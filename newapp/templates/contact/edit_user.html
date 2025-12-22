@@ -1,0 +1,23 @@
+{% extends 'layouts/base.html' %}
+
+
+
+
+{% block title %}Edit User{% endblock %}
+
+{% block content %}
+<div class="container p-4" style="background:#E8DFCA;">
+
+    <h2>Edit User: {{ user.name }}</h2>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-primary" style="background:#CFAB8D; border-color:#CFAB8D; color:#777C6D;">
+        Save
+      </button>
+      
+      
+      <a href="{% url 'show_people' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+  </div>
+{% endblock %}

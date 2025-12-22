@@ -1,4 +1,4 @@
-from .models import User, Message
+from .models import User, Message, ChatGPTPrompt
 from django.db import transaction
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
@@ -8,6 +8,9 @@ import requests
 from .models import User
 from datetime import datetime
 # from .models import Message
+from django.db.models import Max
+from django.shortcuts import render
+from .models import User, Message
 from pinecone_plugins.assistant.models.chat import Message as Pinemessage
 
 from django.http import JsonResponse
@@ -18,6 +21,11 @@ from .models import Message
 from .models import Admin
 from .forms import TaggingForm  
 from .models import User, Tag, UserTag
+from newapp.models import Tag
+
+
+
+
 
 
 
@@ -82,7 +90,7 @@ def send_whatsapp_message(request):
                     new_user = User.objects.create(
                         name='bot',
                         phone_no=phone,
-                        created_at=datetime.now()
+                        created_at=timezone.now()
                     )
                     user_id = new_user.id
                     print(f"id:{user_id}")
@@ -94,7 +102,7 @@ def send_whatsapp_message(request):
                     new_message = Message.objects.create(
                         user_id=user_instance,
                         messages=message,
-                        created_at=datetime.now(),
+                        created_at=timezone.now(),
                         who='bot'
                     )
                     print(f"successfully")
@@ -252,7 +260,7 @@ def show_chatbox(request):
 
     if selected_user_id:
         selected_user = User.objects.filter(id=selected_user_id).first()
-        messages = Message.objects.filter(user_id=selected_user_id).order_by('created_at')
+        messages = Message.objects.filter(user_id=selected_user_id).order_by('created_at', 'id')
 
     return render(request, 'show_people.html', {
         'users': users,
@@ -367,53 +375,111 @@ def show_chatbox(request):
 #             return HttpResponse(f"Error: {str(e)}", status=400)
 
 
+# def broadcast_msg(request):
+#     return render(request, 'broadcast_form.html')
 def broadcast_msg(request):
-    return render(request, 'broadcast_form.html')
+    tags = Tag.objects.all()
+    return render(request, 'broadcast_form.html', {'tags': tags})
 
 
-WHATSAPP_API_URL = "https://graph.facebook.com/v22.0/1356495696480176/messages"
+WHATSAPP_API_URL = "https://graph.facebook.com/v22.0/771795822685853/messages"
 ACCESS_TOKEN = "EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD"  # your WhatsApp Cloud API token
 
 
 # views.py
 # views.py
 
-WHATSAPP_API_URL ="https://graph.facebook.com/v22.0/1356495696480176/messages"
+WHATSAPP_API_URL ="https://graph.facebook.com/v22.0/771795822685853/messages"
 ACCESS_TOKEN ='EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD'
 
 
+# def send_broadcast(request):
+#     if request.method != "POST":
+#         return HttpResponse("Invalid request method", status=405)
+
+#     msg = (request.POST.get('message') or '').strip()
+#     if not msg:
+#         return HttpResponse("Message is required", status=400)
+
+#     # Get all phones you intend to send to
+#     phones = list(User.objects.values_list('phone_no', flat=True))
+#     users = User.objects.filter(phone_no__in=phones).values('id', 'phone_no')
+#     headers = {
+#         "Authorization": f"Bearer {ACCESS_TOKEN}",
+#         "Content-Type": "application/json"
+#     }
+#     for user in users:
+#         user_instance = User.objects.get(id=user['id'])
+#         payload = {
+#         "messaging_product": "whatsapp",
+#         "to":user['phone_no'],
+#         "type": "template",
+#         "template": {
+#         "name": "hello_world",
+#         "language": {"code": "en_US"}
+#         }}
+#         r = requests.post(WHATSAPP_API_URL, headers=headers, json=payload)
+#         Message.objects.create(
+#             user_id=user_instance,
+#             messages="hello world",
+#             who="bot"
+#         )
+#     return HttpResponse(200)
+WHATSAPP_API_URL ="https://graph.facebook.com/v22.0/771795822685853/messages"
+ACCESS_TOKEN ='EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD'
+@csrf_exempt
 def send_broadcast(request):
     if request.method != "POST":
         return HttpResponse("Invalid request method", status=405)
 
-    msg = (request.POST.get('message') or '').strip()
-    if not msg:
-        return HttpResponse("Message is required", status=400)
+    message_body = (request.POST.get('message') or '').strip()
+    selected_tag_name = request.POST.get('selected_tag_name')
+    template_name = request.POST.get('template')
 
-    # Get all phones you intend to send to
-    phones = list(User.objects.values_list('phone_no', flat=True))
-    users = User.objects.filter(phone_no__in=phones).values('id', 'phone_no')
+    if not message_body:
+        return HttpResponse("Message is required", status=400)
+    if not selected_tag_name:
+        return HttpResponse("Tag selection is required", status=400)
+    if not template_name:
+        return HttpResponse("Template selection is required", status=400)
+
+    try:
+        tag = Tag.objects.get(name=selected_tag_name)
+    except Tag.DoesNotExist:
+        return HttpResponse(f"Tag '{selected_tag_name}' not found.", status=400)
+
+    # Get all users linked to the selected tag
+    user_ids = UserTag.objects.filter(tag=tag).values_list('user_id', flat=True)
+    users = User.objects.filter(id__in=user_ids)
+
     headers = {
         "Authorization": f"Bearer {ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
+
     for user in users:
-        user_instance = User.objects.get(id=user['id'])
         payload = {
-        "messaging_product": "whatsapp",
-        "to":user['phone_no'],
-        "type": "template",
-        "template": {
-        "name": "hello_world",
-        "language": {"code": "en_US"}
-        }}
+            "messaging_product": "whatsapp",
+            "to": user.phone_no,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": "en_US"}
+            }
+        }
         r = requests.post(WHATSAPP_API_URL, headers=headers, json=payload)
+        print(f"Sent to {user.phone_no}, Status: {r.status_code}, Response: {r.text}")
+        
+        # Log each message sent in your DB
         Message.objects.create(
-            user_id=user_instance,
-            messages="hello world",
+            user_id=user,
+            messages=message_body,
             who="bot"
         )
-    return HttpResponse(200)
+
+    # return HttpResponse("Broadcast sent successfully.")
+    return redirect('broadcast_msg')
+
          
    
    
@@ -503,6 +569,7 @@ def dashboard_view(request):
 
 def inbox_view(request):
     return render(request, 'inbox.html')
+
 
 def flows_view(request):
     return render(request, 'flows.html')
@@ -695,30 +762,51 @@ import openai
 
 @csrf_exempt
 def chatgpt_respond(request):
+    """Handle chat from inbox UI - accepts both JSON and FormData"""
     if request.method == "POST":
         try:
-            data = json.loads(request.body)
-            user_prompt = data.get("prompt", "").strip()
+            # Handle both JSON and FormData
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+                user_prompt = data.get("prompt", "") or data.get("message", "")
+            else:
+                user_prompt = request.POST.get("message", "") or request.POST.get("prompt", "")
+            
+            user_prompt = user_prompt.strip()
             if not user_prompt:
-                return JsonResponse({"error": "Prompt cannot be empty."}, status=400)
+                return JsonResponse({"error": "Message cannot be empty."}, status=400)
 
-            admin = Admin.objects.first()
+            # Get admin from session or default
+            admin_id = request.session.get('admin_id')
+            if admin_id:
+                admin = Admin.objects.filter(id=admin_id).first()
+            else:
+                admin = Admin.objects.first()
+                
             if not admin or not admin.openai_api_key:
                 return JsonResponse({"error": "ChatGPT API key not configured."}, status=403)
 
-            openai.api_key = admin.openai_api_key
+            # Get system prompt
+            prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
+            system_prompt = prompt_obj.prompt_text if prompt_obj else "You are a helpful assistant."
 
-            response = openai.ChatCompletion.create(
-                model="gpt-4",  # or "gpt-3.5-turbo"
-                messages=[{"role": "user", "content": user_prompt}],
+            # Use new OpenAI v1.0+ API format
+            from openai import OpenAI
+            client = OpenAI(api_key=admin.openai_api_key)
+
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
             )
             reply = response.choices[0].message.content
-
-            # Here you can also add your logic to send this reply back to WhatsApp user if needed
 
             return JsonResponse({"reply": reply})
 
         except Exception as e:
+            print(f"ChatGPT respond error: {e}")
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method."}, status=405)
@@ -737,7 +825,7 @@ def chatgpt_prompt_page(request):
             prompt_obj.save()
         else:
             ChatGPTPrompt.objects.create(prompt_text=new_prompt)
-        return redirect('chatgpt_prompt_page')
+        return redirect('integration_view')
 
     return render(request, 'chatgpt_prompt.html', {"prompt": current_prompt})
 
@@ -758,42 +846,216 @@ def get_message_chatgpt(request):
 
         messages = messages_list[0]
         phone = messages.get('from')  # WhatsApp number
-        user_text = messages.get('text', {}).get('body')
+        message_type = messages.get('type')  # text, image, document, etc.
 
         admin = Admin.objects.first()
         if not admin or not admin.openai_api_key:
             return HttpResponse("ChatGPT API key not configured", status=400)
 
-        # Save incoming message
+        # Get or create user
         user_obj, _ = User.objects.get_or_create(
             phone_no=phone,
-            defaults={'name': 'user', 'created_at': datetime.now()}
+            defaults={'name': 'user', 'created_at': timezone.now()}
         )
+
+        # ==================== IMAGE/PDF ANALYSIS ====================
+        # Handle image messages
+        if message_type == 'image':
+            from .image_pdf_service import analyze_media_message
+            
+            image_info = messages.get('image', {})
+            media_id = image_info.get('id')
+            caption = image_info.get('caption', 'What can you see in this image? Describe it in detail.')
+            
+            # Save incoming message
+            Message.objects.create(
+                user_id=user_obj,
+                messages=f"[Image] {caption}",
+                created_at=timezone.now(),
+                who='human'
+            )
+            
+            # Analyze the image
+            reply = analyze_media_message(
+                media_id=media_id,
+                media_type='image',
+                user_question=caption,
+                admin=admin
+            )
+            
+            # Save and send reply
+            Message.objects.create(
+                user_id=user_obj,
+                messages=reply,
+                created_at=timezone.now(),
+                who='bot'
+            )
+            
+            whatsapp_api_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
+            headers = {
+                "Authorization": f"Bearer {admin.whatsapp_token}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": phone,
+                "type": "text",
+                "text": {"body": reply}
+            }
+            requests.post(whatsapp_api_url, json=payload, headers=headers)
+            
+            return HttpResponse("Image analyzed", status=200)
+        
+        # Handle document messages (PDFs)
+        elif message_type == 'document':
+            from .image_pdf_service import analyze_media_message
+            
+            doc_info = messages.get('document', {})
+            media_id = doc_info.get('id')
+            mime_type = doc_info.get('mime_type', '')
+            filename = doc_info.get('filename', 'document')
+            caption = doc_info.get('caption', 'Please analyze this document and tell me what it contains.')
+            
+            # Save incoming message
+            Message.objects.create(
+                user_id=user_obj,
+                messages=f"[Document: {filename}] {caption}",
+                created_at=timezone.now(),
+                who='human'
+            )
+            
+            # Analyze the document
+            reply = analyze_media_message(
+                media_id=media_id,
+                media_type='document',
+                user_question=caption,
+                admin=admin,
+                mime_type=mime_type
+            )
+            
+            # Save and send reply
+            Message.objects.create(
+                user_id=user_obj,
+                messages=reply,
+                created_at=timezone.now(),
+                who='bot'
+            )
+            
+            whatsapp_api_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
+            headers = {
+                "Authorization": f"Bearer {admin.whatsapp_token}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": phone,
+                "type": "text",
+                "text": {"body": reply}
+            }
+            requests.post(whatsapp_api_url, json=payload, headers=headers)
+            
+            return HttpResponse("Document analyzed", status=200)
+        
+        # ==================== TEXT MESSAGE HANDLING ====================
+        # Handle regular text messages
+        user_text = messages.get('text', {}).get('body')
+        
+        # Save incoming text message
         Message.objects.create(
             user_id=user_obj,
             messages=user_text,
-            created_at=datetime.now(),
+            created_at=timezone.now(),
             who='human'
         )
 
-        prompt_obj = ChatGPTPrompt.objects.first()
-        common_prompt = prompt_obj.prompt_text if prompt_obj else ""
+        # ==================== CALENDLY INTEGRATION ====================
+        # Check for booking/cancellation intent BEFORE calling OpenAI
+        user_text_lower = user_text.lower() if user_text else ""
+        
+        # Booking intent keywords
+        booking_keywords = ['book', 'schedule', 'appointment', 'meeting', 'book appointment', 
+                           'schedule a call', 'set up a meeting', 'book a call', 'schedule meeting']
+        
+        # Cancellation intent keywords  
+        cancel_keywords = ['cancel', 'cancel appointment', 'cancel meeting', 'remove booking',
+                          'delete appointment', 'cancel my appointment']
+        
+        # Check if user wants to book
+        is_booking_intent = any(kw in user_text_lower for kw in booking_keywords)
+        is_cancel_intent = any(kw in user_text_lower for kw in cancel_keywords)
+        
+        if is_booking_intent and not is_cancel_intent:
+            # User wants to book - return Calendly booking link
+            try:
+                from .calendly_service import CalendlyService
+                from .calendly_views import CALENDLY_ACCESS_TOKEN
+                
+                service = CalendlyService(access_token=CALENDLY_ACCESS_TOKEN)
+                event_types = service.get_event_types()
+                
+                if event_types:
+                    event_type = event_types[0]  # Get first event type
+                    booking_url = event_type.get('scheduling_url')
+                    event_name = event_type.get('name')
+                    duration = event_type.get('duration')
+                    
+                    reply = f"Great! I can help you book an appointment. 📅\n\n"
+                    reply += f"*{event_name}* ({duration} minutes)\n\n"
+                    reply += f"👉 Click here to book: {booking_url}\n\n"
+                    reply += "Choose a time that works best for you!"
+                else:
+                    reply = "I'd love to help you book an appointment, but no appointment slots are currently available. Please try again later or contact us directly."
+                    
+            except Exception as e:
+                print(f"Calendly booking error: {e}")
+                reply = "I'd love to help you book an appointment! Please visit our scheduling page or contact us directly to book."
+        
+        elif is_cancel_intent:
+            # User wants to cancel - provide cancellation info
+            try:
+                from .calendly_service import CalendlyService
+                from .calendly_views import CALENDLY_ACCESS_TOKEN
+                
+                service = CalendlyService(access_token=CALENDLY_ACCESS_TOKEN)
+                events = service.get_scheduled_events(status='active')
+                
+                if events:
+                    reply = "To cancel your appointment, please use the cancellation link in your confirmation email, or contact us directly with your appointment details."
+                else:
+                    reply = "I don't see any upcoming appointments. If you need to cancel an appointment, please contact us with your booking details."
+                    
+            except Exception as e:
+                print(f"Calendly cancel error: {e}")
+                reply = "To cancel your appointment, please use the cancellation link in your confirmation email, or contact us directly."
+        
+        else:
+            # No booking/cancel intent - use regular ChatGPT response
+            prompt_obj = ChatGPTPrompt.objects.first()
+            common_prompt = prompt_obj.prompt_text if prompt_obj else ""
+            
+            # Add Calendly context to the system prompt
+            calendly_context = """
+You are also able to help users book and cancel appointments. 
+- If a user wants to book an appointment, tell them you can help and ask them to say "book appointment".
+- If a user wants to cancel, tell them to say "cancel appointment" or use the cancellation link in their email.
+"""
+            
+            chatgpt_input = f"{common_prompt}\n{calendly_context}\n\nUser: {user_text}" if common_prompt else f"{calendly_context}\n\nUser: {user_text}"
 
-        chatgpt_input = f"{common_prompt}\n\nUser: {user_text}" if common_prompt else user_text
-
-        # Call OpenAI API
-        openai.api_key = admin.openai_api_key
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": chatgpt_input}],
-        )
-        reply = response.choices[0].message.content
+            # Call OpenAI API
+            openai.api_key = admin.openai_api_key
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": chatgpt_input}],
+            )
+            reply = response.choices[0].message.content
+        # ==================== END CALENDLY INTEGRATION ====================
 
         # Save reply
         Message.objects.create(
             user_id=user_obj,
             messages=reply,
-            created_at=datetime.now(),
+            created_at=timezone.now(),
             who='bot'
         )
 
@@ -854,3 +1116,163 @@ def disconnect_openai_key(request):
         admin.save(update_fields=['openai_api_key'])
         return JsonResponse({"msg": "ChatGPT API key disconnected."})
     return JsonResponse({"msg": "Invalid request."}, status=405)
+
+# import logging
+# import requests
+
+# logger = logging.getLogger(__name__)
+
+# def send_whatsapp_reply(message_text, to_phone, phone_id, token):
+#     url = f"https://graph.facebook.com/v17.0/{phone_id}"
+#     headers = {
+#         "Authorization": f"Bearer {token}",
+#         "Content-Type": "application/json"
+#     }
+#     payload = {
+#         "messaging_product": "whatsapp",
+#         "to": to_phone,
+#         "type": "text",
+#         "text": {"body": message_text}
+#     }
+#     try:
+#         response = requests.post(url + '/messages', json=payload, headers=headers)
+#         if response.status_code != 200:
+#             logger.warning(f"Failed to send WhatsApp message: {response.text}")
+#     except Exception as e:
+#         logger.error(f"Exception during sending WhatsApp message: {e}")
+
+import logging
+import requests
+from django.utils import timezone
+from newapp.models import User, Message
+
+logger = logging.getLogger(__name__)
+
+def send_whatsapp_reply(message_text, to_phone, phone_id, token):
+    url = f"https://graph.facebook.com/v17.0/{phone_id}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_phone,
+        "type": "text",
+        "text": {"body": message_text}
+    }
+    try:
+        response = requests.post(url + '/messages', json=payload, headers=headers)
+        if response.status_code != 200:
+            logger.warning(f"Failed to send WhatsApp message: {response.text}")
+        else:
+            # Save bot reply in DB
+            user, created = User.objects.get_or_create(phone_no=to_phone, defaults={'name': 'bot', 'created_at': timezone.now()})
+            Message.objects.create(user=user, messages=message_text, created_at=timezone.now(), who='bot')
+    except Exception as e:
+        logger.error(f"Exception during sending WhatsApp message: {e}")
+
+
+import csv
+from django.shortcuts import redirect
+from django.contrib import messages
+from .models import User, Tag, UserTag
+import traceback
+@csrf_exempt
+def import_contacts(request):
+    try:
+        if request.method == 'POST':
+            tag_name = request.POST.get('tag_name', '').strip()
+            csv_file = request.FILES.get('csv_file')
+
+            # Get admin_id from session
+            admin_id_value = request.session.get('admin_id')
+            if not admin_id_value:
+                messages.error(request, "You must be logged in.")
+                return redirect('login')  # or your login page
+            
+            # Fetch the Admin instance
+            try:
+                admin_instance = Admin.objects.get(id=admin_id_value)
+            except Admin.DoesNotExist:
+                messages.error(request, "Invalid admin.")
+                return redirect('login')
+
+            if not tag_name or not csv_file:
+                messages.error(request, "Tag name and CSV file are required.")
+                return redirect('contact_dashboard')
+
+            tag, created = Tag.objects.get_or_create(name=tag_name)
+
+            decoded_file = csv_file.read().decode('utf-8-sig').splitlines()
+            reader = csv.DictReader(decoded_file)
+
+            for row in reader:
+                print("Raw row dict:", row)
+                name = (row.get('name') or '').strip()
+                phone = row.get('phone', '').strip()
+                print(f"Processing name={name} phone={phone}")
+                if not phone:
+                    continue
+                if not name:
+                    name = 'Unknown'  # or any default name
+
+                # Create or get User with admin instance properly assigned
+                user, created = User.objects.get_or_create(phone_no=phone, defaults={'name': name, 'admin_id': admin_instance})
+
+                # If user exists but admin_id not set or different, update it
+                if not created and user.admin_id != admin_instance:
+                    user.admin_id = admin_instance
+                    user.save()
+
+                UserTag.objects.get_or_create(user=user, tag=tag)
+
+            messages.success(request, f"Contacts imported under tag '{tag_name}'.")
+            return redirect('contact_dashboard')
+
+        return redirect('contact_dashboard')
+
+    except Exception as e:
+            print('IMPORT ERROR:', e)
+            print(traceback.format_exc())
+            return HttpResponse("Import Error: {}".format(e), status=500)
+
+
+from django.http import JsonResponse
+import requests
+
+def whatsapp_templates(request):
+    waba_id = "1356495696480176"
+    access_token = "EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD"  
+
+    url = f"https://graph.facebook.com/v22.0/{waba_id}/message_templates"
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        templates = response.json().get("data", [])
+        template_names = [t["name"] for t in templates]
+        return JsonResponse({"templates": template_names})
+    else:
+        return JsonResponse({"error": "Failed to fetch templates", "details": response.text}, status=500)
+    
+from django.shortcuts import redirect, get_object_or_404
+from newapp.models import Tag
+
+def delete_tag(request, tag_id):
+    if request.method == "POST":
+        tag = get_object_or_404(Tag, id=tag_id)
+        tag.delete()
+    return redirect('add_tag')
+
+from django.shortcuts import get_object_or_404, redirect
+from .models import AIAgentConfig
+
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def delete_pdf(request, pk):
+    if request.method == "POST":
+        pdf = get_object_or_404(AIAgentConfig, pk=pk)
+        pdf.pdf_file.delete()  # Removes the file from storage
+        pdf.delete()           # Removes the DB entry
+    return redirect('ai_agent_upload')  # Update with your upload view name

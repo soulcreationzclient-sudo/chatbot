@@ -1,0 +1,248 @@
+<!-- ===== Add SmartMemory Card (place this alongside Pinecone & ChatGPT cards) ===== -->
+{% comment %} SmartMemory Integration Card {% endcomment %}
+{% if smartmemory_connected %}
+  <a href="javascript:void(0)" class="text-decoration-none text-reset" id="smartmemoryDisconnectLink">
+{% else %}
+  <a href="javascript:void(0)" class="text-decoration-none text-reset" id="smartmemoryConnectLink">
+{% endif %}
+  <div class="channel-card">
+    <div class="d-flex align-items-center gap-3">
+      <div class="icon-box" style="background:#fff7ed;">
+        <!-- simple memory icon -->
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M3 12h18M12 3v18" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="fw-semibold">SmartMemory</div>
+    </div>
+    <span class="text-muted">&rsaquo;</span>
+    {% if smartmemory_connected %}
+      <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected"></i>
+    {% else %}
+      <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected" aria-label="not connected"></i>
+    {% endif %}
+  </div>
+</a>
+
+<!-- ===== SmartMemory Modal ===== -->
+<div class="modal fade" id="smartmemoryModal" tabindex="-1" aria-labelledby="smartmemoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="smartmemoryModalLabel">SmartMemory Integration</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Alerts -->
+        <div id="smartmemoryAlert" class="alert d-none" role="alert"></div>
+
+        <!-- Form fields -->
+        <form id="smartmemoryForm" class="row g-3">
+          <div class="col-md-6">
+            <label for="smName" class="form-label">Name</label>
+            <input type="text" id="smName" class="form-control" placeholder="User name" required>
+          </div>
+          <div class="col-md-6">
+            <label for="smEmail" class="form-label">Email</label>
+            <input type="email" id="smEmail" class="form-control" placeholder="email@example.com" required>
+          </div>
+          <div class="col-md-6">
+            <label for="smLastOrder" class="form-label">Last Order</label>
+            <input type="text" id="smLastOrder" class="form-control" placeholder="Order #1234 or product name">
+          </div>
+          <div class="col-12">
+            <label for="smPrompt" class="form-label">Prompt / Instructions</label>
+            <textarea id="smPrompt" class="form-control" rows="3" placeholder="How should the SmartMemory reply?"></textarea>
+            <div class="form-text">This will be used as the initial prompt or system instruction for responses.</div>
+          </div>
+
+          <!-- File upload -->
+          <div class="col-12">
+            <label for="smFile" class="form-label">Upload file (PDF, TXT, CSV)</label>
+            <input class="form-control" type="file" id="smFile" accept=".pdf,.txt,.csv">
+            <div id="smUploadProgress" class="progress mt-2" style="height:10px; display:none;">
+              <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+            </div>
+            <div id="smFileName" class="form-text mt-1 text-truncate"></div>
+          </div>
+
+          <!-- Response preview -->
+          <div class="col-12">
+            <label class="form-label">Assistant Reply Preview</label>
+            <div id="smReplyPreview" class="border p-3 rounded" style="min-height:60px;background:#fbfbfb;"></div>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" id="smSaveBtn">Save & Process Prompt</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Add JS handlers near bottom of page (merge with your existing <script>) ===== -->
+<script>
+  // use existing CSRF token logic from your page
+  // CSRF_TOKEN is already defined above in your template
+  const smartmemoryModalEl = document.getElementById('smartmemoryModal');
+  const smartmemoryModal = new bootstrap.Modal(smartmemoryModalEl);
+
+  const smConnectLink = document.getElementById('smartmemoryConnectLink');
+  const smDisconnectLink = document.getElementById('smartmemoryDisconnectLink');
+
+  if (smConnectLink) smConnectLink.addEventListener('click', (e) => { e.preventDefault(); openSmartMemoryModal(); });
+  if (smDisconnectLink) smDisconnectLink.addEventListener('click', (e) => { e.preventDefault(); openSmartMemoryModal(); });
+
+  function openSmartMemoryModal() {
+    // clear previous
+    clearSmAlert();
+    document.getElementById('smName').value = '{{ admin.name|default:"" }}';
+    document.getElementById('smEmail').value = '{{ admin.email|default:"" }}';
+    document.getElementById('smLastOrder').value = '';
+    document.getElementById('smPrompt').value = '';
+    document.getElementById('smFile').value = null;
+    document.getElementById('smFileName').textContent = '';
+    document.getElementById('smReplyPreview').textContent = '';
+    smartmemoryModal.show();
+  }
+
+  function showSmAlert(message, type='info') {
+    const el = document.getElementById('smartmemoryAlert');
+    el.className = alert alert-${type};
+    el.textContent = message;
+    el.classList.remove('d-none');
+  }
+  function clearSmAlert() {
+    const el = document.getElementById('smartmemoryAlert');
+    if (el) { el.classList.add('d-none'); el.textContent = ''; }
+  }
+
+  // file upload helper
+  async function uploadSmartMemoryFile(file) {
+    if (!file) return null;
+    const url = '/smartmemory/upload_file/'; // Django endpoint
+    const form = new FormData();
+    form.append('file', file);
+
+    // show progress bar
+    const progressEl = document.getElementById('smUploadProgress');
+    const bar = progressEl.querySelector('.progress-bar');
+    progressEl.style.display = 'block';
+    bar.style.width = '0%';
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader('X-CSRFToken', CSRF_TOKEN);
+
+      xhr.upload.onprogress = function(e) {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          bar.style.width = percent + '%';
+          bar.textContent = percent + '%';
+        }
+      };
+
+      xhr.onload = function() {
+        progressEl.style.display = 'none';
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            if (data?.success) {
+              document.getElementById('smFileName').textContent = data.filename || file.name;
+              resolve(data); // return server file info
+            } else {
+              reject(new Error(data?.error || 'Upload failed'));
+            }
+          } catch (err) {
+            reject(err);
+          }
+        } else {
+          reject(new Error('Upload failed HTTP ' + xhr.status));
+        }
+      };
+
+      xhr.onerror = function() {
+        progressEl.style.display = 'none';
+        reject(new Error('Upload network error'));
+      };
+
+      xhr.send(form);
+    });
+  }
+
+  // Save & Process button
+  const smSaveBtn = document.getElementById('smSaveBtn');
+  if (smSaveBtn) {
+    smSaveBtn.addEventListener('click', async () => {
+      clearSmAlert();
+      smSaveBtn.disabled = true;
+      smSaveBtn.textContent = 'Processing...';
+
+      const name = document.getElementById('smName').value.trim();
+      const email = document.getElementById('smEmail').value.trim();
+      const lastOrder = document.getElementById('smLastOrder').value.trim();
+      const prompt = document.getElementById('smPrompt').value.trim();
+      const fileInput = document.getElementById('smFile');
+      const file = fileInput?.files?.[0] || null;
+
+      if (!name || !email) {
+        showSmAlert('Name and Email are required.', 'warning');
+        smSaveBtn.disabled = false;
+        smSaveBtn.textContent = 'Save & Process Prompt';
+        return;
+      }
+
+      try {
+        // 1) Upload file (if provided)
+        let uploadInfo = null;
+        if (file) {
+          showSmAlert('Uploading file...', 'info');
+          uploadInfo = await uploadSmartMemoryFile(file);
+          showSmAlert('File uploaded.', 'success');
+        }
+
+        // 2) Save metadata to DB
+        showSmAlert('Saving SmartMemory data...', 'info');
+        const saveRes = await fetch('/smartmemory/save/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+          body: JSON.stringify({
+            name, email, last_order: lastOrder, prompt,
+            uploaded_file: uploadInfo?.file_id || null
+          })
+        });
+        if (!saveRes.ok) throw new Error('Save HTTP ' + saveRes.status);
+        const saveData = await saveRes.json();
+        if (!saveData?.success) throw new Error(saveData?.error || 'Save failed');
+
+        // 3) Process prompt (RAG) - server will read the uploaded file (if any), index or fetch vectored content, and reply
+        showSmAlert('Processing prompt to generate reply...', 'info');
+        const procRes = await fetch('/smartmemory/process_prompt/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+          body: JSON.stringify({
+            integration_id: saveData.integration_id,
+            prompt: prompt || Give a helpful reply for ${name}
+          })
+        });
+        if (!procRes.ok) throw new Error('Process HTTP ' + procRes.status);
+        const procData = await procRes.json();
+        if (!procData?.success) throw new Error(procData?.error || 'Processing failed');
+
+        // show reply preview
+        document.getElementById('smReplyPreview').textContent = procData.reply || '[No reply returned]';
+        showSmAlert('Saved and processed successfully.', 'success');
+
+      } catch (err) {
+        console.error(err);
+        showSmAlert('Error: ' + (err.message || err), 'danger');
+      } finally {
+        smSaveBtn.disabled = false;
+        smSaveBtn.textContent = 'Save & Process Prompt';
+      }
+    });
+  }
+</script>

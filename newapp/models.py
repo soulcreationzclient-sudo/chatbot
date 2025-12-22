@@ -7,14 +7,29 @@ class Admin(models.Model):
     whatsapp_phone_id=models.TextField()
     whatsapp_token=models.TextField()
     pinecone_token=models.TextField()
+    assistant_name = models.CharField(max_length=100, null=True, blank=True, default='')
     created_at=models.DateTimeField(auto_now_add=True)
     display_phone_no=models.TextField()
     goolgle_calendar=models.TextField()
     openai_api_key = models.TextField(blank=True, null=True)
+    CHATGPT_MODE_CHOICES = (
+        ('prompt', 'Prompt'),
+        ('ai_agent', 'AI Agent'),
+    )
+    chatgpt_mode = models.CharField(max_length=20, choices=CHATGPT_MODE_CHOICES, default='prompt')
+    
+    # Calendly Integration
+    calendly_token = models.TextField(blank=True, null=True)           # Personal Access Token
+    calendly_scheduling_url = models.TextField(blank=True, null=True)  # Event type URL for booking
+    
+    # Follow-up Settings  
+    followup_delay_minutes = models.IntegerField(default=10)           # Minutes between follow-ups
+    followup_enabled = models.BooleanField(default=True)               # Enable/disable follow-ups
+
     
     
     class Meta:
-        managed=False
+        managed=True
         db_table='admins'
 
 class User(models.Model):
@@ -23,9 +38,11 @@ class User(models.Model):
     name = models.CharField(max_length=100)
     phone_no= models.CharField(max_length=20)
     created_at = models.DateTimeField()
+    is_escalation = models.BooleanField(default=False)
+    followup_count = models.IntegerField(default=0)  # Track follow-up attempts (max 3)
 
     class Meta:
-        managed = False  # This tells Django: don't create or modify this table
+        # managed = False  # This tells Django: don't create or modify this table
         db_table = 'users'  # Must exactly match your phpMyAdmin table name
 
 class Message(models.Model):
@@ -41,8 +58,8 @@ class Message(models.Model):
     who=models.CharField(max_length=10, choices=WHO_CHOICES)
 
     class Meta:
-        managed = False
-        db_table = 'conversations'  # Ensure this matches your MySQL table
+        managed = True
+        db_table = 'conversations' 
 
 
 # Create your models here.
@@ -88,3 +105,26 @@ class ChatGPTPrompt(models.Model):
 
     def __str__(self):
         return f"ChatGPT Prompt (updated {self.updated_at})"
+    
+class AIAgentConfig(models.Model):
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
+    pdf_file = models.FileField(upload_to='ai_agent_pdfs/')  # PDFs will be uploaded to MEDIA_ROOT/ai_agent_pdfs/
+    instruction = models.TextField(blank=True)
+    pdf_text = models.TextField(blank=True, null=True)               
+    is_active = models.BooleanField(default=True)            
+    uploaded_at = models.DateTimeField(auto_now_add=True)    
+
+    class Meta:
+        db_table = 'ai_agent_config'
+        
+    def __str__(self):
+        return f"AI Agent Config - {self.pdf_file.name} - Active: {self.is_active}"  
+    
+from django import forms
+from .models import AIAgentConfig
+
+class AIAgentConfigForm(forms.ModelForm):
+    class Meta:
+        model = AIAgentConfig
+        fields = ['pdf_file', 'instruction']
+      

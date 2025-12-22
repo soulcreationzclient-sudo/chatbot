@@ -8,6 +8,8 @@ from datetime import datetime
 from django.shortcuts import get_object_or_404
 from newapp.forms import UserForm
 from django.views.decorators.csrf import csrf_exempt
+from newapp.models import User, UserTag
+
 
 
 
@@ -22,6 +24,10 @@ class Contactcontroller:
 
         # filter users by admin_id
         users = User.objects.filter(admin_id=admin_id)
+
+        # Add tags list to each user instance
+        for user in users:
+            user.tags = [ut.tag.name for ut in UserTag.objects.filter(user=user)]
 
         return render(request, "contact/dashboard.html", {"users": users})
     

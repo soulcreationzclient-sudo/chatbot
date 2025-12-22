@@ -24,13 +24,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-gf7l^42ba)oc=rvv87_ocx@tq4o$c)2&$eg5&ake*5yzx)jf@j'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = [
      'localhost',
     '127.0.0.1',
-    '1d947b3a8e32.ngrok-free.app',  # ← Add this
+    '1d947b3a8e32.ngrok-free.app',  # ← Add this    
     '.ngrok-free.app',
+    '.ngrok-free.dev',
+    'overslight-shirley-overhearty.ngrok-free.dev',
     "https://07377353818c.ngrok-free.app"
 ]
 
@@ -83,15 +85,8 @@ WSGI_APPLICATION = 'mynewsite.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME':'chat_py',
-        'USER':'root',
-        'PASSWORD':'',
-        'HOST':'localhost',
-        'PORT':'3306',
-        'OPTIONS':{
-            'init_command':"SET sql_mode='STRICT_TRANS_TABLES'"
-        }
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -120,7 +115,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -142,7 +137,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://494b6c088862.ngrok-free.app"
+    "https://494b6c088862.ngrok-free.app",
+    "https://overslight-shirley-overhearty.ngrok-free.dev"
 ]
 
 
@@ -152,3 +148,15 @@ CSRF_TRUSTED_ORIGINS = [
 # ]
 
 # LOGIN_URL = "/login_view/"
+
+# Celery Configuration with Upstash Redis
+CELERY_BROKER_URL = 'rediss://default:ATruAAIncDIzNGRkNmNiYTY2NWU0OGE4OTg5YmFiZDBkZGNhODAzZHAyMTUwODY@devoted-cougar-15086.upstash.io:6379?ssl_cert_reqs=none'
+CELERY_RESULT_BACKEND = 'rediss://default:ATruAAIncDIzNGRkNmNiYTY2NWU0OGE4OTg5YmFiZDBkZGNhODAzZHAyMTUwODY@devoted-cougar-15086.upstash.io:6379?ssl_cert_reqs=none'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+
+MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+
+

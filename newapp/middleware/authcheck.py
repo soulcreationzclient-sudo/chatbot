@@ -9,8 +9,8 @@ class AdminAuthMiddleware:
     def __call__(self, request):
         path = request.path or "/"
 
-        # Don’t block login, logout, or static/media
-        allowlist = ("/login", "/logout", "/static/", "/media/",'/get_message','/send_whatsapp_message','/send_trigger','/appointment_date','/create-event')
+        # Don't block login, logout, or static/media, or API webhooks
+        allowlist = ("/login", "/logout", "/static/", "/media/",'/get_message','/send_whatsapp_message','/send_trigger','/appointment_date','/create-event','/api/calendly/webhook')
 
         # Check if path is protected
         if not path.startswith(allowlist):

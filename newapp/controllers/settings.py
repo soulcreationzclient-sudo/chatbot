@@ -32,11 +32,14 @@ class Settingcontroller :
     #     return render(request,'set/integration.html',{'pinecone_connected':pinecone_connected})
     def integration(request):
         pinecone_connected = None
-        chatgpt_connected = False  # default to False
+        chatgpt_connected = False
+        calendly_connected = False
+        admin = None 
+        chatgpt_mode = "N/A"
         admin_id = request.session.get('admin_id')
 
         if admin_id:
-            admin = Admin.objects.filter(id=admin_id).only('pinecone_token', 'openai_api_key').first()
+            admin = Admin.objects.filter(id=admin_id).first()
             
             if admin:
                 pinecone_token = admin.pinecone_token
@@ -46,9 +49,17 @@ class Settingcontroller :
                 openai_key = admin.openai_api_key
                 if openai_key and openai_key != '':
                     chatgpt_connected = True
+                chatgpt_mode = admin.chatgpt_mode
+                
+                # Check Calendly connection
+                if admin.calendly_token and admin.calendly_token.strip():
+                    calendly_connected = True
 
         return render(request, 'set/integration.html', {
             'pinecone_connected': pinecone_connected,
             'chatgpt_connected': chatgpt_connected,
+            'calendly_connected': calendly_connected,
+            'admin': admin,
+            'chatgpt_mode': chatgpt_mode,
         })
         

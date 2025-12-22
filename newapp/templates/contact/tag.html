@@ -33,7 +33,7 @@
   </div>
   <hr>
   <h2 style="font-size:1.3rem;">Tags and Assigned Users</h2>
-  <table class="table table-hover" style="background:#fff; width:100%; max-width:1200px; margin-left:0;">
+  <table class="table table-hover" style="background:#FBF3D5; width:100%; max-width:1200px; margin-left:0;">
     <thead>
       <tr>
         <th style="width:40px;"></th>
@@ -48,7 +48,17 @@
         <td style="padding-left:8px;"><input type="checkbox" disabled></td>
         <td style="padding-left:36px;">{{ entry.tag.name }}</td>
         <td style="padding-left:36px;">{{ entry.users|length }}</td>
-        <td><span id="arrow-{{ entry.tag.id }}" class="arrow" style="cursor:pointer;">&#x25BC;</span></td>
+        <td>
+          <span id="arrow-{{ entry.tag.id }}" class="arrow" style="cursor:pointer;">&#x25BC;</span>
+          <form method="post" action="{% url 'delete_tag' entry.tag.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm" style="margin-left:8px;"
+              onclick="return confirm('Are you sure you want to delete this tag?');">
+              Delete
+            </button>
+          </form>
+        </td>
+        
       </tr>
       <tr id="users-{{ entry.tag.id }}" class="tag-users-row" style="display:none; background:#f9fafb;">
         <td></td>
@@ -129,9 +139,10 @@
     max-width:1200px;
     margin-left:0 !important;
     padding:24px 0 24px 0 !important;
+    
   }
   .tag-row:focus { background: #e6f0fa; outline: none; }
-  .tag-row:hover { background: #f1f5f9; }
+  .tag-row:hover { background: transparent !important; }
   .tag-users-row td { border-top: none !important; }
   .input-group-text { font-size: 1.2rem; }
 
@@ -143,5 +154,7 @@
     display: block;
     margin-bottom: 0.3rem;
   }
+ 
+
 </style>
 {% endblock %}

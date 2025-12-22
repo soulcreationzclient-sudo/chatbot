@@ -6,7 +6,7 @@
   .wrap {
     max-width: 640px;
     margin: 60px auto;
-    background: #fff;
+    background: #D9C4B0;
     padding: 28px;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
@@ -31,7 +31,7 @@
     border: 1px solid #d1d5db;
     border-radius: 10px;
     padding: 12px;
-    background: #f9fafb;
+    background: #FBF3D5;
     outline: none;
     transition: all 0.2s ease;
   }
@@ -54,8 +54,8 @@
     padding: 10px 20px;
     font-size: 15px;
     font-weight: 600;
-    background: #2563eb;
-    color: #fff;
+    background: #CFAB8D;
+    color: #777C6D;
     border: none;
     border-radius: 8px;
     cursor: pointer;
@@ -75,22 +75,18 @@
   </p>
   <form method="post" action="{% url 'send_broadcast' %}">
     {% csrf_token %}
-    <label for="phone">Phone Number (with country code):</label>
-    <input
-      type="text"
-      id="phone"
-      name="phone"
-      placeholder="+919876543210"
-      required
-    />
+    
+    <label for="selected_tag">Select Tag:</label>
+    <select id="selected_tag" name="selected_tag_name" required>
+      <option value="" disabled selected>Select a tag</option>
+      {% for tag in tags %}
+        <option value="{{ tag.name }}">{{ tag.name|capfirst }}</option>
+      {% endfor %}
+    </select>
 
     <label for="template">Select Broadcast Template:</label>
-    <select id="template" name="template" required>
-      <option value="" disabled selected>Select template</option>
-      <option value="hello_world">Hello World</option>
-      <option value="service_update">Service Update</option>
-      <option value="promotion">Promotion</option>
-      <!-- Add more options as needed -->
+    <select id="templateDropdown">
+      <option value="">Select template</option>
     </select>
 
     <label for="message">Message Body:</label>
@@ -106,4 +102,30 @@
     </div>
   </form>
 </div>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+      fetch('/api/whatsapp_templates/')
+      .then(response => response.json())
+      .then(data => {
+        const dropdown = document.getElementById('templateDropdown');
+          if ('templates' in data) {
+              // Remove the current placeholder options first:
+              dropdown.innerHTML = '<option value="" disabled selected>Select template</option>';
+  
+              data.templates.forEach(name => {
+                  let opt = document.createElement('option');
+                  opt.value = name;  // Use the actual template name as value
+                  opt.text = name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '); // Pretty print
+                  dropdown.appendChild(opt);
+              });
+          } else {
+              console.error('Error fetching templates:', data.error);
+          }
+      })
+      .catch(error => {
+          console.error('Error fetching templates:', error);
+      });
+  });
+  </script>
+  
 {% endblock %}

@@ -45,3 +45,11 @@ class UserForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['name', 'phone_no']  # Add any other fields editable
+
+from django import forms
+from .models import AIAgentConfig
+
+class AIAgentConfigForm(forms.ModelForm):
+    class Meta:
+        model = AIAgentConfig
+        fields = ['pdf_file', 'instruction']
