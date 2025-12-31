@@ -3,129 +3,171 @@
 
 {% block content %}
 <style>
-  .wrap {
-    max-width: 640px;
-    margin: 60px auto;
-    background: #D9C4B0;
-    padding: 28px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  :root {
+    --bg-card: #ffffff;
+    --border-soft: #e5e7eb;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --accent: #3b82f6;
+    --success: #22c55e;
   }
-  h1 {
-    font-size: 24px;
-    margin: 0 0 10px;
-    color: #1f2937;
+
+  /* This container ensures the form stays centered and bulky 
+     but expands/contracts when the sidebar is toggled.
+  */
+  .broadcast-page-wrapper {
+    padding: 40px 20px;
     display: flex;
-    align-items: center;
-    gap: 8px;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100%;
   }
-  .desc {
-    font-size: 14px;
-    color: #6b7280;
-    margin-bottom: 20px;
-  }
-  input, select, textarea {
+
+  .wrap-card {
+    background: var(--bg-card);
     width: 100%;
+    max-width: 1000px;
+    padding: 48px;
+    border-radius: 20px;
+    border: 1px solid var(--border-soft);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    /* Matches sidebar transition speed */
+  }
+
+  .wrap-card h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 10px;
+  }
+
+  .desc {
+    font-size: 16px;
+    color: var(--text-muted);
+    margin-bottom: 35px;
+  }
+
+  label {
     font-size: 15px;
-    margin-bottom: 16px;
-    border: 1px solid #d1d5db;
-    border-radius: 10px;
-    padding: 12px;
-    background: #FBF3D5;
-    outline: none;
-    transition: all 0.2s ease;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: block;
+    color: var(--text-main);
   }
-  input:focus, select:focus, textarea:focus {
-    background: #fff;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
-  }
+
+  input,
+  select,
   textarea {
-    min-height: 120px;
-    resize: vertical;
-    margin-bottom: 20px;
+    width: 100%;
+    font-size: 16px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    border: 2px solid var(--border-soft);
+    border-radius: 12px;
+    transition: all 0.2s;
+    background-color: #fff;
   }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  }
+
+  textarea {
+    min-height: 220px;
+    resize: vertical;
+  }
+
   .actions {
     display: flex;
     justify-content: flex-end;
-    margin-top: 8px;
   }
-  button {
-    padding: 10px 20px;
-    font-size: 15px;
-    font-weight: 600;
-    background: #CFAB8D;
-    color: #777C6D;
+
+  .btn-send {
+    background: var(--success);
+    background-color: #3b82f6;
+    color: white;
     border: none;
-    border-radius: 8px;
+    padding: 16px 45px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 16px;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: transform 0.1s, background 0.2s;
   }
-  button:hover {
-    background: #1e4fc9;
+
+  .btn-send:hover {
+    background: #16a34a;
   }
-  button:active {
+
+  .btn-send:active {
     transform: scale(0.98);
   }
+
+  /* Responsive adjustment for small screens */
+  @media (max-width: 768px) {
+    .wrap-card {
+      padding: 24px;
+    }
+  }
 </style>
-<div class="wrap">
-  <h1>📢 Broadcast Message</h1>
-  <p class="desc">
-    Send an update to specific WhatsApp contacts with your chosen template and message.
-  </p>
-  <form method="post" action="{% url 'send_broadcast' %}">
-    {% csrf_token %}
-    
-    <label for="selected_tag">Select Tag:</label>
-    <select id="selected_tag" name="selected_tag_name" required>
-      <option value="" disabled selected>Select a tag</option>
-      {% for tag in tags %}
+
+<div class="broadcast-page-wrapper">
+  <div class="wrap-card">
+    <h1>📢 Broadcast Message</h1>
+    <p class="desc">Reach your audience instantly. Choose a segment, select your pre-approved WhatsApp template, and
+      refine your message.</p>
+
+    <form method="post" action="{% url 'send_broadcast' %}">
+      {% csrf_token %}
+
+      <label for="selected_tag">Recipient Segment (Tag):</label>
+      <select id="selected_tag" name="selected_tag_name" required>
+        <option value="" disabled selected>Select a contact tag...</option>
+        {% for tag in tags %}
         <option value="{{ tag.name }}">{{ tag.name|capfirst }}</option>
-      {% endfor %}
-    </select>
+        {% endfor %}
+      </select>
 
-    <label for="template">Select Broadcast Template:</label>
-    <select id="templateDropdown">
-      <option value="">Select template</option>
-    </select>
+      <label for="templateDropdown">WhatsApp Template:</label>
+      <select id="templateDropdown" name="template_name" required>
+        <option value="">Loading templates...</option>
+      </select>
 
-    <label for="message">Message Body:</label>
-    <textarea
-      id="message"
-      name="message"
-      placeholder="Type your custom message here..."
-      required
-    ></textarea>
+      <label for="message">Message Body Content:</label>
+      <textarea id="message" name="message" placeholder="Type your message..." required></textarea>
 
-    <div class="actions">
-      <button type="submit">Send Broadcast</button>
-    </div>
-  </form>
+      <div class="actions">
+        <button type="submit" class="btn-send">Send Broadcast</button>
+      </div>
+    </form>
+  </div>
 </div>
+
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-      fetch('/api/whatsapp_templates/')
+    fetch('/api/whatsapp_templates/')
       .then(response => response.json())
       .then(data => {
         const dropdown = document.getElementById('templateDropdown');
-          if ('templates' in data) {
-              // Remove the current placeholder options first:
-              dropdown.innerHTML = '<option value="" disabled selected>Select template</option>';
-  
-              data.templates.forEach(name => {
-                  let opt = document.createElement('option');
-                  opt.value = name;  // Use the actual template name as value
-                  opt.text = name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '); // Pretty print
-                  dropdown.appendChild(opt);
-              });
-          } else {
-              console.error('Error fetching templates:', data.error);
-          }
+        dropdown.innerHTML = '<option value="" disabled selected>Select template</option>';
+        if (data.templates) {
+          data.templates.forEach(name => {
+            let opt = document.createElement('option');
+            opt.value = name;
+            opt.text = name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            dropdown.appendChild(opt);
+          });
+        }
       })
-      .catch(error => {
-          console.error('Error fetching templates:', error);
+      .catch(err => {
+        console.error("Error fetching templates:", err);
+        document.getElementById('templateDropdown').innerHTML = '<option value="">Error loading templates</option>';
       });
   });
-  </script>
-  
+</script>
 {% endblock %}

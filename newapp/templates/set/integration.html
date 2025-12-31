@@ -1,681 +1,583 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+﻿{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Integration Channels{% endblock %}
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Integration Channels</title>
+{% block head_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<meta name="csrf-token" content="{{ csrf_token }}">
+<style>
+  :root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --border-soft: #e5e7eb;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --accent: #3b82f6;
+    --accent-soft: #e0edff;
+    --success: #22c55e;
+    --danger: #ef4444;
+  }
 
-  <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  .integration-wrap {
+    padding: 24px 32px;
+  }
 
-  <!-- CSRF Token -->
-  <meta name="csrf-token" content="{{ csrf_token }}">
+  .breadcrumb-nav {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
 
-  <style>
-    :root {
-      --sidebar-w: 250px;
+  .breadcrumb-nav a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  /* INTEGRATION CARDS */
+  .channel-card {
+    border-radius: 14px;
+    border: 1px solid var(--border-soft);
+    background: var(--bg-card);
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+
+  .channel-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: var(--accent-soft);
+  }
+
+  .icon-pine {
+    background: #e0f2fe;
+  }
+
+  .icon-chatgpt {
+    background: #dcfce7;
+  }
+
+  .fw-semibold {
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  .text-muted {
+    color: var(--text-muted) !important;
+  }
+
+  .fa-circle-check {
+    color: var(--success);
+  }
+
+  .fa-circle-xmark {
+    color: var(--danger);
+  }
+
+  .badge {
+    font-weight: 500;
+    background: #eef2ff !important;
+    color: #3730a3;
+  }
+
+  .modal-content {
+    border-radius: 16px;
+    border: 1px solid var(--border-soft);
+  }
+
+  .modal-header {
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .modal-footer {
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .btn-success {
+    background: var(--success);
+    border: none;
+  }
+
+  .btn-danger {
+    background: var(--danger);
+    border: none;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    border: none;
+  }
+
+  .btn-secondary {
+    background: #e5e7eb;
+    color: #111827;
+    border: none;
+  }
+
+  .btn:hover {
+    opacity: 0.95;
+  }
+
+  @media (max-width: 768px) {
+    .integration-wrap {
+      padding: 16px;
     }
+  }
+</style>
+{% endblock %}
 
-    html,
-    body {
-      height: 100%;
-    }
+{% block body_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+  }
+  const csrfFromCookie = getCookie('csrftoken');
+  const csrfFromMeta = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+  const CSRF_TOKEN = csrfFromCookie || csrfFromMeta || '';
 
-    body {
-      margin: 0;
-      background: #E8DFCA;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: #0f172a;
-    }
+  const pineconeModalEl = document.getElementById('pineconeModal');
+  const pineconeModal = new bootstrap.Modal(pineconeModalEl);
 
-    .sidebar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      width: var(--sidebar-w);
-      background: #0b1324;
-      color: #cbd5e1;
-      overflow-y: auto;
-      z-index: 1030;
-    }
+  const disconnectLink = document.getElementById('disconnect');
+  const connectLink = document.getElementById('connect');
 
-    .main {
-      margin-left: var(--sidebar-w);
-      min-height: 100vh;
-      padding: 24px;
-      display: block;
-    }
+  if (disconnectLink) {
+    disconnectLink.addEventListener('click', (e) => { e.preventDefault(); pineconeModal.show(); });
+  }
+  if (connectLink) {
+    connectLink.addEventListener('click', (e) => { e.preventDefault(); pineconeModal.show(); });
+  }
 
-    @media (max-width: 991.98px) {
-      .main {
-        margin-left: 0;
+  function showAlert(message, type = 'info', alertId = 'pineconeAlert') {
+    const alertEl = document.getElementById(alertId);
+    alertEl.className = `alert alert-${type}`;
+    alertEl.textContent = message;
+    alertEl.classList.remove('d-none');
+  }
+  function clearAlert(alertId = 'pineconeAlert') {
+    const alertEl = document.getElementById(alertId);
+    alertEl.classList.add('d-none');
+    alertEl.textContent = '';
+  }
+
+  const confirmDisconnectBtn = document.getElementById('confirmDisconnect');
+  if (confirmDisconnectBtn) {
+    confirmDisconnectBtn.addEventListener('click', async () => {
+      clearAlert();
+      try {
+        const res = await fetch('{% url "disconnect" %}', { method: 'GET' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        showAlert(data?.msg || 'Disconnected', 'success');
+        setTimeout(() => window.location.reload(), 600);
+      } catch (err) {
+        showAlert('Failed to disconnect. ' + err.message, 'danger');
       }
-    }
+    });
+  }
 
-    .channel-card {
-      border-radius: 1rem;
-      border: 1px solid #D9C4B0;
-      background: #FBF3D5;
-      padding: 1rem 1.25rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      transition: .15s ease-in-out;
-    }
+  const confirmConnectBtn = document.getElementById('confirmConnect');
+  if (confirmConnectBtn) {
+    confirmConnectBtn.addEventListener('click', async () => {
+      clearAlert();
+      const keyInput = document.getElementById('pineconeKey');
+      const assistantInput = document.getElementById('assistantName');
+      const apiKey = keyInput?.value?.trim();
+      const assistantName = assistantInput?.value.trim();
+      if (!apiKey || !assistantName) {
+        showAlert('Please enter both API key and assistant name.', 'warning');
+        return;
+      }
+      try {
+        const origin = window.location.origin + '/connect_pinecone_token/';
+        const res = await fetch(origin, {
+          method: 'POST',
+          body: JSON.stringify({ api_key: apiKey, assistant_name: assistantName }),
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN }
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        showAlert(data?.msg || 'Connected', 'success');
+        setTimeout(() => window.location.reload(), 600);
+      } catch (err) {
+        showAlert('Failed to connect. ' + err.message, 'danger');
+      }
+    });
+  }
 
-    .channel-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
-    }
+  // ChatGPT modal handlers
+  const chatgptModalEl = document.getElementById('chatgptModal');
+  const chatgptModal = new bootstrap.Modal(chatgptModalEl);
 
-    .icon-box {
-      width: 44px;
-      height: 44px;
-      border-radius: .75rem;
-      display: grid;
-      place-items: center;
-      background: #f1f5f9;
-    }
+  const chatgptConnectLink = document.getElementById('chatgptConnectLink');
+  if (chatgptConnectLink) chatgptConnectLink.addEventListener('click', (e) => { e.preventDefault(); chatgptModal.show(); });
 
-    .icon-pine {
-      background: #e0f2fe;
-    }
+  const chatgptDisconnectLink = document.getElementById('chatgptDisconnectLink');
+  if (chatgptDisconnectLink) chatgptDisconnectLink.addEventListener('click', (e) => { e.preventDefault(); chatgptModal.show(); });
 
-    .icon-chatgpt {
-      background: #dcfce7;
-    }
+  const confirmChatGPTConnectBtn = document.getElementById('confirmChatGPTConnect');
+  if (confirmChatGPTConnectBtn) {
+    confirmChatGPTConnectBtn.addEventListener('click', async () => {
+      clearAlert('chatgptAlert');
+      const apiKey = document.getElementById('chatgptKey').value.trim();
+      if (!apiKey) { showAlert('Please enter an API key.', 'warning', 'chatgptAlert'); return; }
+      try {
+        const res = await fetch('/connect_openai_key/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+          body: JSON.stringify({ api_key: apiKey })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        showAlert(data?.msg || 'Connected', 'success', 'chatgptAlert');
+        setTimeout(() => window.location.reload(), 600);
+      } catch (err) {
+        showAlert('Failed to connect. ' + err.message, 'danger', 'chatgptAlert');
+      }
+    });
+  }
 
-    .fw-semibold {
-      font-weight: 600;
-    }
-  </style>
-</head>
+  const confirmChatGPTDisconnectBtn = document.getElementById('confirmChatGPTDisconnect');
+  if (confirmChatGPTDisconnectBtn) {
+    confirmChatGPTDisconnectBtn.addEventListener('click', async () => {
+      clearAlert('chatgptAlert');
+      try {
+        const res = await fetch('/disconnect_openai_key/', { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        showAlert(data?.msg || 'Disconnected', 'success', 'chatgptAlert');
+        setTimeout(() => window.location.reload(), 600);
+      } catch (err) {
+        showAlert('Failed to disconnect. ' + err.message, 'danger', 'chatgptAlert');
+      }
+    });
+  }
 
-<body>
-  {% include 'layouts/sidebar.html' %}
+  async function updateChatGPTMode(mode) {
+    const adminId = '{{ admin.id }}';
+    const response = await fetch('/set_chatgpt_mode/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': CSRF_TOKEN },
+      body: new URLSearchParams({ 'admin_id': adminId, 'mode': mode }),
+    });
+    const data = await response.json();
+    if (data.success) alert('Bot mode changed to: ' + data.mode);
+    else alert('Failed to change mode: ' + (data.error || 'Unknown error'));
+  }
 
-  <main class="main">
-    <div class="container py-4">
-      <h5 class="mb-4">Settings &gt; <b>Integration</b></h5>
+  const goToPromptPageBtn = document.getElementById('goToPromptPage');
+  if (goToPromptPageBtn) goToPromptPageBtn.addEventListener('click', async () => { await updateChatGPTMode('prompt'); window.location.href = '/chatgpt_prompt/'; });
 
-      <div class="d-grid gap-3">
-        <!-- Pinecone (unchanged, existing code) -->
-        {% if pinecone_connected %}
-        <a href="javascript:void(0)" class="text-decoration-none text-reset" id="disconnect">
+  const goToAIpageBtn = document.getElementById('goToAIpage');
+  if (goToAIpageBtn) goToAIpageBtn.addEventListener('click', async () => { await updateChatGPTMode('ai_agent'); window.location.href = '/ai_agent/upload/'; });
+
+  // Calendly modal handlers
+  const calendlyModalEl = document.getElementById('calendlyModal');
+  const calendlyModal = new bootstrap.Modal(calendlyModalEl);
+
+  const calendlyConnectLink = document.getElementById('calendlyConnectLink');
+  if (calendlyConnectLink) calendlyConnectLink.addEventListener('click', (e) => { e.preventDefault(); calendlyModal.show(); });
+
+  const calendlyDisconnectLink = document.getElementById('calendlyDisconnectLink');
+  if (calendlyDisconnectLink) calendlyDisconnectLink.addEventListener('click', (e) => { e.preventDefault(); calendlyModal.show(); });
+
+  const followupDelayRange = document.getElementById('followupDelayRange');
+  const followupDelayValue = document.getElementById('followupDelayValue');
+  if (followupDelayRange && followupDelayValue) {
+    followupDelayRange.addEventListener('input', () => { followupDelayValue.textContent = followupDelayRange.value; });
+  }
+
+  const confirmCalendlyConnectBtn = document.getElementById('confirmCalendlyConnect');
+  if (confirmCalendlyConnectBtn) {
+    confirmCalendlyConnectBtn.addEventListener('click', async () => {
+      clearAlert('calendlyAlert');
+      const token = document.getElementById('calendlyToken').value.trim();
+      const url = document.getElementById('calendlySchedulingUrl').value.trim();
+      if (!token || !url) { showAlert('Please enter both token and scheduling URL.', 'warning', 'calendlyAlert'); return; }
+      try {
+        const res = await fetch('/connect_calendly/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+          body: JSON.stringify({ calendly_token: token, scheduling_url: url })
+        });
+        const data = await res.json();
+        if (data.success) { showAlert(data.msg || 'Connected!', 'success', 'calendlyAlert'); setTimeout(() => window.location.reload(), 600); }
+        else showAlert(data.error || 'Failed to connect', 'danger', 'calendlyAlert');
+      } catch (err) { showAlert('Failed to connect. ' + err.message, 'danger', 'calendlyAlert'); }
+    });
+  }
+
+  const confirmCalendlyDisconnectBtn = document.getElementById('confirmCalendlyDisconnect');
+  if (confirmCalendlyDisconnectBtn) {
+    confirmCalendlyDisconnectBtn.addEventListener('click', async () => {
+      clearAlert('calendlyAlert');
+      try {
+        const res = await fetch('/disconnect_calendly/', { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } });
+        const data = await res.json();
+        if (data.success) { showAlert(data.msg || 'Disconnected!', 'success', 'calendlyAlert'); setTimeout(() => window.location.reload(), 600); }
+        else showAlert(data.error || 'Failed to disconnect', 'danger', 'calendlyAlert');
+      } catch (err) { showAlert('Failed to disconnect. ' + err.message, 'danger', 'calendlyAlert'); }
+    });
+  }
+
+  const saveFollowupSettingsBtn = document.getElementById('saveFollowupSettings');
+  if (saveFollowupSettingsBtn) {
+    saveFollowupSettingsBtn.addEventListener('click', async () => {
+      clearAlert('calendlyAlert');
+      const delayMinutes = document.getElementById('followupDelayRange')?.value || 10;
+      const enabled = document.getElementById('followupEnabled')?.checked || false;
+      try {
+        const res = await fetch('/update_followup_settings/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+          body: JSON.stringify({ followup_delay_minutes: parseInt(delayMinutes), followup_enabled: enabled })
+        });
+        const data = await res.json();
+        if (data.success) { showAlert(data.msg || 'Settings saved!', 'success', 'calendlyAlert'); setTimeout(() => window.location.reload(), 600); }
+        else showAlert(data.error || 'Failed to save', 'danger', 'calendlyAlert');
+      } catch (err) { showAlert('Failed to save. ' + err.message, 'danger', 'calendlyAlert'); }
+    });
+  }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="integration-wrap">
+  <div class="breadcrumb-nav">
+    <a href="{% url 'settings' %}">Settings</a> &gt; <b>Integration</b>
+  </div>
+
+  <div class="d-grid gap-3">
+    <!-- Pinecone -->
+    {% if pinecone_connected %}
+    <a href="javascript:void(0)" class="text-decoration-none text-reset" id="disconnect">
+      {% else %}
+      <a href="javascript:void(0)" class="text-decoration-none text-reset" id="connect">
+        {% endif %}
+        <div class="channel-card">
+          <div class="d-flex align-items-center gap-3">
+            <div class="icon-box icon-pine">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2l7 4v8l-7 4-7-4V6l7-4z" stroke="#0ea5e9" stroke-width="2" />
+                <path d="M12 6l7 4-7 4-7-4 7-4z" stroke="#0ea5e9" stroke-width="2" />
+              </svg>
+            </div>
+            <div class="fw-semibold">Pinecone</div>
+          </div>
+          <span class="text-muted">&rsaquo;</span>
+          {% if pinecone_connected %}
+          <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected"
+            id="connected"></i>
           {% else %}
-          <a href="javascript:void(0)" class="text-decoration-none text-reset" id="connect">
+          <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected" aria-label="not connected"></i>
+          {% endif %}
+        </div>
+      </a>
+
+      <!-- ChatGPT Card -->
+      {% if chatgpt_connected %}
+      <a href="javascript:void(0)" class="text-decoration-none text-reset" id="chatgptDisconnectLink">
+        {% else %}
+        <a href="javascript:void(0)" class="text-decoration-none text-reset" id="chatgptConnectLink">
+          {% endif %}
+          <div class="channel-card">
+            <div class="d-flex align-items-center gap-3">
+              <div class="icon-box icon-chatgpt">
+                <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+                  <path d="M12 2a7 7 0 017 7c0 .7-.1 1.3-.3 1.9a5 5 0 01-1.9 9.6h-10a5 5 0 01-1.9-9.6A7 7 0 0112 2z"
+                    stroke="#16a34a" stroke-width="2" />
+                </svg>
+              </div>
+              <div class="fw-semibold">ChatGPT</div>
+              <span class="badge rounded-pill bg-secondary ms-2">
+                {% if chatgpt_mode == "prompt" %}Prompt Mode
+                {% elif chatgpt_mode == "ai_agent" %}AI Agent Mode
+                {% else %}Not Set{% endif %}
+              </span>
+            </div>
+            <span class="text-muted">&rsaquo;</span>
+            {% if chatgpt_connected %}
+            <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected"></i>
+            {% else %}
+            <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected" aria-label="not connected"></i>
+            {% endif %}
+          </div>
+        </a>
+
+        <!-- Calendly Card -->
+        {% if calendly_connected %}
+        <a href="javascript:void(0)" class="text-decoration-none text-reset" id="calendlyDisconnectLink">
+          {% else %}
+          <a href="javascript:void(0)" class="text-decoration-none text-reset" id="calendlyConnectLink">
             {% endif %}
             <div class="channel-card">
               <div class="d-flex align-items-center gap-3">
-                <div class="icon-box icon-pine">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2l7 4v8l-7 4-7-4V6l7-4z" stroke="#0ea5e9" stroke-width="2" />
-                    <path d="M12 6l7 4-7 4-7-4 7-4z" stroke="#0ea5e9" stroke-width="2" />
+                <div class="icon-box" style="background:#fef3c7;">
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="#f59e0b" stroke-width="2" />
+                    <path d="M16 2v4M8 2v4M3 10h18" stroke="#f59e0b" stroke-width="2" />
                   </svg>
                 </div>
-                <div class="fw-semibold">Pinecone</div>
+                <div class="fw-semibold">Calendly</div>
+                {% if calendly_connected %}
+                <span class="badge rounded-pill bg-secondary ms-2">Follow-up: {{
+                  admin.followup_delay_minutes|default:"10" }} min</span>
+                {% endif %}
               </div>
               <span class="text-muted">&rsaquo;</span>
-              {% if pinecone_connected %}
-              <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected"
-                id="connected"></i>
+              {% if calendly_connected %}
+              <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected"></i>
               {% else %}
               <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected" aria-label="not connected"></i>
               {% endif %}
             </div>
           </a>
+  </div>
+</div>
 
-          <!-- ChatGPT Card (new) -->
-          {% if chatgpt_connected %}
-          <a href="javascript:void(0)" class="text-decoration-none text-reset" id="chatgptDisconnectLink">
-            {% else %}
-            <a href="javascript:void(0)" class="text-decoration-none text-reset" id="chatgptConnectLink">
-              {% endif %}
-              <div class="channel-card">
-                <div class="d-flex align-items-center gap-3">
-                  <div class="icon-box icon-chatgpt">
-                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
-                      <path d="M12 2a7 7 0 017 7c0 .7-.1 1.3-.3 1.9a5 5 0 01-1.9 9.6h-10a5 5 0 01-1.9-9.6A7 7 0 0112 2z"
-                        stroke="#16a34a" stroke-width="2" />
-                    </svg>
-                  </div>
-                  <div class="fw-semibold">ChatGPT</div>
-                  <span class="badge rounded-pill bg-secondary ms-2">
-                    {% if chatgpt_mode == "prompt" %}
-                    Prompt Mode
-                    {% elif chatgpt_mode == "ai_agent" %}
-                    AI Agent Mode
-                    {% else %}
-                    Not Set
-                    {% endif %}
-                  </span>
-                </div>
-                <span class="text-muted">&rsaquo;</span>
-                {% if chatgpt_connected %}
-                <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected"></i>
-                {% else %}
-                <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected"
-                  aria-label="not connected"></i>
-                {% endif %}
-              </div>
-            </a>
-
-            <!-- Calendly Card (new) -->
-            {% if calendly_connected %}
-            <a href="javascript:void(0)" class="text-decoration-none text-reset" id="calendlyDisconnectLink">
-              {% else %}
-              <a href="javascript:void(0)" class="text-decoration-none text-reset" id="calendlyConnectLink">
-                {% endif %}
-                <div class="channel-card">
-                  <div class="d-flex align-items-center gap-3">
-                    <div class="icon-box" style="background:#fef3c7;">
-                      <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
-                        <rect x="3" y="4" width="18" height="18" rx="2" stroke="#f59e0b" stroke-width="2" />
-                        <path d="M16 2v4M8 2v4M3 10h18" stroke="#f59e0b" stroke-width="2" />
-                      </svg>
-                    </div>
-                    <div class="fw-semibold">Calendly</div>
-                    {% if calendly_connected %}
-                    <span class="badge rounded-pill bg-secondary ms-2">
-                      Follow-up: {{ admin.followup_delay_minutes|default:"10" }} min
-                    </span>
-                    {% endif %}
-                  </div>
-                  <span class="text-muted">&rsaquo;</span>
-                  {% if calendly_connected %}
-                  <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected"></i>
-                  {% else %}
-                  <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected"
-                    aria-label="not connected"></i>
-                  {% endif %}
-                </div>
-              </a>
+<!-- Pinecone Modal -->
+<div class="modal fade" id="pineconeModal" tabindex="-1" aria-labelledby="pineconeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pineconeModalLabel">Pinecone Integration</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-    </div>
-  </main>
-
-  <!-- Pinecone Modal (unchanged) -->
-  <div class="modal fade" id="pineconeModal" tabindex="-1" aria-labelledby="pineconeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="pineconeModalLabel">Pinecone Integration</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-body">
+        {% if pinecone_connected %}
+        <p>Pinecone is currently <b>connected</b>. Do you want to disconnect?</p>
+        {% else %}
+        <div class="mb-3">
+          <label for="pineconeKey" class="form-label">Pinecone API Key</label>
+          <input type="text" id="pineconeKey" class="form-control" placeholder="Enter Pinecone API Key" />
+          <div class="form-text">We'll store this securely to enable Pinecone features.</div>
         </div>
-        <div class="modal-body">
-          {% if pinecone_connected %}
-          <p>Pinecone is currently <b>connected</b>. Do you want to disconnect?</p>
-          {% else %}
-          <div class="mb-3">
-            <label for="pineconeKey" class="form-label">Pinecone API Key</label>
-            <input type="text" id="pineconeKey" class="form-control" placeholder="Enter Pinecone API Key" />
-            <div class="form-text">Weâ€™ll store this securely to enable Pinecone features.</div>
-          </div>
-          <div class="mb-3">
-            <label for="assistantName" class="form-label">Assistant Name</label>
-            <input type="text" id="assistantName" class="form-control" placeholder="Enter Assistant Name"
-              value="{{ admin.assistant_name|default:'' }}">
-            <div class="form-text">Set the assistant name used for Pinecone connections.</div>
-          </div>
-          {% endif %}
-          <div id="pineconeAlert" class="alert d-none" role="alert"></div>
+        <div class="mb-3">
+          <label for="assistantName" class="form-label">Assistant Name</label>
+          <input type="text" id="assistantName" class="form-control" placeholder="Enter Assistant Name"
+            value="{{ admin.assistant_name|default:'' }}">
+          <div class="form-text">Set the assistant name used for Pinecone connections.</div>
         </div>
-        <div class="modal-footer">
-          {% if pinecone_connected %}
-          <button type="button" class="btn btn-danger" id="confirmDisconnect">Disconnect</button>
-          {% else %}
-          <button type="button" class="btn btn-success" id="confirmConnect">Connect</button>
-          {% endif %}
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        </div>
+        {% endif %}
+        <div id="pineconeAlert" class="alert d-none" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        {% if pinecone_connected %}
+        <button type="button" class="btn btn-danger" id="confirmDisconnect">Disconnect</button>
+        {% else %}
+        <button type="button" class="btn btn-success" id="confirmConnect">Connect</button>
+        {% endif %}
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ChatGPT Modal (new) -->
-  <div class="modal fade" id="chatgptModal" tabindex="-1" aria-labelledby="chatgptModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="chatgptModalLabel">ChatGPT Integration</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- ChatGPT Modal -->
+<div class="modal fade" id="chatgptModal" tabindex="-1" aria-labelledby="chatgptModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="chatgptModalLabel">ChatGPT Integration</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if chatgpt_connected %}
+        <p>ChatGPT is currently <b>connected</b>. Do you want to disconnect?</p>
+        {% else %}
+        <div class="mb-3">
+          <label for="chatgptKey" class="form-label">OpenAI API Key</label>
+          <input type="text" id="chatgptKey" class="form-control" placeholder="Enter OpenAI API Key" />
+          <div class="form-text">We'll store this securely to enable ChatGPT features.</div>
         </div>
-        <div class="modal-body">
-          {% if chatgpt_connected %}
-          <p>ChatGPT is currently <b>connected</b>. Do you want to disconnect?</p>
-          {% else %}
-          <div class="mb-3">
-            <label for="chatgptKey" class="form-label">OpenAI API Key</label>
-            <input type="text" id="chatgptKey" class="form-control" placeholder="Enter OpenAI API Key" />
-            <div class="form-text">We'll store this securely to enable ChatGPT features.</div>
-          </div>
-          {% endif %}
-          <div id="chatgptAlert" class="alert d-none" role="alert"></div>
-        </div>
-        <div class="modal-footer">
-          {% if chatgpt_connected %}
-          <button type="button" class="btn btn-danger" id="confirmChatGPTDisconnect">Disconnect</button>
-          <button type="button" class="btn btn-primary" id="goToPromptPage">Enter Prompt</button>
-          <button type="button" class="btn btn-secondary" id="goToAIpage">AI Agent</button>
-          {% else %}
-          <button type="button" class="btn btn-success" id="confirmChatGPTConnect">Connect</button>
-          {% endif %}
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        </div>
+        {% endif %}
+        <div id="chatgptAlert" class="alert d-none" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        {% if chatgpt_connected %}
+        <button type="button" class="btn btn-danger" id="confirmChatGPTDisconnect">Disconnect</button>
+        <button type="button" class="btn btn-primary" id="goToPromptPage">Enter Prompt</button>
+        <button type="button" class="btn btn-secondary" id="goToAIpage">AI Agent</button>
+        {% else %}
+        <button type="button" class="btn btn-success" id="confirmChatGPTConnect">Connect</button>
+        {% endif %}
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Calendly Modal (new) -->
-  <div class="modal fade" id="calendlyModal" tabindex="-1" aria-labelledby="calendlyModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="calendlyModalLabel">Calendly Integration</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Calendly Modal -->
+<div class="modal fade" id="calendlyModal" tabindex="-1" aria-labelledby="calendlyModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="calendlyModalLabel">Calendly Integration</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if calendly_connected %}
+        <p>Calendly is currently <b>connected</b>.</p>
+        <div class="mb-3">
+          <label class="form-label">Scheduling URL</label>
+          <input type="text" class="form-control" value="{{ admin.calendly_scheduling_url }}" disabled>
         </div>
-        <div class="modal-body">
-          {% if calendly_connected %}
-          <p>Calendly is currently <b>connected</b>.</p>
-          <div class="mb-3">
-            <label class="form-label">Scheduling URL</label>
-            <input type="text" class="form-control" value="{{ admin.calendly_scheduling_url }}" disabled>
-          </div>
-          <hr>
-          <h6>Follow-up Settings</h6>
-          <div class="mb-3">
-            <label for="followupDelayRange" class="form-label">
-              Delay: <span id="followupDelayValue">{{ admin.followup_delay_minutes|default:"10" }}</span> minutes
-            </label>
-            <input type="range" class="form-range" id="followupDelayRange" min="1" max="60"
-              value="{{ admin.followup_delay_minutes|default:10 }}">
-          </div>
-          <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" id="followupEnabled" {% if admin.followup_enabled %}checked{% endif %}>
-            <label class="form-check-label" for="followupEnabled">Enable follow-up messages</label>
-          </div>
-          {% else %}
-          <div class="mb-3">
-            <label for="calendlyToken" class="form-label">Calendly Personal Access Token</label>
-            <input type="password" id="calendlyToken" class="form-control" placeholder="Enter your Calendly PAT">
-            <div class="form-text">
-              Get your token from <a href="https://calendly.com/integrations/api_webhooks" target="_blank">Calendly API
-                Settings</a>
-            </div>
-          </div>
-          <div class="mb-3">
-            <label for="calendlySchedulingUrl" class="form-label">Scheduling URL</label>
-            <input type="text" id="calendlySchedulingUrl" class="form-control"
-              placeholder="https://calendly.com/your-name/30min">
-            <div class="form-text">The booking link to share with users</div>
-          </div>
-          {% endif %}
-          <div id="calendlyAlert" class="alert d-none" role="alert"></div>
+        <hr>
+        <h6>Follow-up Settings</h6>
+        <div class="mb-3">
+          <label for="followupDelayRange" class="form-label">
+            Delay: <span id="followupDelayValue">{{ admin.followup_delay_minutes|default:"10" }}</span> minutes
+          </label>
+          <input type="range" class="form-range" id="followupDelayRange" min="1" max="60"
+            value="{{ admin.followup_delay_minutes|default:10 }}">
         </div>
-        <div class="modal-footer">
-          {% if calendly_connected %}
-          <button type="button" class="btn btn-primary" id="saveFollowupSettings">Save Settings</button>
-          <button type="button" class="btn btn-danger" id="confirmCalendlyDisconnect">Disconnect</button>
-          {% else %}
-          <button type="button" class="btn btn-success" id="confirmCalendlyConnect">Connect</button>
-          {% endif %}
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" id="followupEnabled" {% if admin.followup_enabled %}checked{% endif %}>
+          <label class="form-check-label" for="followupEnabled">Enable follow-up messages</label>
         </div>
+        {% else %}
+        <div class="mb-3">
+          <label for="calendlyToken" class="form-label">Calendly Personal Access Token</label>
+          <input type="password" id="calendlyToken" class="form-control" placeholder="Enter your Calendly PAT">
+          <div class="form-text">Get your token from <a href="https://calendly.com/integrations/api_webhooks"
+              target="_blank">Calendly API Settings</a></div>
+        </div>
+        <div class="mb-3">
+          <label for="calendlySchedulingUrl" class="form-label">Scheduling URL</label>
+          <input type="text" id="calendlySchedulingUrl" class="form-control"
+            placeholder="https://calendly.com/your-name/30min">
+          <div class="form-text">The booking link to share with users</div>
+        </div>
+        {% endif %}
+        <div id="calendlyAlert" class="alert d-none" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        {% if calendly_connected %}
+        <button type="button" class="btn btn-primary" id="saveFollowupSettings">Save Settings</button>
+        <button type="button" class="btn btn-danger" id="confirmCalendlyDisconnect">Disconnect</button>
+        {% else %}
+        <button type="button" class="btn btn-success" id="confirmCalendlyConnect">Connect</button>
+        {% endif %}
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
       </div>
     </div>
   </div>
-  <!-- Bootstrap 5 JS bundle (includes Popper) -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-  <script>
-    // CSRF helper function (unchanged)
-    function getCookie(name) {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop().split(';').shift();
-      return null;
-    }
-    const csrfFromCookie = getCookie('csrftoken');
-    const csrfFromMeta = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    const CSRF_TOKEN = csrfFromCookie || csrfFromMeta || '';
-
-    // Pinecone modal handlers (unchanged)
-    const pineconeModalEl = document.getElementById('pineconeModal');
-    const pineconeModal = new bootstrap.Modal(pineconeModalEl);
-
-    const disconnectLink = document.getElementById('disconnect');
-    const connectLink = document.getElementById('connect');
-
-    if (disconnectLink) {
-      disconnectLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        pineconeModal.show();
-      });
-    }
-    if (connectLink) {
-      connectLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        pineconeModal.show();
-      });
-    }
-
-    function showAlert(message, type = 'info', alertId = 'pineconeAlert') {
-      const alertEl = document.getElementById(alertId);
-      alertEl.className = `alert alert-${type}`;
-      alertEl.textContent = message;
-      alertEl.classList.remove('d-none');
-    }
-    function clearAlert(alertId = 'pineconeAlert') {
-      const alertEl = document.getElementById(alertId);
-      alertEl.classList.add('d-none');
-      alertEl.textContent = '';
-    }
-
-    const confirmDisconnectBtn = document.getElementById('confirmDisconnect');
-    if (confirmDisconnectBtn) {
-      confirmDisconnectBtn.addEventListener('click', async () => {
-        clearAlert();
-        try {
-          const res = await fetch('{% url "disconnect" %}', { method: 'GET' });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const data = await res.json();
-          showAlert(data?.msg || 'Disconnected', 'success');
-          setTimeout(() => window.location.reload(), 600);
-        } catch (err) {
-          showAlert('Failed to disconnect. ' + err.message, 'danger');
-        }
-      });
-    }
-
-    const confirmConnectBtn = document.getElementById('confirmConnect');
-    if (confirmConnectBtn) {
-      confirmConnectBtn.addEventListener('click', async () => {
-        clearAlert();
-        const keyInput = document.getElementById('pineconeKey');
-        const assistantInput = document.getElementById('assistantName');
-        const apiKey = keyInput?.value?.trim();
-        const assistantName = assistantInput?.value.trim();
-        if (!apiKey || !assistantName) {
-          showAlert('Please enter both API key and assistant name.', 'warning');
-          return;
-        }
-        try {
-          const origin = window.location.origin + '/connect_pinecone_token/';
-          const res = await fetch(origin, {
-            method: 'POST',
-            body: JSON.stringify({ api_key: apiKey, assistant_name: assistantName }),
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': CSRF_TOKEN
-            }
-          });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const data = await res.json();
-          showAlert(data?.msg || 'Connected', 'success');
-          setTimeout(() => window.location.reload(), 600);
-        } catch (err) {
-          showAlert('Failed to connect. ' + err.message, 'danger');
-        }
-      });
-    }
-
-    // ChatGPT modal handlers
-    const chatgptModalEl = document.getElementById('chatgptModal');
-    const chatgptModal = new bootstrap.Modal(chatgptModalEl);
-
-    const chatgptConnectLink = document.getElementById('chatgptConnectLink');
-    if (chatgptConnectLink) {
-      chatgptConnectLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        chatgptModal.show();
-      });
-    }
-
-    const chatgptDisconnectLink = document.getElementById('chatgptDisconnectLink');
-    if (chatgptDisconnectLink) {
-      chatgptDisconnectLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        chatgptModal.show();
-      });
-    }
-
-    const confirmChatGPTConnectBtn = document.getElementById('confirmChatGPTConnect');
-    if (confirmChatGPTConnectBtn) {
-      confirmChatGPTConnectBtn.addEventListener('click', async () => {
-        clearAlert('chatgptAlert');
-        const apiKey = document.getElementById('chatgptKey').value.trim();
-        if (!apiKey) {
-          showAlert('Please enter an API key.', 'warning', 'chatgptAlert');
-          return;
-        }
-        try {
-          const res = await fetch('/connect_openai_key/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': CSRF_TOKEN
-            },
-            body: JSON.stringify({ api_key: apiKey })
-          });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const data = await res.json();
-          showAlert(data?.msg || 'Connected', 'success', 'chatgptAlert');
-          setTimeout(() => window.location.reload(), 600);
-        } catch (err) {
-          showAlert('Failed to connect. ' + err.message, 'danger', 'chatgptAlert');
-        }
-      });
-    }
-
-    const confirmChatGPTDisconnectBtn = document.getElementById('confirmChatGPTDisconnect');
-    if (confirmChatGPTDisconnectBtn) {
-      confirmChatGPTDisconnectBtn.addEventListener('click', async () => {
-        clearAlert('chatgptAlert');
-        try {
-          const res = await fetch('/disconnect_openai_key/', {
-            method: 'POST',
-            headers: { 'X-CSRFToken': CSRF_TOKEN }
-          });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const data = await res.json();
-          showAlert(data?.msg || 'Disconnected', 'success', 'chatgptAlert');
-          setTimeout(() => window.location.reload(), 600);
-        } catch (err) {
-          showAlert('Failed to disconnect. ' + err.message, 'danger', 'chatgptAlert');
-        }
-      });
-    }
-
-    const goToPromptPageBtn = document.getElementById('goToPromptPage');
-    if (goToPromptPageBtn) {
-      goToPromptPageBtn.addEventListener('click', async (e) => {
-        e.preventDefault(); // Prevent default button action
-        await updateChatGPTMode('prompt'); // Send mode change to backend
-        window.location.href = '/chatgpt_prompt/'; // Then redirect
-      });
-    }
-
-    function showAlert(message, type = 'info', alertId = 'chatgptAlert') {
-      const alertEl = document.getElementById(alertId);
-      alertEl.className = `alert alert-${type}`;
-      alertEl.textContent = message;
-      alertEl.classList.remove('d-none');
-    }
-
-    function clearAlert(alertId = 'chatgptAlert') {
-      const alertEl = document.getElementById(alertId);
-      alertEl.classList.add('d-none');
-      alertEl.textContent = '';
-    }
-    const goToAIpageBtn = document.getElementById('goToAIpage');
-    if (goToAIpageBtn) {
-      goToAIpageBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        await updateChatGPTMode('ai_agent');
-        window.location.href = '/ai_agent/upload/';
-      });
-
-
-    }
-    async function updateChatGPTMode(mode) {
-      const csrfToken = CSRF_TOKEN;  // CSRF token variable you already have
-      const adminId = '{{ admin.id }}';  // Make sure admin.id is passed into the template context
-
-      const response = await fetch('/set_chatgpt_mode/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-CSRFToken': csrfToken,
-        },
-        body: new URLSearchParams({
-          'admin_id': adminId,
-          'mode': mode,
-        }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        alert('Bot mode changed to: ' + data.mode);
-      } else {
-        alert('Failed to change mode: ' + (data.error || 'Unknown error'));
-      }
-    }
-
-    document.getElementById('goToPromptPage').addEventListener('click', async () => {
-      await updateChatGPTMode('prompt');
-      window.location.href = '/chatgpt_prompt/';
-    });
-
-    document.getElementById('goToAIpage').addEventListener('click', async () => {
-      await updateChatGPTMode('ai_agent');
-      window.location.href = '/ai_agent/upload/';
-    });
-
-    // ==================== CALENDLY MODAL HANDLERS ====================
-    const calendlyModalEl = document.getElementById('calendlyModal');
-    const calendlyModal = new bootstrap.Modal(calendlyModalEl);
-
-    const calendlyConnectLink = document.getElementById('calendlyConnectLink');
-    if (calendlyConnectLink) {
-      calendlyConnectLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        calendlyModal.show();
-      });
-    }
-
-    const calendlyDisconnectLink = document.getElementById('calendlyDisconnectLink');
-    if (calendlyDisconnectLink) {
-      calendlyDisconnectLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        calendlyModal.show();
-      });
-    }
-
-    // Range slider update
-    const followupDelayRange = document.getElementById('followupDelayRange');
-    const followupDelayValue = document.getElementById('followupDelayValue');
-    if (followupDelayRange && followupDelayValue) {
-      followupDelayRange.addEventListener('input', () => {
-        followupDelayValue.textContent = followupDelayRange.value;
-      });
-    }
-
-    // Connect Calendly
-    const confirmCalendlyConnectBtn = document.getElementById('confirmCalendlyConnect');
-    if (confirmCalendlyConnectBtn) {
-      confirmCalendlyConnectBtn.addEventListener('click', async () => {
-        clearAlert('calendlyAlert');
-        const token = document.getElementById('calendlyToken').value.trim();
-        const url = document.getElementById('calendlySchedulingUrl').value.trim();
-
-        if (!token || !url) {
-          showAlert('Please enter both token and scheduling URL.', 'warning', 'calendlyAlert');
-          return;
-        }
-
-        try {
-          const res = await fetch('/connect_calendly/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': CSRF_TOKEN
-            },
-            body: JSON.stringify({ calendly_token: token, scheduling_url: url })
-          });
-          const data = await res.json();
-          if (data.success) {
-            showAlert(data.msg || 'Connected!', 'success', 'calendlyAlert');
-            setTimeout(() => window.location.reload(), 600);
-          } else {
-            showAlert(data.error || 'Failed to connect', 'danger', 'calendlyAlert');
-          }
-        } catch (err) {
-          showAlert('Failed to connect. ' + err.message, 'danger', 'calendlyAlert');
-        }
-      });
-    }
-
-    // Disconnect Calendly
-    const confirmCalendlyDisconnectBtn = document.getElementById('confirmCalendlyDisconnect');
-    if (confirmCalendlyDisconnectBtn) {
-      confirmCalendlyDisconnectBtn.addEventListener('click', async () => {
-        clearAlert('calendlyAlert');
-        try {
-          const res = await fetch('/disconnect_calendly/', {
-            method: 'POST',
-            headers: { 'X-CSRFToken': CSRF_TOKEN }
-          });
-          const data = await res.json();
-          if (data.success) {
-            showAlert(data.msg || 'Disconnected!', 'success', 'calendlyAlert');
-            setTimeout(() => window.location.reload(), 600);
-          } else {
-            showAlert(data.error || 'Failed to disconnect', 'danger', 'calendlyAlert');
-          }
-        } catch (err) {
-          showAlert('Failed to disconnect. ' + err.message, 'danger', 'calendlyAlert');
-        }
-      });
-    }
-
-    // Save Follow-up Settings
-    const saveFollowupSettingsBtn = document.getElementById('saveFollowupSettings');
-    if (saveFollowupSettingsBtn) {
-      saveFollowupSettingsBtn.addEventListener('click', async () => {
-        clearAlert('calendlyAlert');
-        const delayMinutes = document.getElementById('followupDelayRange')?.value || 10;
-        const enabled = document.getElementById('followupEnabled')?.checked || false;
-
-        try {
-          const res = await fetch('/update_followup_settings/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': CSRF_TOKEN
-            },
-            body: JSON.stringify({
-              followup_delay_minutes: parseInt(delayMinutes),
-              followup_enabled: enabled
-            })
-          });
-          const data = await res.json();
-          if (data.success) {
-            showAlert(data.msg || 'Settings saved!', 'success', 'calendlyAlert');
-            setTimeout(() => window.location.reload(), 600);
-          } else {
-            showAlert(data.error || 'Failed to save', 'danger', 'calendlyAlert');
-          }
-        } catch (err) {
-          showAlert('Failed to save. ' + err.message, 'danger', 'calendlyAlert');
-        }
-      });
-    }
-
-  </script>
-</body>
-
-</html>
+</div>
+{% endblock %}

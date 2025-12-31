@@ -1,37 +1,19 @@
 {% load static custom_tags %}
 
 <style>
-  .sidebar {
-  width: 220px;
-  background: #CBDCEB;
-  border-right: 1px solid #CBDCEB;
-  padding: 15px 10px;
-  font-family: Arial, sans-serif;
-  transition: transform 0.3s ease;
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100%;
-  z-index: 1000;
-}
-
-.main {
-  margin-left: 240px;
-  padding: 20px;
-  min-height: 100vh;
-  display: block;
-}
-
-
-  .sidebar.hidden {
-    transform: translateX(-70%);
-  }
-
-  .sidebar-header {
+  /* Topbar */
+  .topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 56px;
+    width: 100%;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
     display: flex;
     align-items: center;
-    justify-content: space-between; /* Logo left, toggle button right */
-    margin-bottom: 20px;
+    padding: 0 16px;
+    z-index: 1100;
   }
 
   .toggle-btn {
@@ -39,81 +21,160 @@
     border: none;
     font-size: 22px;
     cursor: pointer;
-    color: #000;
+    color: #334155;
   }
 
-  .sidebar a {
+  /* Sidebar */
+  .sidebar {
+    width: 250px;
+    background: #eef4ff;
+    border-right: 1px solid #e5edff;
+    padding: 16px;
+    position: fixed;
+    top: 56px;
+    /* below topbar */
+    left: 0;
+    height: calc(100vh - 56px);
+    transition: transform 0.25s ease;
+    z-index: 1000;
+    box-sizing: border-box;
+  }
+
+  .sidebar.hidden {
+    transform: translateX(-100%);
+  }
+
+  .brand {
     display: flex;
     align-items: center;
-    padding: 10px;
-    margin-bottom: 5px;
-    border-radius: 8px;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 16px;
+    color: #0f172a;
+    margin-bottom: 28px;
+  }
+
+  .brand img {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Menu */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    margin-bottom: 6px;
+    border-radius: 14px;
     text-decoration: none;
-    color: #000;
-    font-size: 15px;
-    transition: background 0.3s, color 0.3s;
+    font-size: 14px;
+    font-weight: 500;
+    color: #475569;
+    transition: all 0.2s ease;
   }
 
-  .sidebar a i {
-    margin-right: 8px;
+  .nav-item svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.8;
   }
 
-  .sidebar a.active {
-    background: #6D94C5;
-    color: black;
+  .nav-item:hover {
+    background: #dde9ff;
   }
 
-  .sidebar a:hover {
-    background: #f0f0f0;
+  .nav-item.active {
+    background: #3b82f6;
+    color: #ffffff;
+  }
+
+  .nav-item.active svg {
+    stroke: #ffffff;
+  }
+
+  /* Main content */
+  .main {
+    margin-left: 240px;
+    padding: 24px;
+    padding-top: 80px;
+    /* space for topbar */
+    min-height: 100vh;
+    transition: margin-left 0.25s ease;
+  }
+
+  .main.full {
+    margin-left: 0;
   }
 </style>
 
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+</div>
+
+<!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
-  <!-- Sidebar Header -->
-  <div class="sidebar-header">
-    <div class="brand">
-      <img src="{% static 'images/Speedbot.png' %}" alt="Logo" style="height:35px; margin-right:8px;">
-      <strong>Speedbots</strong>
-    </div>
-    <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+  <div class="brand">
+    <img src="{% static 'images/speedbot.png' %}" alt="Speedbots" style="width:36px; height:36px; object-fit:contain;">
+    Speedbots
   </div>
 
   {% url 'dashboard' as dashboard_url %}
-  <a href="{{ dashboard_url }}" class="{% if request.path|startswith:'dashboard' %}active{% endif %}">
-    <i class="fas fa-th-large"></i> Dashboard
+  <a href="{{ dashboard_url }}" class="nav-item {% if request.path == dashboard_url %}active{% endif %}">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <rect x="3" y="3" width="7" height="7" rx="2" />
+      <rect x="14" y="3" width="7" height="7" rx="2" />
+      <rect x="3" y="14" width="7" height="7" rx="2" />
+      <rect x="14" y="14" width="7" height="7" rx="2" />
+    </svg>
+    Dashboard
   </a>
 
   {% url 'inbox_dashboard' as inbox_url %}
-  <a href="{{ inbox_url }}" class="{% if request.path|startswith:'inbox' %}active{% endif %}">
-    <i class="fas fa-comment-alt"></i> Inbox
+  <a href="{{ inbox_url }}" class="nav-item {% if request.path == inbox_url %}active{% endif %}">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path d="M3 12h5l2 3h4l2-3h5" />
+      <path d="M5 6h14v10H5z" />
+    </svg>
+    Inbox
   </a>
 
-  <!-- {% url 'flows' as flows_url %}
-  <a href="{{ flows_url }}" class="{% if request.path|startswith:'flows' %}active{% endif %}">
-    <i class="fas fa-project-diagram"></i> Flows
-  </a> -->
+  {% url 'broadcast_msg' as broadcast_url %}
+  <a href="{{ broadcast_url }}" class="nav-item {% if request.path == broadcast_url %}active{% endif %}">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path d="M3 11v2a2 2 0 0 0 2 2h1l4 4v-7l-4 4H5a2 2 0 0 1-2-2z" />
+      <path d="M14 9l6-3v12l-6-3" />
+    </svg>
+    Broadcast
+  </a>
 
- {% url 'contact_dashboard' as contact_url %}
-<a href="{{ contact_url }}"
-   class="{% if request.path == contact_url %}active{% endif %}">
-  <i class="fas fa-user"></i> My Contacts
-</a>
-
-{% url 'broadcast_msg' as broadcast_url %}
-<a href="{{ broadcast_url }}" class="{% if request.path == broadcast_url %}active{% endif %}">
-  <i class="fas fa-bullhorn"></i> Broadcast
-</a>
-
-
+  {% url 'contact_dashboard' as contact_url %}
+  <a href="{{ contact_url }}" class="nav-item {% if request.path == contact_url %}active{% endif %}">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20a8 8 0 0 1 16 0" />
+    </svg>
+    My Contacts
+  </a>
 
   {% url 'settings' as settings_url %}
-  <a href="{{ settings_url }}" class="{% if request.path|startswith:'settings' %}active{% endif %}">
-    <i class="fas fa-cog"></i> Settings
+  <a href="{{ settings_url }}" class="nav-item {% if request.path == settings_url %}active{% endif %}">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <circle cx="12" cy="12" r="3" />
+      <path
+        d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+    </svg>
+    Settings
   </a>
 </div>
 
 <script>
-function toggleSidebar() {
-  document.getElementById("sidebar").classList.toggle("hidden");
-}
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('hidden');
+    const main = document.querySelector('.main');
+    const header = document.querySelector('.page-header');
+    if (main) main.classList.toggle('full');
+    if (header) header.classList.toggle('full');
+  }
 </script>

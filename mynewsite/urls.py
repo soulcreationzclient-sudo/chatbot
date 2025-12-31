@@ -48,6 +48,18 @@ urlpatterns = [
     path('setting/channels', Settingcontroller.channels_view, name='channels_view'),
     # integration
     path('setting/integration',Settingcontroller.integration,name='integration_view'),
+    path('setting/external_apis',Settingcontroller.external_apis,name='external_apis_view'),
+    # External APIs CRUD
+    path('api/external-api/create/', Settingcontroller.external_api_create, name='external_api_create'),
+    path('api/external-api/<int:api_id>/', Settingcontroller.external_api_detail, name='external_api_detail'),
+    path('api/external-api/<int:api_id>/update/', Settingcontroller.external_api_update, name='external_api_update'),
+    path('api/external-api/<int:api_id>/delete/', Settingcontroller.external_api_delete, name='external_api_delete'),
+    path('api/external-api/<int:api_id>/test/', Settingcontroller.external_api_test, name='external_api_test'),
+    # Image Assets CRUD
+    path('setting/image_assets', Settingcontroller.image_assets, name='image_assets_view'),
+    path('api/image-asset/create/', Settingcontroller.image_asset_create, name='image_asset_create'),
+    path('api/image-asset/<int:asset_id>/update/', Settingcontroller.image_asset_update, name='image_asset_update'),
+    path('api/image-asset/<int:asset_id>/delete/', Settingcontroller.image_asset_delete, name='image_asset_delete'),
     path('whatsapp_connect',whatsappcontroller.connect,name='whatsapp_connect'),
     #path('admin/connect_google_calendar/', Integrationcontroller.connect_google_calendar, name='connect_google_calendar'),
     #path('admin/disconnect_google_calendar/', Integrationcontroller.disconnect_google_calendar, name='disconnect_google_calendar'),

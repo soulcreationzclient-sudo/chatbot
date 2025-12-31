@@ -1,0 +1,257 @@
+
+[Debug] Processing message from 1234567890
+[Debug] OpenAI Key found: sk-pr...
+
+[Debug] Processing message from 1234567890
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: Hello! Welcome to Timurbay Seafront Residence & Suites. To proceed with your check-in, could you please upload your Booking Confirmation Slip (either as a PDF or an image)?
+[Debug] Bot response is valid
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: Hello! Welcome to Timurbay Seafront Residence & Suites. Please upload your Booking Confirmation Slip (PDF or Image) so we can start the check-in process.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+[Debug] Sent to WhatsApp. Status: 200
+[Debug] Sent to WhatsApp. Status: 200
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Tool] AI wants to call 1 tools
+[Tool] Calling verify_booking with {'booking_id': '12345'}
+[Debug] Bot Response generated: Thank you for providing your booking ID. Your booking has been successfully verified!
+
+Next, could you please let me know which platform you booked with? This information will help me explain if there's any outstanding payment or specific details you need to know, including deposits and fees.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Tool] AI wants to call 1 tools
+[Tool] Calling verify_booking with {'booking_id': '12345'}
+[Tool Result] Output: {"args": {}, "data": "{\"action\": \"verify_booking\", \"booking_id\": \"12345\", \"status\": \"confirmed\", \"valid\": true}", "files": {}, "form": {}, "headers": {"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "Content-Length": "89", "Content-Type": "application/json", "Host": "httpbin.org", "User-Agent": "python-requests/2.32.3", "X-Amzn-Trace-Id": "Root=1-694e1bf8-06687029010bae140e2cd58c"}, "json": {"action": "verify_booking", "booking_id": "12345", "status": "confirmed", "valid": true}, "method": "POST", "origin": "103.161.99.32", "url": "https://httpbin.org/anything/verify_booking"}
+[Debug] Bot Response generated: Thank you for providing your Booking ID. Your booking has been successfully verified.
+
+Next, could you please let me know which platform you booked with (Agoda, Booking.com, Trip.com, Airbnb, or Walk-in)? This will help me provide the correct details regarding your payments. Additionally, as part of the check-in process, we require a refundable security deposit of RM100 and any outstanding room rate amount. If you booked through Trip.com, there's an additional conservation fee of RM3 per night.
+
+Here are the bank details for your payment:
+
+- **Bank**: Maybank
+- **Account Number**: 555-123-456-789
+- **Account Name**: Timurbay Management
+
+Kindly upload a snapshot of the payment receipt once you've made the payment.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Tool] AI wants to call 1 tools
+[Tool] Calling process_booking_slip with {'platform_name': 'Trip.com', 'hotel_name': 'Timurbay Seafront Residences', 'address': '', 'phone': '', 'booking_reference': '30478925320', 'confirmation_number': '999230478948429', 'pin_number': '', 'guest_name': 'ABD MANAF BIN MOHD ALI', 'check_in_date': 'Feb 23, 2024', 'check_in_time': '', 'check_out_date': 'Feb 24, 2024', 'check_out_time': '', 'number_of_rooms': '', 'number_of_nights': '', 'number_of_guests': '', 'room_type': '', 'room_info': '', 'meals_included': '', 'occupancy_limit': '', 'price_paid_online': 'RM 216.83', 'tax_amount': '', 'extra_charges_due': '', 'extra_charge_description': '', 'total_amount': '', 'currency': 'RM', 'cancellation_policy': '', 'booking_status': '', 'contact_info': '', 'notes': '', 'verified': 'yes'}
+[Tool Result] Output: {"response": "\u2705 Booking Confirmation\n\ud83c\udfe8 Hotel: Timurbay Seafront Residences\n\ud83d\udc64 Guest: ABD MANAF BIN MOHD ALI\n\ud83d\udd22 Booking Ref: 30478925320 \u2022 Confirmation: 999230478948429 \u2022 PIN: -\n\ud83d\udcc5 Check-in: Feb 23, 2024 \n\ud83d\udcc6 Check-out: Feb 24, 2024 \n\ud83d\udeaa Room Type: -\n\ud83d\udc65 Rooms: - \u2022 Nights: - \u2022 Guests: - \u2022 Limit: -\n\ud83d\udcb0 Paid Online: RM 216.83 \u2022 Tax: - \u2022 Extra: - \u2022 Total: -\n\ud83d\udce6 Status: -\n\ud83c\udf10 Platform: Trip.com\n\u2705 Verified", "hotel_name": "Timurbay Seafront Residences", "address": null, "phone": null, "guest_name": "ABD MANAF BIN MOHD ALI", "booking_reference": "30478925320", "confirmation_number": "999230478948429", "pin_number": null, "check_in_date": "Feb 23, 2024", "check_in_time": null, "check_out_date": "Feb 24, 2024", "check_out_time": null, "number_of_rooms": null, "number_of_nights": null, "number_of_guests": null, "room_type": null, "room_info": null, "meals_included": null, "occupancy_limit": null, "price_paid_online": "RM 216.83", "tax_amount": null, "extra_charges_due": null, "extra_charge_description": null, "total_amount": null, "currency": "RM", "booking_status": null, "platform_name": "Trip.com", "contact_info": null, "cancellation_policy": null, "verified": "yes"}
+[Debug] Bot Response generated: The booking for **ABD MANAF BIN MOHD ALI** at **Timurbay Seafront Residences** has been successfully verified. Below are the details concerning your stay:
+
+- **Check-in Date:** Feb 23, 2024
+- **Check-out Date:** Feb 24, 2024
+- **Platform:** Trip.com
+- **Paid Online:** RM 216.83
+
+### Next Steps:
+For completing your registration, could you please provide the following details?
+1. **Full Name** and **IC number**
+2. **Contact Number**
+3. **Email Address**
+4. **Car Plate Number** (if applicable)
+
+Additionally, a **refundable deposit of RM 100** will be collected upon check-in, which will be refunded upon check-out provided there are no damages or needless expenses during your stay.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Tool] AI wants to call 1 tools
+[Tool] Calling process_booking_slip with {'platform_name': 'Trip.com', 'hotel_name': 'Timurbay Seafront Residences', 'address': '', 'phone': '', 'booking_reference': '30478925320', 'confirmation_number': '999230478948429', 'pin_number': '', 'guest_name': 'ABD MANAF BIN MOHD ALI', 'check_in_date': 'Feb 23, 2024', 'check_in_time': '', 'check_out_date': 'Feb 24, 2024', 'check_out_time': '', 'number_of_rooms': '', 'number_of_nights': '', 'number_of_guests': '', 'room_type': '', 'room_info': '', 'meals_included': '', 'occupancy_limit': '', 'price_paid_online': 'RM 216.83', 'tax_amount': '', 'extra_charges_due': '', 'extra_charge_description': '', 'total_amount': '', 'currency': '', 'cancellation_policy': '', 'booking_status': '', 'contact_info': '', 'notes': '', 'verified': 'yes'}
+[Tool Result] Output: {"response": "\u2705 Booking Confirmation\n\ud83c\udfe8 Hotel: Timurbay Seafront Residences\n\ud83d\udc64 Guest: ABD MANAF BIN MOHD ALI\n\ud83d\udd22 Booking Ref: 30478925320 \u2022 Confirmation: 999230478948429 \u2022 PIN: -\n\ud83d\udcc5 Check-in: Feb 23, 2024 \n\ud83d\udcc6 Check-out: Feb 24, 2024 \n\ud83d\udeaa Room Type: -\n\ud83d\udc65 Rooms: - \u2022 Nights: - \u2022 Guests: - \u2022 Limit: -\n\ud83d\udcb0 Paid Online: RM 216.83 \u2022 Tax: - \u2022 Extra: - \u2022 Total: -\n\ud83d\udce6 Status: -\n\ud83c\udf10 Platform: Trip.com\n\u2705 Verified", "hotel_name": "Timurbay Seafront Residences", "address": null, "phone": null, "guest_name": "ABD MANAF BIN MOHD ALI", "booking_reference": "30478925320", "confirmation_number": "999230478948429", "pin_number": null, "check_in_date": "Feb 23, 2024", "check_in_time": null, "check_out_date": "Feb 24, 2024", "check_out_time": null, "number_of_rooms": null, "number_of_nights": null, "number_of_guests": null, "room_type": null, "room_info": null, "meals_included": null, "occupancy_limit": null, "price_paid_online": "RM 216.83", "tax_amount": null, "extra_charges_due": null, "extra_charge_description": null, "total_amount": null, "currency": null, "booking_status": null, "platform_name": "Trip.com", "contact_info": null, "cancellation_policy": null, "verified": "yes"}
+[Debug] Bot Response generated: The booking confirmation for **ABD MANAF BIN MOHD ALI** at **Timurbay Seafront Residences** for **Feb 23, 2024** to **Feb 24, 2024** has been successfully processed.
+
+### Next Steps:
+1. **Guest Registration:**
+   - Please provide the following details for the guest registration:
+     - Name
+     - Identity Card Number
+     - Contact Details
+     - Car Plate Number (if applicable)
+
+2. **Payments:**
+   - A **refundable deposit of RM100** is required upon check-in. This will be refunded upon check-out after room inspection.
+   - All payments should be settled directly at the reception.
+
+Please let me know the guest details to complete the registration, or if you have any other inquiries regarding this booking.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: Hello! How can I assist you today? If you're here to check in, please upload your booking slip for "Timurbay Seafront Residences".
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: Hello! How can I assist you today? If you have a booking slip for Timurbay Seafront Residences, you can upload it here, and I'll help you with the check-in process.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: It appears that the document you uploaded previously did not contain the necessary details to proceed. If you have another document relevant to your booking at Timurbay Seafront Residence & Suites, please upload it, and I'll assist you further.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+[Vision] Downloaded media bytes: 53806
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: Hello! How can I assist you today? If you have a booking slip for Timurbay Seafront Residence & Suites, please upload it here for verification and further processing.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+[Vision] Downloaded media bytes: 53806
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: It appears that the uploaded document is not a valid booking slip for "Timurbay Seafront Residence & Suites". If you have a booking slip from Timurbay and need assistance with it, please check and re-upload the correct document. If you have any other questions or requirements, feel free to let me know!
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: Hello! How can I assist you today? If you have a booking slip for Timurbay Seafront Residence & Suites, you can upload it here for verification and further assistance.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+[Vision] Downloaded media bytes: 53806
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: Based on my analysis, the document you uploaded does not qualify for further processing as it does not meet the requirement for a booking slip verification from "Timurbay Seafront Residences". If you have any other document or need assistance with anything else, please let me know!
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: Hello! How can I assist you today?
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: Hello! How can I assist you today? If you're here to check in, please upload your booking slip for Timurbay Seafront Residence & Suites.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+[Vision] Downloaded media bytes: 53806
+
+[Vision] OpenAI Response:
+Based on the document, here are the extracted booking details:
+
+- **platform_name**: Agoda
+- **hotel_name**: Timurbay Seafront Residence & Suites
+- **address**: (Empty, not provided)
+- **phone**: (Empty, not provided)
+- **booking_reference**: 1965740483
+- **confirmation_number**: (Empty, not provided)
+- **pin_number**: (Empty, not provided)
+- **guest_name**: azhar abd hashim
+- **check_in_date**: December 26, 2025
+- **check_in_time**: (Empty, not provided)
+- **check_out_date**: December 27, 2025
+- **check_out_time**: (Empty, not provided)
+- **number_of_rooms**: 2
+- **number_of_nights**: 1
+- **number_of_guests**: (Empty, not provided)
+- **room_type**: One Bedroom Suite Sea View
+- **room_info**: (Empty, not provided)
+- **meals_included**: (Empty, not provided)
+- **occupancy_limit**: (Empty, not provided)
+- **price_paid_online**: USD 167.12
+- **tax_amount**: (Empty, not provided)
+- **extra_charges_due**: USD 0.00
+- **extra_charge_description**: (Empty, not provided)
+- **total_amount**: MYR 681.54 (USD 167.12)
+- **currency**: MYR
+- **cancellation_policy**: (Empty, not provided)
+- **booking_status**: (Empty, not provided)
+- **contact_info**: syukriahtech@gmail.com
+- **notes**: This receipt is automatically generated.
+- **verified**: yes
+
+I'll proceed with the process.
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Tool] AI wants to call 1 tools
+[Tool] Calling process_booking_slip with {'platform_name': 'Agoda', 'hotel_name': 'Timurbay Seafront Residence & Suites', 'address': '', 'phone': '', 'booking_reference': '1965740483', 'confirmation_number': '', 'pin_number': '', 'guest_name': 'azhar abd hashim', 'check_in_date': 'December 26, 2025', 'check_in_time': '', 'check_out_date': 'December 27, 2025', 'check_out_time': '', 'number_of_rooms': '2', 'number_of_nights': '1', 'number_of_guests': '', 'room_type': 'One Bedroom Suite Sea View', 'room_info': '', 'meals_included': '', 'occupancy_limit': '', 'price_paid_online': 'USD 167.12', 'tax_amount': '', 'extra_charges_due': 'USD 0.00', 'extra_charge_description': '', 'total_amount': 'MYR 681.54', 'currency': 'MYR', 'cancellation_policy': '', 'booking_status': '', 'contact_info': 'syukriahtech@gmail.com', 'notes': 'This receipt is automatically generated.', 'verified': 'yes'}
+[Tool Result] Output: {"response": "\u2705 Booking Confirmation\n\ud83c\udfe8 Hotel: Timurbay Seafront Residence & Suites\n\ud83d\udc64 Guest: azhar abd hashim\n\ud83d\udd22 Booking Ref: 1965740483 \u2022 Confirmation: - \u2022 PIN: -\n\ud83d\udcc5 Check-in: December 26, 2025 \n\ud83d\udcc6 Check-out: December 27, 2025 \n\ud83d\udeaa Room Type: One Bedroom Suite Sea View\n\ud83d\udc65 Rooms: 2 \u2022 Nights: 1 \u2022 Guests: - \u2022 Limit: -\n\ud83d\udcb0 Paid Online: USD 167.12 \u2022 Tax: - \u2022 Extra: USD 0.00 \u2022 Total: MYR 681.54\n\ud83d\udce6 Status: -\n\ud83c\udf10 Platform: Agoda\n\ud83d\udcde Support: syukriahtech@gmail.com\n\u2705 Verified", "hotel_name": "Timurbay Seafront Residence & Suites", "address": null, "phone": null, "guest_name": "azhar abd hashim", "booking_reference": "1965740483", "confirmation_number": null, "pin_number": null, "check_in_date": "December 26, 2025", "check_in_time": null, "check_out_date": "December 27, 2025", "check_out_time": null, "number_of_rooms": "2", "number_of_nights": "1", "number_of_guests": null, "room_type": "One Bedroom Suite Sea View", "room_info": null, "meals_included": null, "occupancy_limit": null, "price_paid_online": "USD 167.12", "tax_amount": null, "extra_charges_due": "USD 0.00", "extra_charge_description": null, "total_amount": "MYR 681.54", "currency": "MYR", "booking_status": null, "platform_name": "Agoda", "contact_info": "syukriahtech@gmail.com", "cancellation_policy": null, "verified": "yes"}
+[LLM] OpenAI error details: 'charmap' codec can't encode character '\U0001f31f' in position 72: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\Meet\.gemini\chatbot\19 08\chatbot\newapp\controllers\whatsapp.py", line 565, in get_message
+    f.write(f"[Debug] Bot Response generated: {bot_response}\n")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f31f' in position 72: character maps to <undefined>
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Tool] AI wants to call 1 tools
+[Tool] Calling process_booking_slip with {'platform_name': 'Agoda', 'hotel_name': 'Timurbay Seafront Residence & Suites', 'address': '', 'phone': '', 'booking_reference': '1965740483', 'confirmation_number': '', 'pin_number': '', 'guest_name': 'azhar abd hashim', 'check_in_date': 'December 26, 2025', 'check_in_time': '', 'check_out_date': 'December 27, 2025', 'check_out_time': '', 'number_of_rooms': '2', 'number_of_nights': '1', 'number_of_guests': '', 'room_type': 'One Bedroom Suite Sea View', 'room_info': '', 'meals_included': '', 'occupancy_limit': '', 'price_paid_online': 'USD 167.12', 'tax_amount': '', 'extra_charges_due': 'USD 0.00', 'extra_charge_description': '', 'total_amount': 'MYR 681.54', 'currency': 'MYR', 'cancellation_policy': '', 'booking_status': '', 'contact_info': 'syukriahtech@gmail.com', 'notes': 'This receipt is automatically generated.', 'verified': 'yes'}
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Tool Result] Output: {"response": "\u2705 Booking Confirmation\n\ud83c\udfe8 Hotel: Timurbay Seafront Residence & Suites\n\ud83d\udc64 Guest: azhar abd hashim\n\ud83d\udd22 Booking Ref: 1965740483 \u2022 Confirmation: - \u2022 PIN: -\n\ud83d\udcc5 Check-in: December 26, 2025 \n\ud83d\udcc6 Check-out: December 27, 2025 \n\ud83d\udeaa Room Type: One Bedroom Suite Sea View\n\ud83d\udc65 Rooms: 2 \u2022 Nights: 1 \u2022 Guests: - \u2022 Limit: -\n\ud83d\udcb0 Paid Online: USD 167.12 \u2022 Tax: - \u2022 Extra: USD 0.00 \u2022 Total: MYR 681.54\n\ud83d\udce6 Status: -\n\ud83c\udf10 Platform: Agoda\n\ud83d\udcde Support: syukriahtech@gmail.com\n\u2705 Verified", "hotel_name": "Timurbay Seafront Residence & Suites", "address": null, "phone": null, "guest_name": "azhar abd hashim", "booking_reference": "1965740483", "confirmation_number": null, "pin_number": null, "check_in_date": "December 26, 2025", "check_in_time": null, "check_out_date": "December 27, 2025", "check_out_time": null, "number_of_rooms": "2", "number_of_nights": "1", "number_of_guests": null, "room_type": "One Bedroom Suite Sea View", "room_info": null, "meals_included": null, "occupancy_limit": null, "price_paid_online": "USD 167.12", "tax_amount": null, "extra_charges_due": "USD 0.00", "extra_charge_description": null, "total_amount": "MYR 681.54", "currency": "MYR", "booking_status": null, "platform_name": "Agoda", "contact_info": "syukriahtech@gmail.com", "cancellation_policy": null, "verified": "yes"}
+[Debug] Bot Response generated: Your booking has been successfully confirmed. 
+
+For completion of your check-in at Timurbay Seafront Residence & Suites, please provide the following details:
+1. Guest's full name
+2. National Identity Card (IC) number
+3. Car plate number (if applicable)
+
+Additionally, there is a refundable deposit of RM100 required at check-in. Please be prepared for this transaction. If you need further assistance or have more details to provide, feel free to share them now.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+[Tool] AI wants to call 1 tools
+[Tool] Calling process_booking_slip with {'platform_name': 'Agoda', 'hotel_name': 'Timurbay Seafront Residence & Suites', 'address': '', 'phone': '', 'booking_reference': '1965740483', 'confirmation_number': '', 'pin_number': '', 'guest_name': 'azhar abd hashim', 'check_in_date': 'December 26, 2025', 'check_in_time': '', 'check_out_date': 'December 27, 2025', 'check_out_time': '', 'number_of_rooms': '2', 'number_of_nights': '1', 'number_of_guests': '', 'room_type': 'One Bedroom Suite Sea View', 'room_info': '', 'meals_included': '', 'occupancy_limit': '', 'price_paid_online': 'USD 167.12', 'tax_amount': '', 'extra_charges_due': 'USD 0.00', 'extra_charge_description': '', 'total_amount': 'MYR 681.54 (USD 167.12)', 'currency': 'MYR', 'cancellation_policy': '', 'booking_status': '', 'contact_info': 'syukriahtech@gmail.com', 'notes': 'This receipt is automatically generated.', 'verified': 'yes'}
+[Tool Result] Output: {"response": "\u2705 Booking Confirmation\n\ud83c\udfe8 Hotel: Timurbay Seafront Residence & Suites\n\ud83d\udc64 Guest: azhar abd hashim\n\ud83d\udd22 Booking Ref: 1965740483 \u2022 Confirmation: - \u2022 PIN: -\n\ud83d\udcc5 Check-in: December 26, 2025 \n\ud83d\udcc6 Check-out: December 27, 2025 \n\ud83d\udeaa Room Type: One Bedroom Suite Sea View\n\ud83d\udc65 Rooms: 2 \u2022 Nights: 1 \u2022 Guests: - \u2022 Limit: -\n\ud83d\udcb0 Paid Online: USD 167.12 \u2022 Tax: - \u2022 Extra: USD 0.00 \u2022 Total: MYR 681.54 (USD 167.12)\n\ud83d\udce6 Status: -\n\ud83c\udf10 Platform: Agoda\n\ud83d\udcde Support: syukriahtech@gmail.com\n\u2705 Verified", "hotel_name": "Timurbay Seafront Residence & Suites", "address": null, "phone": null, "guest_name": "azhar abd hashim", "booking_reference": "1965740483", "confirmation_number": null, "pin_number": null, "check_in_date": "December 26, 2025", "check_in_time": null, "check_out_date": "December 27, 2025", "check_out_time": null, "number_of_rooms": "2", "number_of_nights": "1", "number_of_guests": null, "room_type": "One Bedroom Suite Sea View", "room_info": null, "meals_included": null, "occupancy_limit": null, "price_paid_online": "USD 167.12", "tax_amount": null, "extra_charges_due": "USD 0.00", "extra_charge_description": null, "total_amount": "MYR 681.54 (USD 167.12)", "currency": "MYR", "booking_status": null, "platform_name": "Agoda", "contact_info": "syukriahtech@gmail.com", "cancellation_policy": null, "verified": "yes"}
+[Debug] Bot Response generated: Your booking has been successfully confirmed. Welcome to Timurbay Seafront Residence & Suites!
+
+### Guest Registration
+To complete the check-in process, please provide the following guest details:
+- Full Name
+- Identity Card Number (IC)
+- Car Plate Number (if applicable)
+
+### Payments and Deposit
+Please note there is a refundable security deposit of RM100 due at check-in. This will be refunded upon checkout, provided there are no damages or outstanding charges.
+
+If you have any special requests or need further assistance, feel free to let us know.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: Hello! How can I assist you today? If you have a booking slip for Timurbay Seafront Residence & Suites, please upload the image or PDF here for verification.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: Please upload your booking slip for Timurbay Seafront Residences so I can proceed with the verification.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200
+
+[Debug] Processing message from 919327606510
+[Debug] OpenAI Key found: sk-pr...
+[Debug] Bot Response generated: Hello! How can I assist you today? If you're here to check in, please upload your booking slip for verification.
+[Debug] Bot response is valid
+[Debug] Sent to WhatsApp. Status: 200

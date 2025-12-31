@@ -1,0 +1,1004 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>External APIs</title>
+    <style>
+        :root {
+            --sidebar-w: 250px;
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e5e7eb;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent: #3b82f6;
+            --green: #22c55e;
+            --danger: #dc2626;
+            --radius: 14px;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg-page);
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .main {
+            margin-left: var(--sidebar-w);
+            padding: 32px;
+            padding-top: 100px;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #2563eb;
+        }
+
+        .btn-outline {
+            background: white;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .btn-outline:hover {
+            background: #f1f5f9;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-success {
+            background: var(--green);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #16a34a;
+        }
+
+        /* API Cards */
+        .api-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .api-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .api-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .api-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .api-method {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .api-method.post {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .api-method.put, .api-method.patch {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .api-method.delete {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .api-description {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .api-url {
+            font-family: monospace;
+            font-size: 13px;
+            color: var(--text-muted);
+            background: #f1f5f9;
+            padding: 8px 12px;
+            border-radius: 8px;
+            word-break: break-all;
+        }
+
+        .api-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .api-actions .btn {
+            padding: 6px 14px;
+            font-size: 13px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .modal-close:hover {
+            color: var(--text-main);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Form Styles */
+        .form-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            flex: 1;
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--accent);
+        }
+
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Key-Value Editor */
+        .kv-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .kv-row input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .kv-remove {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 4px 8px;
+        }
+
+        .kv-remove:hover {
+            color: var(--danger);
+        }
+
+        .btn-add {
+            background: #f1f5f9;
+            color: var(--text-main);
+            border: 1px dashed var(--border);
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .btn-add:hover {
+            background: #e2e8f0;
+        }
+
+        /* Response Mapping */
+        .mapping-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .mapping-row input,
+        .mapping-row select {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        /* Radio Group */
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .radio-option input[type="radio"] {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Test Result */
+        .test-result {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+        }
+
+        .test-result.success {
+            background: #f0fdf4;
+            border-color: #86efac;
+        }
+
+        .test-result.error {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
+        .test-result pre {
+            margin: 8px 0 0;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-badge.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        @media (max-width: 768px) {
+            .main {
+                margin-left: 0;
+                padding: 16px;
+                padding-top: 80px;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+
+            .modal {
+                width: 95%;
+                max-height: 90vh;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    {% include 'layouts/sidebar.html' %}
+
+    <main class="main">
+        <a href="{% url 'settings' %}" class="back-link">← Back to Settings</a>
+
+        <div class="page-header">
+            <h1 class="page-title">External APIs</h1>
+            <button class="btn" onclick="openAddModal()">+ Add API</button>
+        </div>
+
+        {% if apis %}
+        {% for api in apis %}
+        <div class="api-card" data-api-id="{{ api.id }}">
+            <div class="api-header">
+                <span class="api-name">{{ api.name }}</span>
+                <span class="api-method {% if api.method == 'POST' %}post{% elif api.method == 'PUT' or api.method == 'PATCH' %}put{% elif api.method == 'DELETE' %}delete{% endif %}">{{ api.method }}</span>
+            </div>
+            <p class="api-description">{{ api.description }}</p>
+            <div class="api-url">{{ api.url }}</div>
+            <div class="api-actions">
+                <button class="btn btn-outline" onclick="openEditModal({{ api.id }})">Edit</button>
+                <button class="btn btn-outline" style="color: var(--danger);" onclick="deleteApi({{ api.id }})">Delete</button>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <h3>No External APIs configured</h3>
+            <p>Add custom API endpoints that your AI assistant can call during conversations.</p>
+            <button class="btn" style="margin-top: 16px;" onclick="openAddModal()">+ Add Your First API</button>
+        </div>
+        {% endif %}
+    </main>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="apiModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">External Request</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="apiId" value="">
+                
+                <!-- Basic Info -->
+                <div class="form-group">
+                    <label>API Name</label>
+                    <input type="text" id="apiName" placeholder="e.g., process_booking_slip">
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="apiDescription" placeholder="Describe when the AI should call this API"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group" style="flex: 0 0 120px;">
+                        <label>Request Type</label>
+                        <select id="apiMethod">
+                            <option value="GET">GET</option>
+                            <option value="POST" selected>POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="PATCH">PATCH</option>
+                            <option value="DELETE">DELETE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Request URL</label>
+                        <input type="url" id="apiUrl" placeholder="https://api.example.com/endpoint">
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab active" data-tab="headers">Headers</button>
+                    <button class="tab" data-tab="body">Body</button>
+                    <button class="tab" data-tab="mapping">Response mapping</button>
+                    <button class="tab" data-tab="test">Test Now</button>
+                </div>
+
+                <!-- Headers Tab -->
+                <div class="tab-content active" id="tab-headers">
+                    <div id="headersContainer">
+                        <div class="kv-row">
+                            <input type="text" placeholder="Header name" class="header-key" value="Content-Type">
+                            <input type="text" placeholder="Header value" class="header-value" value="application/json">
+                            <button class="kv-remove" onclick="removeRow(this)">&times;</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-add" onclick="addHeaderRow()">Add</button>
+                </div>
+
+                <!-- Body Tab -->
+                <div class="tab-content" id="tab-body">
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="bodyType" value="json" checked>
+                            JSON
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="bodyType" value="form">
+                            Form-encoded
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <textarea id="apiPayload" placeholder='{"key": "{{variable_name}}"}'></textarea>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-muted);">
+                        Use <code>{{variable_name}}</code> to insert dynamic values from the conversation.
+                    </p>
+                </div>
+
+                <!-- Response Mapping Tab -->
+                <div class="tab-content" id="tab-mapping">
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                        Map response fields to custom fields for use in your chatbot.
+                    </p>
+                    <div id="mappingContainer">
+                        <div class="mapping-row">
+                            <input type="text" placeholder="JSONPath (e.g., check_in_date)" class="mapping-jsonpath">
+                            <input type="text" placeholder="Save to custom field" class="mapping-field">
+                            <button class="kv-remove" onclick="removeRow(this)">&times;</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-add" onclick="addMappingRow()">Add</button>
+                </div>
+
+                <!-- Test Tab -->
+                <div class="tab-content" id="tab-test">
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                        Test your API configuration. Variables will be replaced with sample values.
+                    </p>
+                    <button class="btn btn-success" onclick="testApi()" id="testBtn">Test Now</button>
+                    <div id="testResult" style="display: none;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="btn" onclick="saveApi()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Modal functions
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add External API';
+            document.getElementById('apiId').value = '';
+            document.getElementById('apiName').value = '';
+            document.getElementById('apiDescription').value = '';
+            document.getElementById('apiMethod').value = 'POST';
+            document.getElementById('apiUrl').value = '';
+            document.getElementById('apiPayload').value = '';
+            document.querySelector('input[name="bodyType"][value="json"]').checked = true;
+            
+            // Reset headers
+            document.getElementById('headersContainer').innerHTML = `
+                <div class="kv-row">
+                    <input type="text" placeholder="Header name" class="header-key" value="Content-Type">
+                    <input type="text" placeholder="Header value" class="header-value" value="application/json">
+                    <button class="kv-remove" onclick="removeRow(this)">&times;</button>
+                </div>
+            `;
+            
+            // Reset mappings
+            document.getElementById('mappingContainer').innerHTML = `
+                <div class="mapping-row">
+                    <input type="text" placeholder="JSONPath (e.g., check_in_date)" class="mapping-jsonpath">
+                    <input type="text" placeholder="Save to custom field" class="mapping-field">
+                    <button class="kv-remove" onclick="removeRow(this)">&times;</button>
+                </div>
+            `;
+            
+            // Reset test result
+            document.getElementById('testResult').style.display = 'none';
+            
+            // Switch to first tab
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector('.tab').classList.add('active');
+            document.getElementById('tab-headers').classList.add('active');
+            
+            document.getElementById('apiModal').classList.add('active');
+        }
+
+        function openEditModal(apiId) {
+            fetch(`/api/external-api/${apiId}/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+                    
+                    document.getElementById('modalTitle').textContent = 'Edit External API';
+                    document.getElementById('apiId').value = data.id;
+                    document.getElementById('apiName').value = data.name;
+                    document.getElementById('apiDescription').value = data.description;
+                    document.getElementById('apiMethod').value = data.method;
+                    document.getElementById('apiUrl').value = data.url;
+                    
+                    // Set body type
+                    const bodyType = data.body_type || 'json';
+                    document.querySelector(`input[name="bodyType"][value="${bodyType}"]`).checked = true;
+                    
+                    // Set payload
+                    if (typeof data.payload === 'object') {
+                        document.getElementById('apiPayload').value = JSON.stringify(data.payload, null, 2);
+                    } else {
+                        document.getElementById('apiPayload').value = data.payload || '';
+                    }
+                    
+                    // Populate headers
+                    const headersContainer = document.getElementById('headersContainer');
+                    headersContainer.innerHTML = '';
+                    const headers = data.headers || {};
+                    if (Object.keys(headers).length === 0) {
+                        addHeaderRow();
+                    } else {
+                        for (const [key, value] of Object.entries(headers)) {
+                            headersContainer.innerHTML += `
+                                <div class="kv-row">
+                                    <input type="text" placeholder="Header name" class="header-key" value="${escapeHtml(key)}">
+                                    <input type="text" placeholder="Header value" class="header-value" value="${escapeHtml(value)}">
+                                    <button class="kv-remove" onclick="removeRow(this)">&times;</button>
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    // Populate mappings
+                    const mappingContainer = document.getElementById('mappingContainer');
+                    mappingContainer.innerHTML = '';
+                    const mappings = data.response_mapping || [];
+                    if (mappings.length === 0) {
+                        addMappingRow();
+                    } else {
+                        mappings.forEach(m => {
+                            mappingContainer.innerHTML += `
+                                <div class="mapping-row">
+                                    <input type="text" placeholder="JSONPath" class="mapping-jsonpath" value="${escapeHtml(m.jsonpath || '')}">
+                                    <input type="text" placeholder="Custom field" class="mapping-field" value="${escapeHtml(m.custom_field || '')}">
+                                    <button class="kv-remove" onclick="removeRow(this)">&times;</button>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    // Reset test result
+                    document.getElementById('testResult').style.display = 'none';
+                    
+                    // Switch to first tab
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    document.querySelector('.tab').classList.add('active');
+                    document.getElementById('tab-headers').classList.add('active');
+                    
+                    document.getElementById('apiModal').classList.add('active');
+                })
+                .catch(err => {
+                    alert('Error loading API: ' + err.message);
+                });
+        }
+
+        function closeModal() {
+            document.getElementById('apiModal').classList.remove('active');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Row management
+        function addHeaderRow() {
+            const container = document.getElementById('headersContainer');
+            container.innerHTML += `
+                <div class="kv-row">
+                    <input type="text" placeholder="Header name" class="header-key">
+                    <input type="text" placeholder="Header value" class="header-value">
+                    <button class="kv-remove" onclick="removeRow(this)">&times;</button>
+                </div>
+            `;
+        }
+
+        function addMappingRow() {
+            const container = document.getElementById('mappingContainer');
+            container.innerHTML += `
+                <div class="mapping-row">
+                    <input type="text" placeholder="JSONPath (e.g., check_in_date)" class="mapping-jsonpath">
+                    <input type="text" placeholder="Save to custom field" class="mapping-field">
+                    <button class="kv-remove" onclick="removeRow(this)">&times;</button>
+                </div>
+            `;
+        }
+
+        function removeRow(btn) {
+            btn.parentElement.remove();
+        }
+
+        // Collect form data
+        function collectFormData() {
+            // Collect headers
+            const headers = {};
+            document.querySelectorAll('#headersContainer .kv-row').forEach(row => {
+                const key = row.querySelector('.header-key').value.trim();
+                const value = row.querySelector('.header-value').value.trim();
+                if (key) {
+                    headers[key] = value;
+                }
+            });
+
+            // Collect mappings
+            const mappings = [];
+            document.querySelectorAll('#mappingContainer .mapping-row').forEach(row => {
+                const jsonpath = row.querySelector('.mapping-jsonpath').value.trim();
+                const field = row.querySelector('.mapping-field').value.trim();
+                if (jsonpath || field) {
+                    mappings.push({ jsonpath, custom_field: field });
+                }
+            });
+
+            // Parse payload
+            let payload = {};
+            const payloadStr = document.getElementById('apiPayload').value.trim();
+            if (payloadStr) {
+                try {
+                    payload = JSON.parse(payloadStr);
+                } catch (e) {
+                    // If not valid JSON, treat as string
+                    payload = { raw: payloadStr };
+                }
+            }
+
+            return {
+                name: document.getElementById('apiName').value.trim(),
+                description: document.getElementById('apiDescription').value.trim(),
+                method: document.getElementById('apiMethod').value,
+                url: document.getElementById('apiUrl').value.trim(),
+                headers: headers,
+                body_type: document.querySelector('input[name="bodyType"]:checked').value,
+                payload: payload,
+                response_mapping: mappings
+            };
+        }
+
+        // Save API
+        function saveApi() {
+            const apiId = document.getElementById('apiId').value;
+            const data = collectFormData();
+            
+            if (!data.name) {
+                alert('Please enter an API name');
+                return;
+            }
+            if (!data.url) {
+                alert('Please enter an API URL');
+                return;
+            }
+
+            const url = apiId ? `/api/external-api/${apiId}/update/` : '/api/external-api/create/';
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    closeModal();
+                    location.reload();
+                } else {
+                    alert('Error: ' + (result.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                alert('Error saving API: ' + err.message);
+            });
+        }
+
+        // Delete API
+        function deleteApi(apiId) {
+            if (!confirm('Are you sure you want to delete this API?')) {
+                return;
+            }
+
+            fetch(`/api/external-api/${apiId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + (result.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                alert('Error deleting API: ' + err.message);
+            });
+        }
+
+        // Test API
+        function testApi() {
+            const apiId = document.getElementById('apiId').value;
+            const testResult = document.getElementById('testResult');
+            const testBtn = document.getElementById('testBtn');
+            
+            if (!apiId) {
+                alert('Please save the API first before testing');
+                return;
+            }
+            
+            testBtn.disabled = true;
+            testBtn.textContent = 'Testing...';
+            testResult.style.display = 'none';
+
+            fetch(`/api/external-api/${apiId}/test/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(res => res.json())
+            .then(result => {
+                testBtn.disabled = false;
+                testBtn.textContent = 'Test Now';
+                testResult.style.display = 'block';
+                
+                if (result.success) {
+                    testResult.className = 'test-result success';
+                    testResult.innerHTML = `
+                        <span class="status-badge success">Status: ${result.status_code}</span>
+                        <pre>${JSON.stringify(result.response, null, 2)}</pre>
+                    `;
+                } else {
+                    testResult.className = 'test-result error';
+                    testResult.innerHTML = `
+                        <span class="status-badge error">Failed</span>
+                        <pre>${result.error || 'Unknown error'}</pre>
+                    `;
+                }
+            })
+            .catch(err => {
+                testBtn.disabled = false;
+                testBtn.textContent = 'Test Now';
+                testResult.style.display = 'block';
+                testResult.className = 'test-result error';
+                testResult.innerHTML = `
+                    <span class="status-badge error">Error</span>
+                    <pre>${err.message}</pre>
+                `;
+            });
+        }
+
+        // CSRF Token helper
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Close modal on overlay click
+        document.getElementById('apiModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+
+</html>

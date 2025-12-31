@@ -1,333 +1,350 @@
+{% extends "layouts/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My Contacts</title>
+{% block title %}My Contacts{% endblock %}
 
-  <style>
-    :root { --sidebar-w: 250px; }
+{% block head_css %}
+<style>
+  :root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-head: #f1f5f9;
+    --border: #e5e7eb;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --primary: #2563eb;
+    --danger: #dc2626;
+    --radius: 14px;
+  }
 
-    body {
-      margin: 0;
-      background: #E8DFCA;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  .contacts-wrap {
+    padding: 28px 32px;
+  }
+
+  .page-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+
+  /* TOOLBAR */
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  .search {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+
+  .search input {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    background: transparent;
+  }
+
+  .btn {
+    background: #fff;
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    border-radius: 10px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.15s ease, border 0.15s ease;
+    text-decoration: none;
+  }
+
+  .btn:hover {
+    background: #f1f5f9;
+  }
+
+  /* TABLE HEADER */
+  .table-head {
+    display: grid;
+    grid-template-columns: 48px 2fr 2fr 1.5fr 1.5fr 1.5fr;
+    padding: 12px 16px;
+    background: var(--bg-head);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  /* ROW CARD */
+  .card {
+    display: grid;
+    grid-template-columns: 48px 2fr 2fr 1.5fr 1.5fr 1.5fr;
+    align-items: center;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    transition: background 0.15s ease, border 0.15s ease;
+  }
+
+  .card:hover {
+    background: #f9fafb;
+    border-color: #c7d2fe;
+  }
+
+  .chk {
+    display: flex;
+    justify-content: center;
+  }
+
+  .name-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+  }
+
+  .avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: #374151;
+    overflow: hidden;
+  }
+
+  .muted {
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* ACTIONS */
+  .actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .actions .btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .actions a[href*="delete"] {
+    border-color: #fecaca;
+    color: var(--danger);
+  }
+
+  .actions a[href*="delete"]:hover {
+    background: #fee2e2;
+  }
+
+  /* DROPDOWN */
+  .dropdown-content {
+    position: absolute;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  }
+
+  .dropdown-content a {
+    display: block;
+    padding: 10px 16px;
+    font-size: 14px;
+    text-decoration: none;
+    color: var(--text-main);
+  }
+
+  .dropdown-content a:hover {
+    background: #f1f5f9;
+  }
+
+  .dropdown {
+    position: relative;
+  }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    .contacts-wrap {
+      padding: 16px;
     }
 
-    .main {
-      margin-left: var(--sidebar-w);
-      padding: 24px 32px; /* extra padding to push right */
-    }
-
-    .page-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: #0f172a;
-      margin: 0 0 16px;
-    }
-
-    .toolbar {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-
-    .search {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 8px 12px;
-    }
-
-    .search input {
-      width: 100%;
-      border: none;
-      outline: none;
-      font-size: 14px;
-      background: transparent;
-    }
-
-    .btn {
-      background: #CFAB8D;
-      border: 1px solid #777C6D; /* blue border */
-      color: #777C6D; /* blue text */
-      border-radius: 6px;
-      padding: 8px 14px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .btn:hover {
-      background: rgba(59, 130, 246, 0.1); /* light blue on hover */
-    }
-
-    /* Changed grid columns to 6 to include Actions column */
     .table-head {
-      display: grid;
-      grid-template-columns: 48px 2fr 2fr 1.5fr 1.5fr 1.5fr;
-      padding: 10px 14px;
-      color: #777C6D;
-      background: #D9C4B0;
-      font-weight: 600;
-      font-size: 13px;
+      display: none;
     }
 
     .card {
-      display: grid;
-      grid-template-columns: 48px 2fr 2fr 1.5fr 1.5fr 1.5fr;
-      align-items: center;
-      padding: 12px 14px;
-      margin-bottom: 8px;
-      background: #FBF3D5;
-      border-radius: 10px;
-      border: 1px solid #777C6D;
-      transition: background 0.2s ease;
+      grid-template-columns: 40px 1fr;
+      row-gap: 8px;
     }
 
-    .card:hover {
-      background: #f9fafb;
+    .card .phone,
+    .card .source,
+    .card .entered,
+    .card .actions {
+      grid-column: 2 / -1;
     }
+  }
 
-    .chk {
-      display: flex;
-      justify-content: center;
-    }
+  a {
+    text-decoration: none;
+  }
+</style>
+{% endblock %}
 
-    .name-cell {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: 700;
-      color: #0f172a;
-    }
+{% block content %}
+<main class="contacts-wrap">
+  <h1 class="page-title">My Contacts</h1>
 
-    .avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      overflow: hidden;
-      flex: 0 0 32px;
-      background: #e5e7eb;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      color: #374151;
-      font-size: 14px;
-    }
-
-    .muted {
-      color: #777C6D;
-      font-weight: 500;
-      font-size: 14px;
-    }
-
-    /* Actions column styling */
-    .actions {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-    }
-
-    @media (max-width: 640px) {
-      .table-head { display: none; }
-      .card {
-        grid-template-columns: 40px 1fr;
-        row-gap: 8px;
-      }
-      .card .phone,
-      .card .source,
-      .card .entered,
-      .card .actions {
-        grid-column: 2 / -1;
-        color: #37513e;
-        font-weight: 500;
-      }
-      .main { padding: 16px; }
-    }
-
-    a {
-      text-decoration: none;
-    }
-
-    .dropdown {
-      position: relative;
-      display: inline-block;
-    }
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      right: 0;
-      background: #fff;
-      min-width: 120px;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      box-shadow: 0 6px 24px rgba(0,0,0,0.06);
-      z-index: 99;
-    }
-    .dropdown-content a {
-      color: #111;
-      padding: 10px 16px;
-      display: block;
-      text-decoration: none;
-      border-radius: 8px;
-      font-size: 14px;
-    }
-    .dropdown-content a:hover {
-      background: #f1f5f9;
-    }
-  </style>
-</head>
-<body>
-
-  {% include 'layouts/sidebar.html' %}
-
-  <main class="main">
-    <h1 class="page-title">My Contacts</h1>
-
-    <div class="toolbar">
-      <div class="search">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M21 21l-3.8-3.8M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"
-            stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" />
-        </svg>
-        <input id="searchInput" type="text" placeholder="Search anything here..." />
+  <div class="toolbar">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M21 21l-3.8-3.8M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" stroke="#9CA3AF" stroke-width="2"
+          stroke-linecap="round" />
+      </svg>
+      <input id="searchInput" type="text" placeholder="Search anything here..." />
+    </div>
+    <button class="btn">Filter</button>
+    <button class="btn" id="importContactsBtn">Import Contacts</button>
+    <div class="dropdown">
+      <button class="btn" id="moreBtn">More</button>
+      <div class="dropdown-content" id="dropdownMenu" style="display: none;">
+        <a href="{% url 'add_tag' %}" id="addTagOption">Add Tag</a>
       </div>
-      <button class="btn">Filter</button>
-      <button class="btn" id="importContactsBtn">Import Contacts</button>
-      <div class="dropdown">
-        <button class="btn" id="moreBtn">More</button>
-        <div class="dropdown-content" id="dropdownMenu" style="display: none;">
-          <a href="{% url 'add_tag' %}" id="addTagOption">Add Tag</a>
-        </div>
-      </div>
-      <a href="{% url 'add_user' %}" class="btn"><span>Add User</span></a>
     </div>
-
-    <div class="table-head">
-      <div class="chk"><input type="checkbox" /></div>
-      <div>Name</div>
-      <div>Phone number</div>
-      <div>Source</div>
-      <div>Last Seen</div>
-      <div>Actions</div>
-    </div>
-
-    <div id="rows">
-      {% for u in users %}
-        <div class="card" data-search="{{ u.name }} {{ u.phone_no }} whatsapp {{ u.created_at }}">
-          <div class="chk"><input type="checkbox" /></div>
-
-          <div class="name-cell">
-            <div class="avatar">
-              {% if u.avatar_url %}
-                <img src="{{ u.avatar_url }}" alt="{{ u.name }}" style="width:100%;height:100%;object-fit:cover;">
-              {% else %}
-                {{ u.name|slice:":1"|upper }}
-              {% endif %}
-            </div>
-            <div>{{ u.name }}</div>
-            {% if u.is_escalation %}
-              <span style="color: red; font-weight: bold; margin-left: 8px;">[Escalation]</span>
-            {% endif %}
-
-            {% if u.tags %}
-              <div>
-                {% for tag in u.tags %}
-                  <span style="color: red; font-weight: bold; margin-left: 8px;">[{{ tag|title }}]</span>
-                {% endfor %}
-              </div>
-            {% endif %}
-
-            
-          </div>
-
-
-          <div class="phone muted">{{ u.phone_no }}</div> 
-          <div class="source muted">Whatsapp</div>
-          <div class="entered muted">{{ u.created_at }}</div>
-
-          <div class="actions">
-            <a href="{% url 'edit_user' u.id %}" class="btn">Edit</a>
-            <a href="{% url 'delete_user' u.id %}" class="btn" onclick="return confirm('Delete this user?');">Delete</a>
-          </div>
-        </div>
-      {% empty %}
-        <p>No contacts yet.</p>
-      {% endfor %}
-    </div>
-  </main>
-  <!-- Import contacts modal -->
-  <div id="importModal" style="display:none; position:fixed; top:20%; left:50%; transform:translateX(-50%); background:#fff; padding:20px; border-radius:8px; box-shadow: 0 3px 10px rgba(0,0,0,0.2); z-index:1000;">
-    <h3>Import Contacts</h3>
-    <form id="importForm" method="post" enctype="multipart/form-data" action="{% url 'import_contacts' %}">
-      {% csrf_token %}
-      <label>Tag Name:</label>
-      <input type="text" name="tag_name" required placeholder="Enter tag name" />
-      <br/><br/>
-      <label>CSV File:</label>
-      <input type="file" name="csv_file" accept=".csv" required />
-      <br/><br/>
-      <button type="submit">Import</button>
-      <button type="button" id="cancelImport">Cancel</button>
-    </form>
+    <a href="{% url 'add_user' %}" class="btn"><span>Add User</span></a>
   </div>
-  <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;"></div>
-  <script>
-    document.getElementById("importContactsBtn").addEventListener("click", function() {
-      document.getElementById("importModal").style.display = "block";
-      document.getElementById("modalOverlay").style.display = "block";
+
+  <div class="table-head">
+    <div class="chk"><input type="checkbox" /></div>
+    <div>Name</div>
+    <div>Phone number</div>
+    <div>Source</div>
+    <div>Last Seen</div>
+    <div>Actions</div>
+  </div>
+
+  <div id="rows">
+    {% for u in users %}
+    <div class="card" data-search="{{ u.name }} {{ u.phone_no }} whatsapp {{ u.created_at }}">
+      <div class="chk"><input type="checkbox" /></div>
+
+      <div class="name-cell">
+        <div class="avatar">
+          {% if u.avatar_url %}
+          <img src="{{ u.avatar_url }}" alt="{{ u.name }}" style="width:100%;height:100%;object-fit:cover;">
+          {% else %}
+          {{ u.name|slice:":1"|upper }}
+          {% endif %}
+        </div>
+        <div>{{ u.name }}</div>
+        {% if u.is_escalation %}
+        <span style="color: red; font-weight: bold; margin-left: 8px;">[Escalation]</span>
+        {% endif %}
+
+        {% if u.tags %}
+        <div>
+          {% for tag in u.tags %}
+          <span style="color: red; font-weight: bold; margin-left: 8px;">[{{ tag|title }}]</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="phone muted">{{ u.phone_no }}</div>
+      <div class="source muted">Whatsapp</div>
+      <div class="entered muted">{{ u.created_at }}</div>
+
+      <div class="actions">
+        <a href="{% url 'edit_user' u.id %}" class="btn">Edit</a>
+        <a href="{% url 'delete_user' u.id %}" class="btn" onclick="return confirm('Delete this user?');">Delete</a>
+      </div>
+    </div>
+    {% empty %}
+    <p>No contacts yet.</p>
+    {% endfor %}
+  </div>
+</main>
+
+<!-- Import contacts modal -->
+<div id="importModal"
+  style="display:none; position:fixed; top:20%; left:50%; transform:translateX(-50%); background:#fff; padding:20px; border-radius:8px; box-shadow: 0 3px 10px rgba(0,0,0,0.2); z-index:1000;">
+  <h3>Import Contacts</h3>
+  <form id="importForm" method="post" enctype="multipart/form-data" action="{% url 'import_contacts' %}">
+    {% csrf_token %}
+    <label>Tag Name:</label>
+    <input type="text" name="tag_name" required placeholder="Enter tag name" />
+    <br /><br />
+    <label>CSV File:</label>
+    <input type="file" name="csv_file" accept=".csv" required />
+    <br /><br />
+    <button type="submit">Import</button>
+    <button type="button" id="cancelImport">Cancel</button>
+  </form>
+</div>
+<div id="modalOverlay"
+  style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;">
+</div>
+
+<script>
+  document.getElementById("importContactsBtn").addEventListener("click", function () {
+    document.getElementById("importModal").style.display = "block";
+    document.getElementById("modalOverlay").style.display = "block";
+  });
+
+  document.getElementById("cancelImport").addEventListener("click", function () {
+    document.getElementById("importModal").style.display = "none";
+    document.getElementById("modalOverlay").style.display = "none";
+  });
+
+  document.getElementById("modalOverlay").addEventListener("click", function () {
+    document.getElementById("importModal").style.display = "none";
+    this.style.display = "none";
+  });
+
+  (function () {
+    const q = document.getElementById('searchInput');
+    const rows = document.getElementById('rows').children;
+    q && q.addEventListener('input', function () {
+      const term = this.value.toLowerCase();
+      for (const r of rows) {
+        const hay = (r.dataset.search || '').toLowerCase();
+        r.style.display = hay.includes(term) ? '' : 'none';
+      }
     });
-  
-    document.getElementById("cancelImport").addEventListener("click", function() {
-      document.getElementById("importModal").style.display = "none";
-      document.getElementById("modalOverlay").style.display = "none";
+  })();
+
+  (function () {
+    const moreBtn = document.getElementById('moreBtn');
+    const dropdownMenu = document.getElementById('dropdownMenu');
+
+    moreBtn && moreBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
     });
-  
-    document.getElementById("modalOverlay").addEventListener("click", function() {
-      document.getElementById("importModal").style.display = "none";
-      this.style.display = "none";
+
+    document.addEventListener('click', function () {
+      dropdownMenu.style.display = 'none';
     });
-  </script>
-  
-
-  <script>
-    (function() {
-      const q = document.getElementById('searchInput');
-      const rows = document.getElementById('rows').children;
-      q && q.addEventListener('input', function() {
-        const term = this.value.toLowerCase();
-        for (const r of rows) {
-          const hay = (r.dataset.search || '').toLowerCase();
-          r.style.display = hay.includes(term) ? '' : 'none';
-        }
-      });
-    })();
-
-    (function() {
-      const moreBtn = document.getElementById('moreBtn');
-      const dropdownMenu = document.getElementById('dropdownMenu');
-
-      moreBtn && moreBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
-      });
-
-      document.addEventListener('click', function() {
-        dropdownMenu.style.display = 'none';
-      });
-    })();
-  </script>
-</body>
-</html>
+  })();
+</script>
+{% endblock %}

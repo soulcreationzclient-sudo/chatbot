@@ -794,16 +794,74 @@ def chatgpt_respond(request):
             from openai import OpenAI
             client = OpenAI(api_key=admin.openai_api_key)
 
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
+            # Load External Tools
+            from .models import ExternalAPI
+            from .logic import execute_tool
+            
+            db_tools = ExternalAPI.objects.filter(admin=admin)
+            openai_tools = []
+            if db_tools.exists():
+                for tool in db_tools:
+                    openai_tools.append({
+                        "type": "function",
+                        "function": {
+                            "name": tool.name,
+                            "description": tool.description,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "param_name": {"type": "string", "description": "Parameter value"} 
+                                    # Note: ideally we store param schema in DB too, but for generic usage we can imply it or use a generic 'arguments' dict
+                                    # For a truly generic simplified version, let's ask the AI to put all args in a single dict or infer from description.
+                                    # To make it robust:
+                                },
+                                "additionalProperties": True # Allow AI to invent properties based on description
+                            }
+                        }
+                    })
+
+            # Prepare API Call Params
+            api_params = {
+                "model": "gpt-4-turbo", # Upgrade to model supporting tools
+                "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-            )
-            reply = response.choices[0].message.content
+            }
+            if openai_tools:
+                api_params["tools"] = openai_tools
+                api_params["tool_choice"] = "auto"
 
-            return JsonResponse({"reply": reply})
+            response = client.chat.completions.create(**api_params)
+            response_message = response.choices[0].message
+
+            # Handle Tool Calls
+            if response_message.tool_calls:
+                # Append the assistant's message (with tool calls) to history
+                api_params["messages"].append(response_message)
+                
+                for tool_call in response_message.tool_calls:
+                    function_name = tool_call.function.name
+                    arguments = json.loads(tool_call.function.arguments)
+                    
+                    # Execute
+                    tool_result = execute_tool(function_name, arguments, admin)
+                    
+                    # Append result
+                    api_params["messages"].append({
+                        "tool_call_id": tool_call.id,
+                        "role": "tool",
+                        "name": function_name,
+                        "content": tool_result,
+                    })
+                
+                # Verify / Get Final Response
+                second_response = client.chat.completions.create(**api_params)
+                final_content = second_response.choices[0].message.content
+            else:
+                final_content = response_message.content
+
+            return JsonResponse({"response": final_content})
 
         except Exception as e:
             print(f"ChatGPT respond error: {e}")

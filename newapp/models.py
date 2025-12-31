@@ -127,4 +127,54 @@ class AIAgentConfigForm(forms.ModelForm):
     class Meta:
         model = AIAgentConfig
         fields = ['pdf_file', 'instruction']
-      
+
+class ExternalAPI(models.Model):
+    HTTP_METHOD_CHOICES = [
+        ('GET', 'GET'),
+        ('POST', 'POST'),
+        ('PUT', 'PUT'),
+        ('PATCH', 'PATCH'),
+        ('DELETE', 'DELETE'),
+    ]
+    BODY_TYPE_CHOICES = [
+        ('json', 'JSON'),
+        ('form', 'Form-encoded'),
+        ('none', 'No Body'),
+    ]
+    
+    id = models.AutoField(primary_key=True)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100, help_text="Name of the function for the AI to call (e.g., check_booking)")
+    description = models.TextField(help_text="Description for the AI explaining when to use this tool")
+    url = models.URLField(max_length=500)
+    method = models.CharField(max_length=10, choices=HTTP_METHOD_CHOICES, default='POST')
+    headers = models.JSONField(default=dict, blank=True, help_text="JSON headers")
+    body_type = models.CharField(max_length=20, choices=BODY_TYPE_CHOICES, default='json')
+    payload = models.JSONField(default=dict, blank=True, help_text="JSON payload with {{placeholders}}")
+    response_mapping = models.JSONField(default=list, blank=True, help_text="List of {jsonpath, custom_field} mappings")
+
+    def __str__(self):
+        return f"{self.name} ({self.admin.assistant_name if self.admin else 'No Admin'})"
+
+    class Meta:
+        db_table = 'external_apis'
+
+
+class ImageAsset(models.Model):
+    """
+    Store images with custom names that can be referenced in AI prompts.
+    Usage: {{image:menu_card}} in prompts to send the image named 'menu_card'
+    """
+    id = models.AutoField(primary_key=True)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100, help_text="Unique name to reference this image (e.g., menu_card)")
+    description = models.TextField(blank=True, help_text="Description for the AI explaining when to use this image")
+    image = models.ImageField(upload_to='image_assets/')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.admin.assistant_name if self.admin else 'No Admin'})"
+
+    class Meta:
+        db_table = 'image_assets'
+        unique_together = ('admin', 'name')

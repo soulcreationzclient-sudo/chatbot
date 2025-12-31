@@ -225,6 +225,7 @@ class whatsappcontroller:
                             continue
 
                         for m in value.get('messages') or []:
+                            msg_text = None # Reset for each message iteration
                             msg_type = m.get('type')
                             phone = m.get('from')
                             
@@ -300,9 +301,14 @@ class whatsappcontroller:
                                     "type": "text",
                                     "text": {"body": reply}
                                 }
-                                requests.post(whatsapp_api_url, json=payload, headers=headers)
-                                print(f"[Vision] Reply sent to {phone}")
-                                continue
+                                # requests.post(whatsapp_api_url, json=payload, headers=headers)
+                                # print(f"[Vision] Reply sent to {phone}")
+                                
+                                # DO NOT CONTINUE - Let it fall through to AI
+                                # continue
+                                
+                                # Inject Analysis into Message Text
+                                msg_text = f"I have uploaded an image. content: {reply}"
                             
                             elif msg_type == 'document':
                                 from newapp.image_pdf_service import analyze_media_message
@@ -355,18 +361,38 @@ class whatsappcontroller:
                                     "type": "text",
                                     "text": {"body": reply}
                                 }
-                                requests.post(whatsapp_api_url, json=payload, headers=headers)
-                                print(f"[Vision] Reply sent to {phone}")
-                                continue
+                                # requests.post(whatsapp_api_url, json=payload, headers=headers)
+                                # print(f"[Vision] Reply sent to {phone}")
+                                
+                                # DO NOT CONTINUE - Let it fall through
+                                # continue 
+                                
+                                # Inject Analysis into Message Text for AI Processing
+                                msg_text = f"I have uploaded a document. content: {reply}"
+                                
+                                # Need to skip the 'msg_text' retrieval block below since we just set it
+
                             
                             elif msg_type != 'text':
                                 # Skip other message types (audio, video, sticker, etc.)
                                 continue
                             # ==================== END IMAGE/DOCUMENT HANDLING ====================
 
-                            msg_text = (m.get('text') or {}).get('body') or ""
+                            # Only get text if not already set by Vision
+                            if msg_text is None:
+                                msg_text = (m.get('text') or {}).get('body') or ""
                             if not msg_text.strip():
                                 continue
+
+                            # Deduplication: Ignore if same text sent within 60 seconds
+                            last_msg = Message.objects.filter(who='human', user_id=existing_user).order_by('-id').first()
+                            if last_msg and last_msg.messages == msg_text:
+                                time_diff = (timezone.now() - last_msg.created_at).total_seconds()
+                                if time_diff < 60:
+                                    print(f"Skipping duplicate message from {phone}: {msg_text}")
+                                    with open('debug_log.txt', 'a', encoding='utf-8') as f:
+                                        f.write(f"[Info] Duplicate message ignored: {msg_text}\n")
+                                    continue
 
                             Message.objects.create(
                                 user_id=existing_user,
@@ -381,11 +407,12 @@ class whatsappcontroller:
 
                             # ==================== CALENDLY INTEGRATION ====================
                             # Check for booking/cancellation intent BEFORE calling OpenAI
-                            msg_lower = msg_text.lower()
+                            # ONLY for pure text messages (bypass for Images/Docs analyzed by AI)
+                            msg_lower = msg_text.lower() if msg_type == 'text' else ""
                             
                             # Booking intent keywords
-                            booking_keywords = ['book', 'schedule', 'appointment', 'meeting', 
-                                              'book appointment', 'schedule a call', 'set up a meeting']
+                            # Booking intent keywords (Strict to avoid collision with 'check-in booking' flow)
+                            booking_keywords = ['book appointment', 'schedule a call', 'set up a meeting', 'schedule appointment']
                             
                             # Cancellation intent keywords  
                             cancel_keywords = ['cancel', 'cancel appointment', 'cancel meeting', 
@@ -424,7 +451,12 @@ class whatsappcontroller:
                                 openai_key = (getattr(admin_check, "openai_api_key", "") or "").strip()
                                 pine_token = (getattr(admin_check, "pinecone_token", "") or "").strip()
 
+                                with open('debug_log.txt', 'a') as f:
+                                    f.write(f"\n[Debug] Processing message from {phone}\n")
+                                
                                 if openai_key:
+                                    with open('debug_log.txt', 'a') as f:
+                                        f.write(f"[Debug] OpenAI Key found: {openai_key[:5]}...\n")
                                     try:
                                         from openai import OpenAI
                                         client = OpenAI(api_key=openai_key)
@@ -466,23 +498,95 @@ If the user's question relates to this document, answer based on your analysis a
                                         if context_prefix:
                                             system_prompt = context_prefix + system_prompt
 
-                                        resp = client.chat.completions.create(
-                                            model="gpt-3.5-turbo",
-                                            messages=[
+                                        # --- TOOL INTEGRATION START ---
+                                        from newapp.models import ExternalAPI
+                                        from newapp.logic import execute_tool
+                                        
+                                        db_tools = ExternalAPI.objects.filter(admin=admin_check)
+                                        openai_tools = []
+                                        if db_tools.exists():
+                                            for tool in db_tools:
+                                                openai_tools.append({
+                                                    "type": "function",
+                                                    "function": {
+                                                        "name": tool.name,
+                                                        "description": tool.description,
+                                                        "parameters": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "param_name": {"type": "string", "description": "Parameter value"} 
+                                                            },
+                                                            "additionalProperties": True 
+                                                        }
+                                                    }
+                                                })
+                                        
+                                        # Prepare API Call Params
+                                        api_params = {
+                                            "model": "gpt-4-turbo", # Need tool support
+                                            "messages": [
                                                 {"role": "system", "content": system_prompt},
                                                 {"role": "user", "content": msg_text},
                                             ],
-                                            timeout=15,
-                                        )
+                                            "timeout": 30,
+                                        }
+                                        if openai_tools:
+                                            api_params["tools"] = openai_tools
+                                            api_params["tool_choice"] = "auto"
+                                            
+                                        resp = client.chat.completions.create(**api_params)
+                                        # Handle Tool Calls
+                                        response_message = resp.choices[0].message
+                                        
+                                        if response_message.tool_calls:
+                                            with open('debug_log.txt', 'a', encoding='utf-8') as f:
+                                                f.write(f"[Tool] AI wants to call {len(response_message.tool_calls)} tools\n")
+                                            # Append the assistant's message (with tool calls) to history
+                                            api_params["messages"].append(response_message)
+                                            
+                                            for tool_call in response_message.tool_calls:
+                                                function_name = tool_call.function.name
+                                                arguments = json.loads(tool_call.function.arguments)
+                                                with open('debug_log.txt', 'a', encoding='utf-8') as f:
+                                                    f.write(f"[Tool] Calling {function_name} with {arguments}\n")
+                                                
+                                                # Execute
+                                                tool_result = execute_tool(function_name, arguments, admin_check)
+                                                
+                                                with open('debug_log.txt', 'a', encoding='utf-8') as f:
+                                                    f.write(f"[Tool Result] Output: {tool_result}\n")
+                                                
+                                                # Append result
+                                                api_params["messages"].append({
+                                                    "tool_call_id": tool_call.id,
+                                                    "role": "tool",
+                                                    "name": function_name,
+                                                    "content": tool_result,
+                                                })
+                                            
+                                            # Get Final Response after tools
+                                            second_response = client.chat.completions.create(**api_params)
+                                            bot_response = second_response.choices[0].message.content.strip()
+                                        else:
+                                            bot_response = response_message.content.strip()
+
+                                        # --- TOOL INTEGRATION END ---
+                                        with open('debug_log.txt', 'a', encoding='utf-8') as f:
+                                            f.write(f"[Debug] Bot Response generated: {bot_response}\n")
                                     except Exception as oe:
-                                        print(f"[LLM] OpenAI error: {oe}")
+                                        with open('debug_log.txt', 'a', encoding='utf-8') as f:
+                                            f.write(f"[LLM] OpenAI error details: {str(oe)}\n")
+                                            import traceback
+                                            traceback.print_exc(file=f)
                                         resp = None
 
-                                    if resp and hasattr(resp, "choices") and len(resp.choices) > 0:
-                                        bot_response = resp.choices[0].message.content.strip()
-                                        print("[LLM] ChatGPT used")
+                                    if bot_response:
+                                         with open('debug_log.txt', 'a', encoding='utf-8') as f:
+                                            f.write("[Debug] Bot response is valid\n")
                                     else:
-                                        bot_response = "Sorry, I couldn’t generate a response just now."
+                                         with open('debug_log.txt', 'a', encoding='utf-8') as f:
+                                            f.write("[Debug] Bot response is Empty/None\n")
+                                         bot_response = "Sorry, I couldn’t generate a response just now."
                                 elif pine_token:
                                     try:
                                         pc = Pinecone(api_key=pine_token)
@@ -556,11 +660,19 @@ If the user's question relates to this document, answer based on your analysis a
                                     "text": {"body": final_reply_text}
                                 }
                                 r = requests.post(whatsapp_api_url, json=payload, headers=headers, timeout=15)
+                                
+                                with open('debug_log.txt', 'a') as f:
+                                    f.write(f"[Debug] Sent to WhatsApp. Status: {r.status_code}\n")
+                                    if r.status_code != 200:
+                                        f.write(f"[Error] WhatsApp API Response: {r.text}\n")
+
                                 if r.status_code != 200:
                                     print(f"send_whatsapp_message error: {r.status_code} - {r.text}")
                                 else:
                                     print(f"✅ Bot reply sent to {existing_user.phone_no}")
                             except Exception as e:
+                                with open('debug_log.txt', 'a') as f:
+                                    f.write(f"[Error] Sending Exception: {str(e)}\n")
                                 print(f"Exception calling send_whatsapp_message: {e}")
                             if not Message.objects.filter(
                                 user_id=existing_user,

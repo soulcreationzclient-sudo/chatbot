@@ -142,10 +142,14 @@ def convert_pdf_to_images(pdf_bytes: bytes) -> List[str]:
         return base64_images
         
     except ImportError:
+        with open('debug_log.txt', 'a') as f:
+            f.write("[ImageService] Error: pdf2image not installed\n")
         print("pdf2image not installed. Install with: pip install pdf2image")
         print("Also ensure Poppler is installed on your system.")
         return []
     except Exception as e:
+        with open('debug_log.txt', 'a') as f:
+            f.write(f"[ImageService] Error converting PDF to images: {e}\n")
         print(f"Error converting PDF to images: {e}")
         return []
 
@@ -251,6 +255,8 @@ def analyze_images_with_vision(
         return response.choices[0].message.content
         
     except Exception as e:
+        with open('debug_log.txt', 'a') as f:
+            f.write(f"[ImageService] Error in Vision API call: {e}\n")
         print(f"Error in Vision API call: {e}")
         return f"Sorry, I couldn't analyze the image(s). Error: {str(e)}"
 
@@ -283,7 +289,14 @@ def analyze_media_message(
         return "Sorry, I cannot download your media. WhatsApp is not configured."
     
     # Download the media
-    media_bytes = download_whatsapp_media(media_id, admin.whatsapp_token)
+    try:
+        media_bytes = download_whatsapp_media(media_id, admin.whatsapp_token)
+        with open('debug_log.txt', 'a') as f:
+            f.write(f"[Vision] Downloaded media bytes: {len(media_bytes)}\n")
+    except Exception as e:
+        with open('debug_log.txt', 'a') as f:
+            f.write(f"[Vision] Download check failed: {str(e)}\n")
+        return f"Error downloading media: {str(e)}"
     if not media_bytes:
         return "Sorry, I couldn't download your file. Please try sending it again."
     
@@ -341,4 +354,7 @@ def analyze_media_message(
         enhanced_prompt
     )
     
+    with open('debug_log.txt', 'a', encoding='utf-8') as f:
+        f.write(f"\n[Vision] OpenAI Response:\n{response}\n")
+        
     return response

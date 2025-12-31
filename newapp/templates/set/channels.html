@@ -1,466 +1,391 @@
+{% extends "layouts/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Settings · Channels</title>
+{% block title %}Settings · Channels{% endblock %}
 
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    />
+{% block head_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<style>
+  :root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --border-soft: #e5e7eb;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --accent: #3b82f6;
+    --accent-soft: #eff6ff;
+    --success: #22c55e;
+    --danger: #ef4444;
+  }
 
-    <style>
-      :root {
-        --sidebar-w: 250px;
-      }
+  .channels-wrap {
+    padding: 32px;
+  }
 
-      html,
-      body {
-        height: 100%;
-      }
-      body {
-        margin: 0;
-        background: #E8DFCA;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial,
-          sans-serif;
-        color: #0f172a;
-      }
+  .breadcrumb {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
 
-      .main {
-        margin-left: var(--sidebar-w);
-        padding: 24px;
-        min-height: 100vh;
-      }
-      .breadcrumb {
-        font-weight: 800;
-        margin: 0 0 18px;
-      }
-      .breadcrumb a {
-        color: #111827;
-        text-decoration: none;
-      }
-      .breadcrumb a:hover {
-        text-decoration: underline;
-      }
-      .breadcrumb .sep {
-        color: #9ca3af;
-        margin: 0 0.35rem;
-      }
+  .breadcrumb a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
 
-      .list {
-        max-width: 900px;
-      }
+  .breadcrumb .sep {
+    margin: 0 6px;
+    color: var(--text-muted);
+  }
 
-      .channel-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        background: #FBF3D5;
-        border: 1px solid #D9C4B0;
-        border-radius: 12px;
-        padding: 18px;
-        margin: 12px 0;
-        text-decoration: none;
-        color: #0f172a;
-        font-weight: 700;
-        box-shadow: 0 2px 8px rgba(16, 24, 40, 0.05);
-        transition: box-shadow 0.12s ease, transform 0.12s ease,
-          border-color 0.12s ease;
-        height: 84px;
-      }
-      .channel-item:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 8px 20px rgba(16, 24, 40, 0.08);
-      }
-      .channel-item:focus-visible,
-      .channel-item.active {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
-      }
+  /* CHANNEL LIST */
+  .list {
+    max-width: 720px;
+  }
 
-      .ci-left {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex: 1;
-      }
-      .ci-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #fff;
-        flex: 0 0 36px;
-      }
-      .ci-label {
-        font-weight: 700;
-      }
-      .wa {
-        background: #25d366;
-      }
-      .ig {
-        background: radial-gradient(
-          circle at 30% 107%,
-          #fdf497 0%,
-          #fdf497 5%,
-          #fd5949 45%,
-          #d6249f 60%,
-          #285aeb 90%
-        );
-      }
-      .ms {
-        background: linear-gradient(135deg, #00b2ff, #5865f2);
-      }
-      .wc {
-        background: #111827;
-      }
-      .ci-right {
-        margin-left: auto;
-        color: #9ca3af;
-        font-size: 18px;
-      }
+  .channel-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    text-decoration: none;
+    color: var(--text-main);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: background .15s ease, box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+  }
 
-      @media (max-width: 991.98px) {
-        .main {
-          margin-left: 0;
-          padding: 16px;
-        }
-      }
+  .channel-item:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.12);
+    transform: translateY(-1px);
+  }
 
-      /* ===== Modal ===== */
-      .modal-backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.45);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 2000;
-      }
-      .modal-backdrop.show {
-        display: flex;
-      }
-      .modal {
-        width: 520px;
-        max-width: calc(100% - 32px);
-        background: #fff;
-        border-radius: 14px;
-        box-shadow: 0 20px 50px rgba(2, 6, 23, 0.25);
-        padding: 22px;
-        transform: translateY(6px);
-        opacity: 0.98;
-        transition: transform 0.12s ease, opacity 0.12s ease;
-      }
-      .modal.show {
-        transform: translateY(0);
-        opacity: 1;
-      }
-      .modal-header {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        margin-bottom: 8px;
-      }
-      .modal-header .close {
-        position: absolute;
-        right: 6px;
-        top: 2px;
-        border: none;
-        background: transparent;
-        font-size: 18px;
-        cursor: pointer;
-        color: #6b7280;
-      }
-      .modal-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-weight: 800;
-        font-size: 18px;
-      }
-      .modal-title .wa-dot {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: #25d366;
-        color: #fff;
-        display: grid;
-        place-items: center;
-      }
-      .field {
-        margin-top: 14px;
-      }
-      .label {
-        font-size: 12px;
-        color: #6b7280;
-        font-weight: 700;
-        margin-bottom: 6px;
-        display: block;
-      }
-      .input {
-        width: 100%;
-        height: 40px;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 0 10px;
-        font-size: 14px;
-      }
-      .input:focus {
-        outline: none;
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-      }
-      .actions {
-        margin-top: 18px;
-      }
-      .btn-primary {
-        width: 100%;
-        height: 40px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 700;
-        color: #fff;
-        background: #0b5bd3;
-      }
-      .btn-primary:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-      .helper {
-        font-size: 12px;
-        color: #6b7280;
-        margin-top: 10px;
-        text-align: center;
-      }
-      .error {
-        color: #b91c1c;
-        font-size: 12px;
-        margin-top: 6px;
-        display: none;
-      }
-      .error.show {
-        display: block;
-      }
-    </style>
-  </head>
-  <body>
-    {% include 'layouts/sidebar.html' %} {% include 'components/flash.html' %}
+  .ci-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
 
-    <main class="main">
-      <div class="breadcrumb">
-        <a href="">Settings</a><span class="sep">›</span>Channels
-      </div>
+  .ci-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+    color: #fff;
+  }
 
-      <div class="list">
-        {% if whatsapp_connected %}
-        <a href="javascript:void(0)" id="disconnect" class="channel-item">
-        {% else %}
-        <a href="javascript:void(0)" id="openWhatsappModal" class="channel-item">
+  .ci-icon.wa {
+    background: #25d366;
+  }
+
+  .ci-icon.ig {
+    background: #e4405f;
+  }
+
+  .ci-icon.ms {
+    background: #0084ff;
+  }
+
+  .ci-icon.wc {
+    background: #3b82f6;
+  }
+
+  .ci-label {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .ci-right {
+    font-size: 18px;
+    color: var(--text-muted);
+  }
+
+  .text-success {
+    color: var(--success) !important;
+  }
+
+  .text-danger {
+    color: var(--danger) !important;
+  }
+
+  /* MODAL */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal-backdrop.show {
+    display: flex;
+  }
+
+  .modal {
+    background: var(--bg-card);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
+    padding: 24px;
+    transform: scale(.96);
+    opacity: 0;
+    transition: all .2s ease;
+  }
+
+  .modal.show {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .wa-dot {
+    background: #25d366;
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+  }
+
+  .close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-muted);
+  }
+
+  .field {
+    margin-bottom: 16px;
+  }
+
+  .label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: block;
+    color: var(--text-main);
+  }
+
+  .input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-soft);
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, .15);
+  }
+
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-primary:hover {
+    background: #2563eb;
+  }
+
+  .error {
+    display: none;
+    font-size: 12px;
+    color: var(--danger);
+    margin-top: 6px;
+  }
+
+  .error.show {
+    display: block;
+  }
+
+  @media (max-width: 768px) {
+    .channels-wrap {
+      padding: 16px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include 'components/flash.html' %}
+
+<div class="channels-wrap">
+  <div class="breadcrumb">
+    <a href="{% url 'settings' %}">Settings</a><span class="sep">›</span>Channels
+  </div>
+
+  <div class="list">
+    {% if whatsapp_connected %}
+    <a href="javascript:void(0)" id="disconnect" class="channel-item">
+      {% else %}
+      <a href="javascript:void(0)" id="openWhatsappModal" class="channel-item">
         {% endif %}
-          <div class="ci-left">
-            <span class="ci-icon wa"
-              ><i class="fa-brands fa-whatsapp"></i
-            ></span>
-            <span class="ci-label">
-              Whatsapp {% if whatsapp_connected %}
-              <i
-                class="fa-solid fa-circle-check text-success ms-1"
-                title="connected"
-                aria-label="connected"
-                id="connected"
-              ></i>
-              {% else %}
-              <i
-                class="fa-solid fa-circle-xmark text-danger ms-1"
-                title="not connected"
-                aria-label="not connected"
-              ></i>
-              {% endif %}
-            </span>
-          </div>
-          <span class="ci-right">›</span>
-        </a>
-
-        <!-- Instagram -->
-        <a class="channel-item" href="#">
-          <div class="ci-left">
-            <span class="ci-icon ig"
-              ><i class="fa-brands fa-instagram"></i
-            ></span>
-            <span class="ci-label">Instagram</span>
-          </div>
-          <span class="ci-right">›</span>
-        </a>
-
-        <!-- Messenger -->
-        <a class="channel-item" href="#">
-          <div class="ci-left">
-            <span class="ci-icon ms"
-              ><i class="fa-brands fa-facebook-messenger"></i
-            ></span>
-            <span class="ci-label">Messenger</span>
-          </div>
-          <span class="ci-right">›</span>
-        </a>
-
-        <!-- Webchat -->
-        <a class="channel-item" href="#">
-          <div class="ci-left">
-            <span class="ci-icon wc"><i class="fa-solid fa-message"></i></span>
-            <span class="ci-label">Webchat</span>
-          </div>
-          <span class="ci-right">›</span>
-        </a>
-      </div>
-    </main>
-
-    <!-- ===== WhatsApp Modal ===== -->
-    <div id="waBackdrop" class="modal-backdrop" aria-hidden="true">
-      <div
-        id="waModal"
-        class="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="waTitle"
-      >
-        <div class="modal-header">
-          <div class="modal-title" id="waTitle">
-            <span class="wa-dot"><i class="fa-brands fa-whatsapp"></i></span>
-            Whatsapp
-          </div>
-          <button type="button" class="close" id="waClose" aria-label="Close">
-            ✕
-          </button>
+        <div class="ci-left">
+          <span class="ci-icon wa"><i class="fa-brands fa-whatsapp"></i></span>
+          <span class="ci-label">
+            Whatsapp {% if whatsapp_connected %}
+            <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected"
+              id="connected"></i>
+            {% else %}
+            <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected" aria-label="not connected"></i>
+            {% endif %}
+          </span>
         </div>
+        <span class="ci-right">›</span>
+      </a>
 
-        <form id="waForm" method="post" action="{% url 'whatsapp_connect' %}">
-          {% csrf_token %}
+      <a class="channel-item" href="#">
+        <div class="ci-left">
+          <span class="ci-icon ig"><i class="fa-brands fa-instagram"></i></span>
+          <span class="ci-label">Instagram</span>
+        </div>
+        <span class="ci-right">›</span>
+      </a>
 
-          <div class="field">
-            <label class="label" for="waId"
-              >WhatsApp Business Account ID (WABA)</label
-            >
-            <input
-              class="input"
-              id="waId"
-              name="phone_id"
-              placeholder="e.g. 123456789012345"
-              required
-            />
-          </div>
+      <a class="channel-item" href="#">
+        <div class="ci-left">
+          <span class="ci-icon ms"><i class="fa-brands fa-facebook-messenger"></i></span>
+          <span class="ci-label">Messenger</span>
+        </div>
+        <span class="ci-right">›</span>
+      </a>
 
-          <div class="field">
-            <label class="label" for="waToken">Access Token</label>
-            <input
-              class="input"
-              id="waToken"
-              name="user_token"
-              placeholder="EAAG..."
-              required
-            />
-            <div id="waError" class="error">Both fields are required.</div>
-          </div>
+      <a class="channel-item" href="#">
+        <div class="ci-left">
+          <span class="ci-icon wc"><i class="fa-solid fa-message"></i></span>
+          <span class="ci-label">Webchat</span>
+        </div>
+        <span class="ci-right">›</span>
+      </a>
+  </div>
+</div>
 
-          <div class="actions">
-            <button class="btn-primary" type="submit" id="waSubmit">
-              Continue
-            </button>
-          </div>
-
-          <!-- <div class="helper">Your token is stored securely. You can rotate it anytime from Meta.</div> -->
-        </form>
+<!-- WhatsApp Modal -->
+<div id="waBackdrop" class="modal-backdrop" aria-hidden="true">
+  <div id="waModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="waTitle">
+    <div class="modal-header">
+      <div class="modal-title" id="waTitle">
+        <span class="wa-dot"><i class="fa-brands fa-whatsapp"></i></span>
+        Whatsapp
       </div>
+      <button type="button" class="close" id="waClose" aria-label="Close">✕</button>
     </div>
 
-    <script>
-      (function () {
-        const disconnect = document.getElementById("disconnect");
-        // console.log(disconnect)
-        const openBtn = document.getElementById("openWhatsappModal");
-        console.log(openBtn);
-        const backdrop = document.getElementById("waBackdrop");
-        const modal = document.getElementById("waModal");
-        const closeBtn = document.getElementById("waClose");
-        const form = document.getElementById("waForm");
-        const errorEl = document.getElementById("waError");
-        const idEl = document.getElementById("waId");
-        const tokenEl = document.getElementById("waToken");
+    <form id="waForm" method="post" action="{% url 'whatsapp_connect' %}">
+      {% csrf_token %}
 
-        function openModal() {
-          backdrop.classList.add("show");
-          modal.classList.add("show");
-          backdrop.setAttribute("aria-hidden", "false");
-          setTimeout(() => idEl.focus(), 60);
-        }
-        function closeModal() {
-          modal.classList.remove("show");
-          backdrop.classList.remove("show");
-          backdrop.setAttribute("aria-hidden", "true");
-        }
-        function dis() {
-          let baseurl = window.location.origin; // Get the base URL of the current site
-          let disconnectUrl = baseurl + "/disconnect/";
-          let con = confirm("are you sure you want to dissconnect");
-          if (con) {
-            window.location.assign(disconnectUrl);
-          }
-        }
-        if (openBtn) {
-          openBtn.addEventListener("click", openModal);
-        } else {
-          disconnect.addEventListener("click", dis);
-        }
+      <div class="field">
+        <label class="label" for="waId">WhatsApp Business Account ID (WABA)</label>
+        <input class="input" id="waId" name="phone_id" placeholder="e.g. 123456789012345" required />
+      </div>
 
-        closeBtn.addEventListener("click", closeModal);
-        backdrop.addEventListener("click", (e) => {
-          if (e.target === backdrop) closeModal();
-        });
-        document.addEventListener("keydown", (e) => {
-          if (e.key === "Escape") closeModal();
-        });
+      <div class="field">
+        <label class="label" for="waToken">Access Token</label>
+        <input class="input" id="waToken" name="user_token" placeholder="EAAG..." required />
+        <div id="waError" class="error">Both fields are required.</div>
+      </div>
 
-        // Simple front-end validation
-        form.addEventListener("submit", function (e) {
-          errorEl.classList.remove("show");
-          if (!idEl.value.trim() || !tokenEl.value.trim()) {
-            e.preventDefault();
-            errorEl.classList.add("show");
-            return;
-          }
-          // Optional: submit via fetch instead of full page reload.
-          // Comment out this block if you prefer normal POST redirect.
-          /*
+      <div class="actions">
+        <button class="btn-primary" type="submit" id="waSubmit">Continue</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const disconnect = document.getElementById("disconnect");
+    const openBtn = document.getElementById("openWhatsappModal");
+    const backdrop = document.getElementById("waBackdrop");
+    const modal = document.getElementById("waModal");
+    const closeBtn = document.getElementById("waClose");
+    const form = document.getElementById("waForm");
+    const errorEl = document.getElementById("waError");
+    const idEl = document.getElementById("waId");
+    const tokenEl = document.getElementById("waToken");
+
+    function openModal() {
+      backdrop.classList.add("show");
+      modal.classList.add("show");
+      backdrop.setAttribute("aria-hidden", "false");
+      setTimeout(() => idEl.focus(), 60);
+    }
+    function closeModal() {
+      modal.classList.remove("show");
+      backdrop.classList.remove("show");
+      backdrop.setAttribute("aria-hidden", "true");
+    }
+    function dis() {
+      let baseurl = window.location.origin;
+      let disconnectUrl = baseurl + "/disconnect/";
+      let con = confirm("Are you sure you want to disconnect?");
+      if (con) {
+        window.location.assign(disconnectUrl);
+      }
+    }
+    if (openBtn) {
+      openBtn.addEventListener("click", openModal);
+    } else if (disconnect) {
+      disconnect.addEventListener("click", dis);
+    }
+
+    closeBtn.addEventListener("click", closeModal);
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) closeModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeModal();
+    });
+
+    form.addEventListener("submit", function (e) {
+      errorEl.classList.remove("show");
+      if (!idEl.value.trim() || !tokenEl.value.trim()) {
         e.preventDefault();
-        const formData = new FormData(form);
-        fetch(form.action, {
-          method: 'POST',
-          headers: { 'X-Requested-With': 'XMLHttpRequest' },
-          body: formData
-        })
-        .then(r => r.json())
-        .then(res => {
-          if(res.ok){
-            closeModal();
-            // Show a toast/snackbar here if you have one
-          }else{
-            errorEl.textContent = res.error || 'Unable to connect. Please check your details.';
-            errorEl.classList.add('show');
-          }
-        })
-        .catch(() => {
-          errorEl.textContent = 'Network error. Please try again.';
-          errorEl.classList.add('show');
-        });
-        */
-        });
-      })();
-    </script>
-  </body>
-</html>
+        errorEl.classList.add("show");
+        return;
+      }
+    });
+  })();
+</script>
+{% endblock %}

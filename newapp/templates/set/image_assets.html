@@ -1,0 +1,643 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Assets</title>
+    <style>
+        :root {
+            --sidebar-w: 250px;
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e5e7eb;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent: #3b82f6;
+            --green: #22c55e;
+            --danger: #dc2626;
+            --radius: 14px;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg-page);
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .main {
+            margin-left: var(--sidebar-w);
+            padding: 32px;
+            padding-top: 100px;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #2563eb;
+        }
+
+        .btn-outline {
+            background: white;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .btn-outline:hover {
+            background: #f1f5f9;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        /* Image Grid */
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .image-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .image-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .image-preview {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: #f1f5f9;
+        }
+
+        .image-info {
+            padding: 16px;
+        }
+
+        .image-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .image-name code {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .image-description {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .image-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .image-actions .btn {
+            padding: 6px 14px;
+            font-size: 13px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 95vh;
+            overflow: visible;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .modal-close:hover {
+            color: var(--text-main);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+            max-height: calc(95vh - 140px);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* File Upload */
+        .file-upload {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-upload:hover {
+            border-color: var(--accent);
+            background: #f8fafc;
+        }
+
+        .file-upload.has-file {
+            border-color: var(--green);
+            background: #f0fdf4;
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .file-upload-icon {
+            font-size: 36px;
+            margin-bottom: 8px;
+        }
+
+        .file-upload-text {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .file-upload-name {
+            color: var(--text-main);
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 150px;
+            margin-top: 12px;
+            border-radius: 8px;
+        }
+
+        .usage-hint {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 13px;
+            color: #0369a1;
+        }
+
+        .usage-hint code {
+            background: #e0f2fe;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .main {
+                margin-left: 0;
+                padding: 16px;
+                padding-top: 80px;
+            }
+
+            .image-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal {
+                width: 95%;
+                max-height: 90vh;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    {% include 'layouts/sidebar.html' %}
+
+    <main class="main">
+        <a href="{% url 'settings' %}" class="back-link">← Back to Settings</a>
+
+        <div class="page-header">
+            <h1 class="page-title">Image Assets</h1>
+            <button class="btn" onclick="openAddModal()">+ Add Image</button>
+        </div>
+
+        <div class="usage-hint" style="margin-bottom: 20px;">
+            💡 <strong>Usage:</strong> Reference images in your AI prompt using
+            <code>{% templatetag openvariable %}image:name{% templatetag closevariable %}</code> syntax.
+            Example: <code>{% templatetag openvariable %}image:menu_card{% templatetag closevariable %}</code>
+        </div>
+
+        {% if assets %}
+        <div class="image-grid">
+            {% for asset in assets %}
+            <div class="image-card" data-asset-id="{{ asset.id }}">
+                <img src="{{ asset.image.url }}" alt="{{ asset.name }}" class="image-preview">
+                <div class="image-info">
+                    <div class="image-name">
+                        {{ asset.name }}
+                        <code>{% templatetag openvariable %}image:{{ asset.name }}{% templatetag closevariable %}</code>
+                    </div>
+                    {% if asset.description %}
+                    <p class="image-description">{{ asset.description }}</p>
+                    {% endif %}
+                    <div class="image-actions">
+                        <button class="btn btn-outline"
+                            onclick="openEditModal({{ asset.id }}, '{{ asset.name|escapejs }}', '{{ asset.description|escapejs }}', '{{ asset.image.url }}')">Edit</button>
+                        <button class="btn btn-outline" style="color: var(--danger);"
+                            onclick="deleteAsset({{ asset.id }})">Delete</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No Image Assets yet</h3>
+            <p>Upload images that your AI assistant can send during conversations.</p>
+            <button class="btn" style="margin-top: 16px;" onclick="openAddModal()">+ Add Your First Image</button>
+        </div>
+        {% endif %}
+    </main>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="imageModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Add Image Asset</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="imageForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="hidden" id="assetId" value="">
+
+                    <div class="form-group">
+                        <label>Image Name *</label>
+                        <input type="text" id="assetName" placeholder="e.g., menu_card, price_list" required
+                            pattern="[a-z0-9_]+" title="Use lowercase letters, numbers, and underscores only">
+                        <small style="color: var(--text-muted); font-size: 12px;">Use lowercase letters, numbers, and
+                            underscores only</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="assetDescription"
+                            placeholder="Describe when the AI should send this image"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Image File *</label>
+                        <div class="file-upload" id="fileUpload" onclick="document.getElementById('assetFile').click()">
+                            <input type="file" id="assetFile" accept="image/*" onchange="handleFileSelect(this)">
+                            <div class="file-upload-icon">📷</div>
+                            <div class="file-upload-text">Click to upload or drag and drop</div>
+                            <div class="file-upload-name" id="fileName"></div>
+                            <img id="previewImage" class="preview-image" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // File handling
+        function handleFileSelect(input) {
+            const file = input.files[0];
+            const fileUpload = document.getElementById('fileUpload');
+            const fileName = document.getElementById('fileName');
+            const previewImage = document.getElementById('previewImage');
+
+            if (file) {
+                fileUpload.classList.add('has-file');
+                fileName.textContent = file.name;
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    previewImage.src = e.target.result;
+                    previewImage.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                fileUpload.classList.remove('has-file');
+                fileName.textContent = '';
+                previewImage.style.display = 'none';
+            }
+        }
+
+        // Modal functions
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Image Asset';
+            document.getElementById('assetId').value = '';
+            document.getElementById('assetName').value = '';
+            document.getElementById('assetDescription').value = '';
+            document.getElementById('assetFile').value = '';
+            document.getElementById('fileName').textContent = '';
+            document.getElementById('previewImage').style.display = 'none';
+            document.getElementById('fileUpload').classList.remove('has-file');
+
+            document.getElementById('imageModal').classList.add('active');
+        }
+
+        function openEditModal(assetId, name, description, imageUrl) {
+            document.getElementById('modalTitle').textContent = 'Edit Image Asset';
+            document.getElementById('assetId').value = assetId;
+            document.getElementById('assetName').value = name;
+            document.getElementById('assetDescription').value = description;
+            document.getElementById('assetFile').value = '';
+
+            // Show current image
+            document.getElementById('fileName').textContent = 'Current image';
+            document.getElementById('previewImage').src = imageUrl;
+            document.getElementById('previewImage').style.display = 'block';
+            document.getElementById('fileUpload').classList.add('has-file');
+
+            document.getElementById('imageModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('imageModal').classList.remove('active');
+        }
+
+        // Form submission
+        document.getElementById('imageForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const assetId = document.getElementById('assetId').value;
+            const formData = new FormData();
+            formData.append('name', document.getElementById('assetName').value);
+            formData.append('description', document.getElementById('assetDescription').value);
+
+            const fileInput = document.getElementById('assetFile');
+            if (fileInput.files[0]) {
+                formData.append('image', fileInput.files[0]);
+            } else if (!assetId) {
+                alert('Please select an image file');
+                return;
+            }
+
+            const url = assetId ? `/api/image-asset/${assetId}/update/` : '/api/image-asset/create/';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: formData
+            })
+                .then(res => res.json())
+                .then(result => {
+                    if (result.success) {
+                        closeModal();
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (result.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => {
+                    alert('Error saving image: ' + err.message);
+                });
+        });
+
+        // Delete asset
+        function deleteAsset(assetId) {
+            if (!confirm('Are you sure you want to delete this image?')) {
+                return;
+            }
+
+            fetch(`/api/image-asset/${assetId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+                .then(res => res.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (result.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => {
+                    alert('Error deleting image: ' + err.message);
+                });
+        }
+
+        // CSRF Token helper
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Close modal on overlay click
+        document.getElementById('imageModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Drag and drop
+        const fileUpload = document.getElementById('fileUpload');
+        fileUpload.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            this.style.borderColor = 'var(--accent)';
+            this.style.background = '#eff6ff';
+        });
+        fileUpload.addEventListener('dragleave', function (e) {
+            e.preventDefault();
+            this.style.borderColor = '';
+            this.style.background = '';
+        });
+        fileUpload.addEventListener('drop', function (e) {
+            e.preventDefault();
+            this.style.borderColor = '';
+            this.style.background = '';
+
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                document.getElementById('assetFile').files = e.dataTransfer.files;
+                handleFileSelect(document.getElementById('assetFile'));
+            }
+        });
+    </script>
+</body>
+
+</html>

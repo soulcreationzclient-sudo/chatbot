@@ -1,95 +1,115 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Add User</title>
-  <style>
-    :root { --sidebar-w: 250px; --primary: #CFAB8D; }
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Add User{% endblock %}
 
-    body {
-      margin: 0;
-      /* background: #f7f8fb; */
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    }
+{% block head_css %}
+<style>
+  :root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --border-soft: #e5e7eb;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --accent: #3b82f6;
+    --accent-soft: #e0edff;
+    --success: #22c55e;
+  }
 
-    .main {
-      margin-left: var(--sidebar-w);
-      padding: 24px 32px;
-    }
+  .add-user-wrap {
+    padding: 32px;
+    max-width: 900px;
+  }
 
-    h2 {
-      margin-bottom: 20px;
-      font-size: 22px;
-      color: #333;
+  h2 {
+    margin-bottom: 24px;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  form {
+    width: 100%;
+    background: var(--bg-card);
+    padding: 36px;
+    border-radius: 18px;
+    border: 1px solid var(--border-soft);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  }
+
+  label {
+    font-size: 14px;
+    font-weight: 500;
+    display: block;
+    margin: 18px 0 8px;
+    color: var(--text-main);
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    font-size: 15px;
+    background: #ffffff;
+    transition: border 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+
+  button {
+    margin-top: 28px;
+    padding: 14px 26px;
+    background-color: #3b82f6;
+    border: none;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+  }
+
+  button:hover {
+    background-color: #16a34a;
+  }
+
+  button:active {
+    transform: scale(0.97);
+  }
+
+  @media (max-width: 768px) {
+    .add-user-wrap {
+      padding: 16px;
     }
 
     form {
-      max-width: 400px;
-      background: #E8DFCA;
-      padding: 50px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 24px;
     }
+  }
+</style>
+{% endblock %}
 
-    label {
-      font-weight: 600;
-      display: block;
-      margin: 12px 0 6px;
-      color: #444;
-    }
+{% block content %}
+<div class="add-user-wrap">
+  {% include 'components/flash.html' %}
 
-    input[type="text"] {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 14px;
-      transition: border-color 0.2s;
-    }
+  <h2>Add User</h2>
 
-    input[type="text"]:focus {
-      border-color: var(--primary);
-      outline: none;
-      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.15);
-    }
+  <form method="post" action="{% url 'add_admin_user' %}">
+    {% csrf_token %}
 
-    button {
-      margin-top: 18px;
-      padding: 10px 16px;
-      background-color: var(--primary);
-      border: none;
-      color: #fff;
-      font-size: 15px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
+    <label for="name">Name</label>
+    <input type="text" id="name" name="name" required>
 
-    button:hover {
-      background-color: #D9C4B0;
-    }
-  </style>
-</head>
-<body>
+    <label for="phone_no">Phone Number</label>
+    <input type="text" id="phone_no" name="phone_no" required placeholder="919994780436">
 
-  {% include 'layouts/sidebar.html' %}
-  <div class="main">
-        
-  {% include 'components/flash.html' %} 
-    <h2>Add User</h2>
-
-    <form method="post" action="{% url 'add_admin_user' %}">
-        {% csrf_token %}
-
-        <label for="name">Name:</label>
-        <input type="text" id="name" name="name" required>
-
-        <label for="phone_no">Phone Number:</label>
-        <input type="text" id="phone_no" name="phone_no" required placeholder="919994780436">
-
-        <button type="submit">Submit</button>
-    </form>
-  </div>
-</body>
-</html>
+    <button type="submit">Submit</button>
+  </form>
+</div>
+{% endblock %}

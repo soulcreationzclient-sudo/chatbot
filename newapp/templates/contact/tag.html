@@ -1,78 +1,268 @@
-{% extends 'layouts/base.html' %}
+{% extends "layouts/base.html" %}
 {% load static %}
-
 {% block title %}Add Tag - Speedbots{% endblock %}
 
-{% block extra_head %}
+{% block head_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+  :root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --border-soft: #e5e7eb;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --accent: #3b82f6;
+    --accent-soft: #eff6ff;
+    --danger: #ef4444;
+  }
+
+  .tag-wrap {
+    padding: 24px 32px;
+  }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+  }
+
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin: 16px 0;
+  }
+
+  /* Table */
+  .tags-table {
+    background: var(--bg-card);
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border-soft);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .tags-table thead th {
+    background: #f9fafb;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-soft);
+    padding: 14px 16px;
+    text-align: left;
+  }
+
+  .tags-table tbody td {
+    font-size: 14px;
+    color: var(--text-main);
+    vertical-align: middle;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .tag-row {
+    cursor: pointer;
+    transition: background .15s ease;
+  }
+
+  .tag-row:hover {
+    background: var(--accent-soft);
+  }
+
+  .arrow {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-right: 8px;
+  }
+
+  .tag-users-row {
+    background: #f9fafb;
+  }
+
+  .tag-users-row td {
+    border-top: none;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .tag-users-row ul {
+    padding-left: 16px;
+    margin-bottom: 0;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: background 0.15s ease;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: #2563eb;
+  }
+
+  .btn-danger {
+    background: var(--danger);
+    color: #fff;
+  }
+
+  .btn-danger:hover {
+    background: #dc2626;
+  }
+
+  .btn-secondary {
+    background: #e5e7eb;
+    color: #111827;
+  }
+
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  /* Modal */
+  .modal-content {
+    border-radius: 16px;
+    border: 1px solid var(--border-soft);
+  }
+
+  .modal-header,
+  .modal-footer {
+    border-color: var(--border-soft);
+  }
+
+  .modal-title {
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  /* Inputs */
+  .form-control {
+    border-radius: 10px;
+    font-size: 14px;
+    border: 1px solid var(--border-soft);
+  }
+
+  .form-control:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  }
+
+  .input-group-text {
+    background: var(--accent-soft);
+    border-color: var(--border-soft);
+  }
+
+  #id_users {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  #id_users li {
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+
+  @media (max-width: 768px) {
+    .tag-wrap {
+      padding: 16px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block body_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function toggleTag(tagId) {
+    var userRow = document.getElementById('users-' + tagId);
+    var arrow = document.getElementById('arrow-' + tagId);
+    if (!userRow || !arrow) return;
+
+    if (userRow.style.display === 'none' || userRow.style.display === '') {
+      userRow.style.display = 'table-row';
+      arrow.innerHTML = '&#x25B2;';
+    } else {
+      userRow.style.display = 'none';
+      arrow.innerHTML = '&#x25BC;';
+    }
+  }
+</script>
 {% endblock %}
 
 {% block content %}
-<div class="main" style="padding:24px 0 24px 0; max-width:1200px; margin-left:0;">
-
-  <script>
-    function toggleTag(tagId) {
-      var userRow = document.getElementById('users-' + tagId);
-      var arrow = document.getElementById('arrow-' + tagId);
-      if (!userRow || !arrow) return;
-
-      if (userRow.style.display === 'none' || userRow.style.display === '') {
-        userRow.style.display = 'table-row';
-        arrow.innerHTML = '&#x25B2;'; // Up arrow ▲
-      } else {
-        userRow.style.display = 'none';
-        arrow.innerHTML = '&#x25BC;'; // Down arrow ▼
-      }
-    }
-  </script>
-
-  <div style="display:flex; align-items:center; justify-content:space-between;">
-    <h1 style="margin-bottom:0; font-size:2rem;">Add/Edit Tag</h1>
+<div class="tag-wrap">
+  <div class="page-header">
+    <h1>Add/Edit Tag</h1>
     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTagModal">
       Add/Edit Tag
     </button>
   </div>
-  <hr>
-  <h2 style="font-size:1.3rem;">Tags and Assigned Users</h2>
-  <table class="table table-hover" style="background:#FBF3D5; width:100%; max-width:1200px; margin-left:0;">
+
+  <h2>Tags and Assigned Users</h2>
+
+  <table class="tags-table">
     <thead>
       <tr>
         <th style="width:40px;"></th>
-        <th style="min-width:240px; padding-left:36px;">Name</th>
-        <th style="min-width:120px; padding-left:36px;">Contacts</th>
-        <th style="width:40px;"></th>
+        <th>Name</th>
+        <th>Contacts</th>
+        <th style="width:140px;">Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for entry in tag_list %}
-      <tr class="tag-row" data-tag-id="{{ entry.tag.id }}" tabindex="0" style="cursor:pointer;" onclick="toggleTag('{{ entry.tag.id }}')">
-        <td style="padding-left:8px;"><input type="checkbox" disabled></td>
-        <td style="padding-left:36px;">{{ entry.tag.name }}</td>
-        <td style="padding-left:36px;">{{ entry.users|length }}</td>
+      <tr class="tag-row" onclick="toggleTag('{{ entry.tag.id }}')">
+        <td><input type="checkbox" disabled></td>
+        <td>{{ entry.tag.name }}</td>
+        <td>{{ entry.users|length }}</td>
         <td>
-          <span id="arrow-{{ entry.tag.id }}" class="arrow" style="cursor:pointer;">&#x25BC;</span>
+          <span id="arrow-{{ entry.tag.id }}" class="arrow">&#x25BC;</span>
           <form method="post" action="{% url 'delete_tag' entry.tag.id %}" style="display:inline;">
             {% csrf_token %}
-            <button type="submit" class="btn btn-danger btn-sm" style="margin-left:8px;"
-              onclick="return confirm('Are you sure you want to delete this tag?');">
+            <button type="submit" class="btn btn-danger btn-sm"
+              onclick="event.stopPropagation(); return confirm('Are you sure you want to delete this tag?');">
               Delete
             </button>
           </form>
         </td>
-        
       </tr>
-      <tr id="users-{{ entry.tag.id }}" class="tag-users-row" style="display:none; background:#f9fafb;">
+      <tr id="users-{{ entry.tag.id }}" class="tag-users-row" style="display:none;">
         <td></td>
-        <td colspan="3" style="padding-left:40px;">
+        <td colspan="3">
           {% if entry.users %}
-            <ul style="margin-bottom:0;">
-              {% for user in entry.users %}
-                <li>{{ user.name }} ({{ user.phone_no }})</li>
-              {% endfor %}
-            </ul>
+          <ul>
+            {% for user in entry.users %}
+            <li>{{ user.name }} ({{ user.phone_no }})</li>
+            {% endfor %}
+          </ul>
           {% else %}
-            <em>No users assigned</em>
+          <em>No users assigned</em>
           {% endif %}
         </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" style="text-align:center; color: var(--text-muted); padding: 32px;">No tags yet.</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -91,35 +281,20 @@
         </div>
 
         <div class="modal-body">
-          <!-- Tag Name Input -->
           <div class="mb-3">
             <label for="id_tag_name" class="form-label" style="font-weight:600;">Tag Name</label>
             <div class="input-group input-group-lg">
-              <span class="input-group-text" id="tagname-addon">🏷️</span>
-              <input 
-                type="text" 
-                name="tag_name"
-                id="id_tag_name"
-                class="form-control"
+              <span class="input-group-text">🏷️</span>
+              <input type="text" name="tag_name" id="id_tag_name" class="form-control"
                 placeholder="Enter a tag name (e.g., Active Customers)"
-                aria-describedby="tagname-addon"
-                autocomplete="off"
-                value="{{ form.tag_name.value|default_if_none:'' }}"
-                required
-              >
+                value="{{ form.tag_name.value|default_if_none:'' }}" required>
             </div>
-            {% if form.tag_name.errors %}
-              <div class="text-danger">{{ form.tag_name.errors }}</div>
-            {% endif %}
           </div>
 
-          <!-- Users Checkbox List -->
-          <div class="mb-3" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 1rem;">
-            <label for="id_users" class="form-label" style="font-weight:600;">Select Users</label>
+          <div class="mb-3"
+            style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 1rem; border-radius: 10px;">
+            <label class="form-label" style="font-weight:600;">Select Users</label>
             {{ form.users }}
-            {% if form.users.errors %}
-              <div class="text-danger">{{ form.users.errors }}</div>
-            {% endif %}
           </div>
         </div>
 
@@ -131,30 +306,4 @@
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_scripts %}
-<style>
-  .main {
-    max-width:1200px;
-    margin-left:0 !important;
-    padding:24px 0 24px 0 !important;
-    
-  }
-  .tag-row:focus { background: #e6f0fa; outline: none; }
-  .tag-row:hover { background: transparent !important; }
-  .tag-users-row td { border-top: none !important; }
-  .input-group-text { font-size: 1.2rem; }
-
-  /* Style checkbox list */
-  #id_users {
-    display: block;
-  }
-  #id_users li {
-    display: block;
-    margin-bottom: 0.3rem;
-  }
- 
-
-</style>
 {% endblock %}

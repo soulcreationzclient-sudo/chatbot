@@ -1,339 +1,331 @@
+{% extends "layouts/base.html" %}
 {% load static %}
 {% load tz %}
-<!DOCTYPE html>
-<html lang="en">
+{% block title %}Inbox{% endblock %}
 
-<head>
-  <meta charset="utf-8">
-  <title>Inbox</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+{% block head_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+  :root {
+    --list-w: 300px;
+    --bg-app: #f8fafc;
+    --bg-panel: #ffffff;
+    --bg-list: #ffffff;
+    --bg-thread: #f9fafb;
+    --border: #e5e7eb;
+    --text-main: #111827;
+    --text-muted: #6b7280;
+    --blue: #2563eb;
+    --green: #22c55e;
+    --bubble-bot: #f1f5ff;
+    --bubble-user: #e6f4ff;
+    --radius: 14px;
+  }
 
-  <style>
-    :root {
-      --sidebar-w: 240px;
-      --list-w: 280px;
-      --ink: #0f172a;
-      --muted: #64748b;
-      --line: #e2e8f0;
-      --fill: #f8fafc;
-      --blue: #0d6efd;
-      --bubble-bot: #eef2ff;
-      --bubble-user: #e6f4ff;
-    }
+  * {
+    box-sizing: border-box;
+  }
 
-    * {
-      box-sizing: border-box
-    }
+  .inbox-container {
+    display: flex;
+    min-height: calc(100vh - 60px);
+  }
 
-    body {
-      margin: 0;
-      background: #fff;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      color: var(--ink)
-    }
+  /* CONVERSATION LIST */
+  .list {
+    width: var(--list-w);
+    background: var(--bg-list);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
 
-    .app {
-      display: flex;
-      min-height: 100vh
-    }
+  .list-head {
+    padding: 16px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border);
+    background: #fff;
+  }
 
-    /* left sidebar include */
-    .sidebar-wrap {
-      width: var(--sidebar-w);
-      border-right: 1px solid var(--line);
-      background: #fff
-    }
+  .items {
+    overflow-y: auto;
+    flex: 1;
+  }
 
-    /* middle: list of conversations */
+  .item {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: 12px;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s ease;
+  }
+
+  .item:hover {
+    background: #f9fafb;
+  }
+
+  .item.active {
+    background: #eef6ff;
+  }
+
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: #374151;
+  }
+
+  .name {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .preview {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .time {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* CHAT THREAD */
+  .thread {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-thread);
+  }
+
+  .thread-head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .thread-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: var(--bg-thread);
+  }
+
+  /* MESSAGES */
+  .rowmsg {
+    display: flex;
+    margin: 10px 0;
+  }
+
+  .rowmsg.bot {
+    justify-content: flex-start;
+  }
+
+  .rowmsg.user {
+    justify-content: flex-end;
+  }
+
+  .bubble {
+    max-width: min(70%, 560px);
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.4;
+    background: #fff;
+    border: 1px solid var(--border);
+  }
+
+  .bot .bubble {
+    background: var(--bubble-bot);
+    border-top-left-radius: 4px;
+  }
+
+  .user .bubble {
+    background: var(--bubble-user);
+    border-top-right-radius: 4px;
+  }
+
+  .meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    text-align: right;
+  }
+
+  .empty {
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 40px;
+    font-size: 14px;
+  }
+
+  /* INPUT AREA */
+  .border-top {
+    border-top: 1px solid var(--border) !important;
+  }
+
+  .input-group input {
+    border-radius: 10px 0 0 10px;
+  }
+
+  .input-group button {
+    border-radius: 0 10px 10px 0;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
     .list {
-      width: var(--list-w);
-      border-right: 1px solid var(--line);
-      background: #E8DFCA;
-      display: flex;
+      width: 100%;
+      max-width: 260px;
+    }
+
+    .inbox-container {
       flex-direction: column;
     }
+  }
+</style>
+{% endblock %}
 
-    .list-head {
-      padding: 12px 14px;
-      font-weight: 700;
-      border-bottom: 1px solid var(--line);
-      display: flex;
-      align-items: center;
-      gap: 8px
-    }
-
-    .items {
-      overflow: auto
-    }
-
-    .item {
-      display: grid;
-      grid-template-columns: 40px 1fr auto;
-      gap: 10px;
-      padding: 12px 14px;
-      border-bottom: 1px solid #f1f5f9;
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .item:hover {
-      background: #f8fafc
-    }
-
-    .item.active {
-      background: #eef6ff
-    }
-
-    .avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #e2e8f0;
-      display: grid;
-      place-items: center;
-      font-weight: 700;
-      color: #334155;
-    }
-
-    .name {
-      font-weight: 600
-    }
-
-    .preview {
-      font-size: 13px;
-      color: var(--muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis
-    }
-
-    .time {
-      font-size: 12px;
-      color: var(--muted)
-    }
-
-    /* right: chat thread */
-    .thread {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-      background: #fff
-    }
-
-    .thread-head {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--line);
-      display: flex;
-      align-items: center;
-      gap: 10px
-    }
-
-    .thread-body {
-      flex: 1;
-      overflow: auto;
-      background: #FBF3D5;
-      padding: 18px
-    }
-
-    .rowmsg {
-      display: flex;
-      margin: 10px 0
-    }
-
-    .rowmsg.bot {
-      justify-content: flex-start
-    }
-
-    .rowmsg.user {
-      justify-content: flex-end
-    }
-
-    .bubble {
-      max-width: min(70%, 560px);
-      padding: 10px 12px;
-      border-radius: 16px;
-      font-size: 14px;
-      line-height: 1.35;
-      box-shadow: 0 1px 1px rgba(0, 0, 0, .04);
-    }
-
-    .bot .bubble {
-      background: var(--bubble-bot)
-    }
-
-    .user .bubble {
-      background: var(--bubble-user)
-    }
-
-    .meta {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 4px
-    }
-
-    .empty {
-      color: var(--muted);
-      text-align: center;
-      margin-top: 24px
-    }
-  </style>
-</head>
-
-<body>
-  <div class="app">
-
-    <!-- Sidebar (your component) -->
-    <aside class="sidebar-wrap">
-      {% include 'layouts/sidebar.html' %}
-    </aside>
-
-    <!-- Conversation list -->
-    <section class="list">
-      <div class="list-head">Inbox</div>
-      <div class="items">
-
-
-        {% for u in users %}
-
-        <a class="item {% if is_active %}active{% endif %}" href="{% url 'inbox_dashboard' %}?user_id={{ u.id }}">
-          <div class="avatar">{{ u.name|default:u.phone_no|slice:":2"|upper }}</div>
-          <div>
-            <div class="name">{{ u.name|default:"User" }}</div>
-            <div class="preview">{{ u.phone_no }}</div>
-          </div>
-          <div class="time">
-            {% if is_active and messages|length %}
-
-            {% endif %}
-          </div>
-        </a>
-
-        {% empty %}
-        <div class="p-3 text-muted">No users.</div>
-        {% endfor %}
-
-      </div>
-    </section>
-
-    <!-- Thread -->
-    <section class="thread">
-      <div class="thread-head">
-        {% if selected_user %}
-        <div class="avatar" style="width:36px;height:36px">{{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
+{% block content %}
+<div class="inbox-container">
+  <!-- Conversation list -->
+  <section class="list">
+    <div class="list-head">Inbox</div>
+    <div class="items">
+      {% for u in users %}
+      <a class="item {% if is_active %}active{% endif %}" href="{% url 'inbox_dashboard' %}?user_id={{ u.id }}">
+        <div class="avatar">{{ u.name|default:u.phone_no|slice:":2"|upper }}</div>
         <div>
-          <div style="font-weight:700">{{ selected_user.name|default:"User" }}</div>
-          <div class="text-muted" style="font-size:12px">{{ selected_user.phone_no }}</div>
+          <div class="name">{{ u.name|default:"User" }}</div>
+          <div class="preview">{{ u.phone_no }}</div>
         </div>
-        {% else %}
-        <div style="font-weight:700">Select a conversation</div>
-        {% endif %}
-      </div>
-
-      <div class="thread-body" id="threadBody">
-        {% if messages %}
-        {% for m in messages %}
-        <div class="rowmsg {% if m.who == 'bot' %}bot{% else %}user{% endif %}">
-          <div class="bubble">
-            <div>{{ m.messages }}</div>
-            <div class="meta">{{ m.created_at|localtime|date:"H:i" }}</div>
-          </div>
+        <div class="time">
+          {% if is_active and messages|length %}{% endif %}
         </div>
-        {% endfor %}
-        {% else %}
-        <div class="empty">No messages for this user.</div>
-        {% endif %}
+      </a>
+      {% empty %}
+      <div class="p-3 text-muted">No users.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Thread -->
+  <section class="thread">
+    <div class="thread-head">
+      {% if selected_user %}
+      <div class="avatar" style="width:36px;height:36px">{{
+        selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
+      <div>
+        <div style="font-weight:700">{{ selected_user.name|default:"User" }}</div>
+        <div class="text-muted" style="font-size:12px">{{ selected_user.phone_no }}</div>
       </div>
-      <div class="p-3 border-top" style="background:#fff;">
-        <form id="chatForm" onsubmit="return sendMessage(event);">
-          <div class="input-group">
-            <input id="userMessage" type="text" class="form-control" placeholder="Type your message..."
-              autocomplete="off" required />
-            <button type="submit" class="btn btn-primary">Send</button>
-          </div>
-        </form>
+      {% else %}
+      <div style="font-weight:700">Select a conversation</div>
+      {% endif %}
+    </div>
+
+    <div class="thread-body" id="threadBody">
+      {% if messages %}
+      {% for m in messages %}
+      <div class="rowmsg {% if m.who == 'bot' %}bot{% else %}user{% endif %}">
+        <div class="bubble">
+          <div>{{ m.messages }}</div>
+          <div class="meta">{{ m.created_at|localtime|date:"H:i" }}</div>
+        </div>
       </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty">No messages for this user.</div>
+      {% endif %}
+    </div>
 
-      <!-- VIEW-ONLY: no input/footer -->
-    </section>
+    <div class="p-3 border-top" style="background:#fff;">
+      <form id="chatForm" onsubmit="return sendMessage(event);">
+        <div class="input-group">
+          <input id="userMessage" type="text" class="form-control" placeholder="Type your message..." autocomplete="off"
+            required />
+          <button type="submit" class="btn btn-primary">Send</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
 
-  </div>
+<script>
+  (function () { var el = document.getElementById('threadBody'); if (el) el.scrollTop = el.scrollHeight; })();
 
-  <script>
-    // Auto-scroll to latest message
-    (function () { var el = document.getElementById('threadBody'); if (el) el.scrollTop = el.scrollHeight; })();
-  </script>
-  <script>
-    async function sendMessage(event) {
-      event.preventDefault();
-      const input = document.getElementById('userMessage');
-      const message = input.value.trim();
-      if (!message) return false;
+  async function sendMessage(event) {
+    event.preventDefault();
+    const input = document.getElementById('userMessage');
+    const message = input.value.trim();
+    if (!message) return false;
 
-      // Display user message immediately
-      appendMessage(message, 'user');
+    appendMessage(message, 'user');
+    input.value = '';
+    input.disabled = true;
 
-      // Clear and disable input while waiting for reply
-      input.value = '';
-      input.disabled = true;
+    try {
+      const formData = new FormData();
+      formData.append('message', message);
 
-      try {
-        const formData = new FormData();
-        formData.append('message', message);
+      const response = await fetch('/chatgpt/respond/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrfToken() },
+        body: formData
+      });
+      const data = await response.json();
 
-        const response = await fetch('/chatgpt/respond/', {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': getCsrfToken()
-          },
-          body: formData
-        });
-        const data = await response.json();
-
-        if (response.ok && data.reply) {
-          appendMessage(data.reply, 'bot');
-        } else {
-          appendMessage("Error: " + (data.error || "No response"), 'bot');
-        }
-      } catch (error) {
-        appendMessage("Network error. Please try again.", 'bot');
-      } finally {
-        input.disabled = false;
-        input.focus();
+      if (response.ok && data.reply) {
+        appendMessage(data.reply, 'bot');
+      } else {
+        appendMessage("Error: " + (data.error || "No response"), 'bot');
       }
-      return false;
+    } catch (error) {
+      appendMessage("Network error. Please try again.", 'bot');
+    } finally {
+      input.disabled = false;
+      input.focus();
     }
+    return false;
+  }
 
-    function appendMessage(msg, sender) {
-      const threadBody = document.getElementById('threadBody');
+  function appendMessage(msg, sender) {
+    const threadBody = document.getElementById('threadBody');
+    const row = document.createElement('div');
+    row.classList.add('rowmsg', sender);
+    const bubble = document.createElement('div');
+    bubble.classList.add('bubble');
+    bubble.textContent = msg;
+    row.appendChild(bubble);
+    threadBody.appendChild(row);
+    threadBody.scrollTop = threadBody.scrollHeight;
+  }
 
-      const row = document.createElement('div');
-      row.classList.add('rowmsg', sender);
-
-      const bubble = document.createElement('div');
-      bubble.classList.add('bubble');
-      bubble.textContent = msg;
-
-      row.appendChild(bubble);
-      threadBody.appendChild(row);
-
-      // Scroll to bottom
-      threadBody.scrollTop = threadBody.scrollHeight;
+  function getCsrfToken() {
+    const name = 'csrftoken=';
+    const decoded = decodeURIComponent(document.cookie);
+    const ca = decoded.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i].trim();
+      if (c.indexOf(name) === 0) return c.substring(name.length, c.length);
     }
-
-    // Helper to get CSRF token from cookie
-    function getCsrfToken() {
-      const name = 'csrftoken=';
-      const decoded = decodeURIComponent(document.cookie);
-      const ca = decoded.split(';');
-      for (let i = 0; i < ca.length; i++) {
-        let c = ca[i].trim();
-        if (c.indexOf(name) === 0) return c.substring(name.length, c.length);
-      }
-      return '';
-    }
-  </script>
-
-</body>
-
-</html>
+    return '';
+  }
+</script>
+{% endblock %}
