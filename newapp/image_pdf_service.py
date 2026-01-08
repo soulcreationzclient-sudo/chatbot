@@ -358,3 +358,47 @@ def analyze_media_message(
         f.write(f"\n[Vision] OpenAI Response:\n{response}\n")
         
     return response
+
+
+def save_chat_media(media_id: str, access_token: str) -> Optional[str]:
+    """
+    Downloads media from WhatsApp and saves it to MEDIA_ROOT/chat_uploads.
+    Returns the public relative URL (e.g. /media/chat_uploads/xyz.jpg).
+    """
+    try:
+        from django.conf import settings
+        import os
+        
+        # Download bytes
+        media_bytes = download_whatsapp_media(media_id, access_token)
+        if not media_bytes:
+            return None
+            
+        # Create directory
+        upload_dir = os.path.join(settings.MEDIA_ROOT, 'chat_uploads')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Detect extension
+        ext = 'bin'
+        if media_bytes[:4] == b'%PDF':
+            ext = 'pdf'
+        elif media_bytes[:3] == b'\xff\xd8\xff': # JPEG
+            ext = 'jpg'
+        elif media_bytes[:8] == b'\x89PNG\r\n\x1a\n': # PNG
+            ext = 'png'
+        else:
+            # Fallback for others
+            ext = 'jpg' 
+            
+        filename = f"{media_id}.{ext}"
+        filepath = os.path.join(upload_dir, filename)
+        
+        with open(filepath, 'wb') as f:
+            f.write(media_bytes)
+            
+        # Return URL
+        return f"/media/chat_uploads/{filename}"
+        
+    except Exception as e:
+        print(f"Error saving chat media: {e}")
+        return None

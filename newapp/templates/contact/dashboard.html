@@ -208,6 +208,55 @@
   a {
     text-decoration: none;
   }
+
+  /* FILTER PANEL */
+  .filter-panel {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: none; /* Hidden by default */
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .filter-panel.open {
+    display: flex;
+  }
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .filter-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .pills {
+    display: flex;
+    gap: 8px;
+  }
+  .pill {
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: #f1f5f9;
+    color: var(--text-main);
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+  .pill:hover { background: #e2e8f0; }
+  .pill.active {
+    background: #eff6ff;
+    color: var(--primary);
+    border-color: #bfdbfe;
+    font-weight: 600;
+  }
+
 </style>
 {% endblock %}
 
@@ -223,8 +272,19 @@
       </svg>
       <input id="searchInput" type="text" placeholder="Search anything here..." />
     </div>
-    <button class="btn">Filter</button>
-    <button class="btn" id="importContactsBtn">Import Contacts</button>
+    
+    <select id="contactTagFilter" class="btn" style="min-width:120px;" onchange="applyContactFilter(this.value)">
+        <option value="">All Tags</option>
+        {% for t in all_tags %}
+        <option value="{{ t.id }}" {% if request.GET.tag_id == t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>
+        {% endfor %}
+    </select>
+    
+    <button class="btn" onclick="toggleFilterPanel()" id="filterToggleBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"></path></svg>
+      Filters
+    </button>
+<button class="btn" id="importContactsBtn">Import Contacts</button>
     <div class="dropdown">
       <button class="btn" id="moreBtn">More</button>
       <div class="dropdown-content" id="dropdownMenu" style="display: none;">
@@ -234,7 +294,53 @@
     <a href="{% url 'add_user' %}" class="btn"><span>Add User</span></a>
   </div>
 
-  <div class="table-head">
+  
+  <!-- Filter Panel -->
+  <div class="filter-panel" id="filterPanel">
+    
+    <!-- Source -->
+    <div class="filter-group">
+      <div class="filter-label">Source</div>
+      <select id="filterSource" class="form-select form-select-sm" style="min-width:140px; padding:6px; border-radius:8px; border:1px solid #e5e7eb;">
+        <option value="all">All Sources</option>
+        <option value="Whatsapp">Whatsapp</option>
+        <option value="Web">Web</option>
+        <option value="Manual">Manual</option>
+      </select>
+    </div>
+
+    <!-- Timeframe -->
+    <div class="filter-group">
+      <div class="filter-label">Last Seen</div>
+      <div class="pills">
+        <div class="pill" onclick="setFilterTime('all', this)">Anytime</div>
+        <div class="pill" onclick="setFilterTime('24h', this)">24h</div>
+        <div class="pill" onclick="setFilterTime('7d', this)">7 Days</div>
+        <div class="pill" onclick="setFilterTime('30d', this)">30 Days</div>
+        <div class="pill" onclick="setFilterTime('custom', this)">Custom</div>
+      </div>
+      <input type="hidden" id="filterTimeframe" value="">
+    </div>
+
+    <!-- Custom Dates (Hidden unless custom) -->
+    <div class="filter-group" id="customDateGroup" style="display:none; flex-direction:row; align-items:flex-end;">
+      <div>
+        <div class="filter-label" style="margin-bottom:4px;">Start Date</div>
+        <input type="date" id="filterStartDate" class="form-control form-control-sm" style="padding:4px 8px; border-radius:6px; border:1px solid #e5e7eb;">
+      </div>
+      <div>
+        <div class="filter-label" style="margin-bottom:4px;">End Date</div>
+        <input type="date" id="filterEndDate" class="form-control form-control-sm" style="padding:4px 8px; border-radius:6px; border:1px solid #e5e7eb;">
+      </div>
+    </div>
+
+    <!-- Apply Button -->
+    <div style="flex:1; display:flex; justify-content:flex-end; align-items:flex-end; height:100%;">
+      <button class="btn" style="background:var(--primary); color:#fff; border:none;" onclick="applyAdvancedFilters()">Apply Filters</button>
+    </div>
+  </div>
+
+<div class="table-head">
     <div class="chk"><input type="checkbox" /></div>
     <div>Name</div>
     <div>Phone number</div>
@@ -256,25 +362,29 @@
           {{ u.name|slice:":1"|upper }}
           {% endif %}
         </div>
-        <div>{{ u.name }}</div>
-        {% if u.is_escalation %}
-        <span style="color: red; font-weight: bold; margin-left: 8px;">[Escalation]</span>
-        {% endif %}
-
-        {% if u.tags %}
         <div>
-          {% for tag in u.tags %}
-          <span style="color: red; font-weight: bold; margin-left: 8px;">[{{ tag|title }}]</span>
-          {% endfor %}
+          {{ u.name }}
+          {% if u.is_escalation %}
+          <span style="color: red; font-weight: bold; margin-left: 8px;">[Escalation]</span>
+          {% endif %}
+          {% if u.tags %}
+          <div class="contact-tags" style="margin-top: 4px;">
+            {% for tag in u.tags %}
+            <span
+              style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-right: 4px;">{{ tag|title }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
         </div>
-        {% endif %}
       </div>
 
       <div class="phone muted">{{ u.phone_no }}</div>
-      <div class="source muted">Whatsapp</div>
-      <div class="entered muted">{{ u.created_at }}</div>
+      <div class="source muted">{{ u.source }}</div>
+      <div class="entered muted">{{ u.last_seen|default:u.created_at }}</div>
 
       <div class="actions">
+        <button class="btn"
+          onclick="openTagModal({{ u.id }}, '{{ u.name|escapejs }}', {{ u.tag_ids|default:'[]' }})">🏷️ Tags</button>
         <a href="{% url 'edit_user' u.id %}" class="btn">Edit</a>
         <a href="{% url 'delete_user' u.id %}" class="btn" onclick="return confirm('Delete this user?');">Delete</a>
       </div>
@@ -301,11 +411,183 @@
     <button type="button" id="cancelImport">Cancel</button>
   </form>
 </div>
+
+<!-- Tag Management Modal -->
+<div id="tagModal"
+  style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; padding:24px; border-radius:12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index:1000; width: 400px; max-width: 90%;">
+  <h3 style="margin-top:0; margin-bottom:16px;">Manage Tags</h3>
+  <p id="tagModalUser" style="color:#666; margin-bottom:20px; font-weight:600;"></p>
+  <input type="hidden" id="tagUserId">
+
+  <div style="margin-bottom:20px;">
+    <label style="display:block; margin-bottom:8px; font-weight:600;">Current Tags:</label>
+    <div id="currentTagsList" style="display:flex; flex-wrap:wrap; gap:8px; min-height:40px;">
+      <!-- Tags populated via JS -->
+    </div>
+  </div>
+
+  <div style="margin-bottom:20px; border-top:1px solid #eee; padding-top:20px;">
+    <label style="display:block; margin-bottom:8px; font-weight:600;">Add New Tag:</label>
+    <div style="display:flex; gap:8px;">
+      <select id="tagSelect" style="flex:1; padding:8px; border-radius:6px; border:1px solid #ddd;">
+        <option value="">Select a tag...</option>
+        {% for tag in all_tags %}
+        <option value="{{ tag.id }}" data-name="{{ tag.name }}">{{ tag.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="addTagToUser()"
+        style="background:#22c55e; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Add</button>
+    </div>
+  </div>
+
+  <div style="text-align:right;">
+    <button onclick="closeTagModal()"
+      style="background:#f1f5f9; color:#475569; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Close</button>
+  </div>
+</div>
+
 <div id="modalOverlay"
   style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;">
 </div>
 
 <script>
+  function applyContactFilter(tagId) {
+    const url = new URL(window.location.href);
+    if (tagId) url.searchParams.set('tag_id', tagId);
+    else url.searchParams.delete('tag_id');
+    window.location.href = url.toString();
+  }
+
+  let availableTags = [
+    {% for tag in all_tags %}
+  { id: {{ tag.id }}, name: "{{ tag.name|escapejs }}" },
+  {% endfor %}
+  ];
+
+  function openTagModal(userId, userName, currentTagIds) {
+    document.getElementById('tagUserId').value = userId;
+    document.getElementById('tagModalUser').textContent = userName;
+
+    renderCurrentTags(currentTagIds);
+
+    document.getElementById('tagModal').style.display = "block";
+    document.getElementById('modalOverlay').style.display = "block";
+  }
+
+  function closeTagModal() {
+    document.getElementById('tagModal').style.display = "none";
+    document.getElementById('modalOverlay').style.display = "none";
+    // Reload to reflect changes
+    window.location.reload();
+  }
+
+  function renderCurrentTags(tagIds) {
+    const container = document.getElementById('currentTagsList');
+    container.innerHTML = '';
+
+    // Store current tags on the modal for easy access
+    container.dataset.tags = JSON.stringify(tagIds);
+
+    if (tagIds.length === 0) {
+      container.innerHTML = '<span style="color:#999; font-size:13px; font-style:italic;">No tags applied</span>';
+      return;
+    }
+
+    tagIds.forEach(id => {
+      // Find tag name
+      const tag = availableTags.find(t => t.id === id);
+      const name = tag ? tag.name : 'Unknown';
+
+      const badge = document.createElement('span');
+      badge.style.cssText = "background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;";
+      badge.innerHTML = `
+        ${name}
+        <span onclick="removeTagFromUser(${id})" style="cursor:pointer; font-size:14px; font-weight:700; line-height:1; display:flex; align-items:center;">&times;</span>
+      `;
+      container.appendChild(badge);
+    });
+  }
+
+  async function addTagToUser() {
+    const userId = document.getElementById('tagUserId').value;
+    const select = document.getElementById('tagSelect');
+    const tagId = parseInt(select.value);
+
+    if (!tagId) return;
+
+    // Check if already exists
+    let currentTags = JSON.parse(document.getElementById('currentTagsList').dataset.tags || '[]');
+    if (currentTags.includes(tagId)) {
+      alert('User already has this tag');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/user/tag/add/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({ user_id: userId, tag_id: tagId })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        currentTags.push(tagId);
+        renderCurrentTags(currentTags);
+        select.value = ""; // Reset dropdown
+      } else {
+        alert(data.error || 'Failed to add tag');
+      }
+    } catch (e) {
+      alert('Error adding tag');
+      console.error(e);
+    }
+  }
+
+  async function removeTagFromUser(tagId) {
+    const userId = document.getElementById('tagUserId').value;
+
+    if (!confirm('Remove this tag?')) return;
+
+    try {
+      const res = await fetch('/api/user/tag/remove/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({ user_id: userId, tag_id: tagId })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        let currentTags = JSON.parse(document.getElementById('currentTagsList').dataset.tags || '[]');
+        currentTags = currentTags.filter(id => id !== tagId);
+        renderCurrentTags(currentTags);
+      } else {
+        alert(data.error || 'Failed to remove tag');
+      }
+    } catch (e) {
+      alert('Error removing tag');
+      console.error(e);
+    }
+  }
+
+  function getCsrfToken() {
+    const name = 'csrftoken=';
+    const decoded = decodeURIComponent(document.cookie);
+    const ca = decoded.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i].trim();
+      if (c.indexOf(name) === 0) return c.substring(name.length, c.length);
+    }
+    return '';
+  }
+
   document.getElementById("importContactsBtn").addEventListener("click", function () {
     document.getElementById("importModal").style.display = "block";
     document.getElementById("modalOverlay").style.display = "block";
@@ -316,8 +598,10 @@
     document.getElementById("modalOverlay").style.display = "none";
   });
 
+  // Close any modal when overlay clicked
   document.getElementById("modalOverlay").addEventListener("click", function () {
     document.getElementById("importModal").style.display = "none";
+    document.getElementById("tagModal").style.display = "none";
     this.style.display = "none";
   });
 
@@ -346,5 +630,99 @@
       dropdownMenu.style.display = 'none';
     });
   })();
+
+  // FILTER LOGIC
+  function toggleFilterPanel() {
+    const p = document.getElementById('filterPanel');
+    const b = document.getElementById('filterToggleBtn');
+    if (p.style.display === 'flex') {
+        p.style.display = 'none';
+        b.style.background = '';
+        b.style.color = '';
+    } else {
+        p.style.display = 'flex';
+        b.style.background = '#eff6ff';
+        b.style.color = 'var(--primary)';
+    }
+  }
+
+  function setFilterTime(val, el) {
+    document.getElementById('filterTimeframe').value = val;
+    // UI
+    document.querySelectorAll('.pill').forEach(e => e.classList.remove('active'));
+    el.classList.add('active');
+    
+    // Show/Hide Date inputs
+    const grp = document.getElementById('customDateGroup');
+    if (val === 'custom') grp.style.display = 'flex';
+    else grp.style.display = 'none';
+  }
+
+  function applyAdvancedFilters() {
+    const url = new URL(window.location.href);
+    
+    // Source
+    const src = document.getElementById('filterSource').value;
+    if (src && src !== 'all') url.searchParams.set('source', src);
+    else url.searchParams.delete('source');
+
+    // Timeframe
+    const tf = document.getElementById('filterTimeframe').value;
+    if (tf && tf !== 'all') {
+        url.searchParams.set('timeframe', tf);
+        if (tf === 'custom') {
+            const s = document.getElementById('filterStartDate').value;
+            const e = document.getElementById('filterEndDate').value;
+            if (s) url.searchParams.set('start_date', s);
+            if (e) url.searchParams.set('end_date', e);
+        }
+    } else {
+        url.searchParams.delete('timeframe');
+        url.searchParams.delete('start_date');
+        url.searchParams.delete('end_date');
+    }
+
+    // Keep Tag if exists (handled by ApplyContactFilter usually, but we overwrite url)
+    // Tag is in URL already if selected.
+    
+    window.location.href = url.toString();
+  }
+  
+  // Init UI on load
+  document.addEventListener("DOMContentLoaded", function() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('source') || params.has('timeframe')) {
+        toggleFilterPanel(); // Open if active
+        
+        // Set Source
+        const s = params.get('source');
+        if (s) document.getElementById('filterSource').value = s;
+        
+        // Set Timeframe
+        const tf = params.get('timeframe');
+        if (tf) {
+            document.getElementById('filterTimeframe').value = tf;
+            // Activate pill
+            const pills = document.querySelectorAll('.pill');
+            pills.forEach(p => {
+                if (p.textContent.toLowerCase().includes(tf) || (tf==='24h' && p.textContent.includes('24h')) || (tf==='7d' && p.textContent.includes('7')) || (tf==='30d' && p.textContent.includes('30'))) {
+                   p.classList.add('active'); 
+                }
+                if (tf === 'custom' && p.textContent === 'Custom') p.classList.add('active');
+                if (tf === 'all' && p.textContent === 'Anytime') p.classList.add('active');
+            });
+            
+            if (tf === 'custom') {
+                document.getElementById('customDateGroup').style.display = 'flex';
+                document.getElementById('filterStartDate').value = params.get('start_date') || '';
+                document.getElementById('filterEndDate').value = params.get('end_date') || '';
+            }
+        }
+    } else {
+        // Default Pill
+        document.querySelector('.pill').classList.add('active');
+    }
+  });
+
 </script>
 {% endblock %}

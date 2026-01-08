@@ -1,0 +1,296 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - {{ organization.name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --primary: #667eea;
+            --primary-dark: #5a67d8;
+            --text: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --success: #10b981;
+            --sidebar-bg: #1f2937;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-main);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .back-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            background: #f9fafb;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #fff;
+        }
+
+        .form-group small {
+            display: block;
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .messages {
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #f0fdf4;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-configured {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <a href="{% url 'dashboard' %}" class="back-link">← Back to Dashboard</a>
+                <h1>Settings</h1>
+            </div>
+            <span
+                class="status-badge {% if organization.whatsapp_token %}status-configured{% else %}status-pending{% endif %}">
+                {% if organization.whatsapp_token %}Configured{% else %}Setup Pending{% endif %}
+            </span>
+        </div>
+
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'client_settings_update' %}">
+            {% csrf_token %}
+
+            <!-- WhatsApp Configuration -->
+            <div class="card">
+                <h3 class="card-title">📱 WhatsApp Configuration</h3>
+                <div class="form-group">
+                    <label for="display_phone_no">Display Phone Number</label>
+                    <input type="text" id="display_phone_no" name="display_phone_no"
+                        value="{{ organization.display_phone_no }}" placeholder="+1234567890">
+                    <small>The phone number shown to your customers</small>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="whatsapp_phone_id">WhatsApp Phone ID</label>
+                        <input type="text" id="whatsapp_phone_id" name="whatsapp_phone_id"
+                            value="{{ organization.whatsapp_phone_id }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="whatsapp_token">WhatsApp Token</label>
+                        <input type="password" id="whatsapp_token" name="whatsapp_token"
+                            placeholder="{% if organization.whatsapp_token %}••••••••{% else %}Enter token{% endif %}">
+                        <small>Leave blank to keep existing token</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI/OpenAI Configuration -->
+            <div class="card">
+                <h3 class="card-title">🤖 AI Configuration</h3>
+                <div class="form-group">
+                    <label for="openai_api_key">OpenAI API Key</label>
+                    <input type="password" id="openai_api_key" name="openai_api_key"
+                        placeholder="{% if organization.openai_api_key %}sk-•••••{% else %}sk-...{% endif %}">
+                    <small>Leave blank to keep existing key</small>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="assistant_name">Assistant Name</label>
+                        <input type="text" id="assistant_name" name="assistant_name"
+                            value="{{ organization.assistant_name }}" placeholder="AI Assistant">
+                    </div>
+                    <div class="form-group">
+                        <label for="chatgpt_mode">ChatGPT Mode</label>
+                        <select id="chatgpt_mode" name="chatgpt_mode">
+                            <option value="prompt" {% if organization.chatgpt_mode=='prompt' %}selected{% endif %}>
+                                Prompt</option>
+                            <option value="ai_agent" {% if organization.chatgpt_mode=='ai_agent' %}selected{% endif %}>
+                                AI Agent</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pinecone Configuration -->
+            <div class="card">
+                <h3 class="card-title">🗄️ Pinecone (Vector DB)</h3>
+                <div class="form-group">
+                    <label for="pinecone_token">Pinecone API Key</label>
+                    <input type="password" id="pinecone_token" name="pinecone_token"
+                        placeholder="{% if organization.pinecone_token %}••••••••{% else %}Enter API key{% endif %}">
+                </div>
+            </div>
+
+            <!-- Calendly Configuration -->
+            <div class="card">
+                <h3 class="card-title">📅 Calendly Integration</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="calendly_token">Calendly Token</label>
+                        <input type="password" id="calendly_token" name="calendly_token"
+                            placeholder="{% if organization.calendly_token %}••••••••{% else %}Enter token{% endif %}">
+                    </div>
+                    <div class="form-group">
+                        <label for="calendly_scheduling_url">Calendly Scheduling URL</label>
+                        <input type="url" id="calendly_scheduling_url" name="calendly_scheduling_url"
+                            value="{{ organization.calendly_scheduling_url }}" placeholder="https://calendly.com/...">
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: right;">
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+            </div>
+        </form>
+    </div>
+</body>
+
+</html>

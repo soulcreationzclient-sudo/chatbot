@@ -48,23 +48,38 @@ class whatsappcontroller:
                 response_data = response.json()
                 display_phone_no = str(
                     response_data.get('display_phone_number', ''))
+                
+                org_id = request.session.get('organization_id')
                 admin_id = request.session.get('admin_id')
-                if admin_id:
+                
+                if org_id:
+                    # Organization-based auth
+                    from newapp.models import Organization
+                    Organization.objects.filter(id=org_id).update(
+                        whatsapp_phone_id=phone_id,
+                        whatsapp_token=user_token,
+                        display_phone_no=display_phone_no
+                    )
+                    messages.success(request, "WhatsApp connected successfully!")
+                    return redirect(request.META.get('HTTP_REFERER', '/'))
+                elif admin_id:
+                    # Legacy admin-based auth
                     Admin.objects.filter(id=admin_id).update(
                         whatsapp_phone_id=phone_id,
                         whatsapp_token=user_token,
                         display_phone_no=display_phone_no
                     )
-                    messages.success(request, "whatsapp connected")
+                    messages.success(request, "WhatsApp connected successfully!")
                     return redirect(request.META.get('HTTP_REFERER', '/'))
-                messages.success(request, "whatsapp not connected")
+                    
+                messages.error(request, "Not authenticated")
                 return redirect(request.META.get('HTTP_REFERER', '/'))
            
         except requests.exceptions.RequestException as e:
-            messages.warning(request, "whatsapp error try again later")
+            messages.warning(request, "WhatsApp error - please try again later")
             return redirect(request.META.get('HTTP_REFERER', '/'))
 
-        messages.warning(request, "server error")
+        messages.warning(request, "Server error")
         return redirect(request.META.get('HTTP_REFERER', '/'))
 
     @csrf_exempt
@@ -254,16 +269,22 @@ class whatsappcontroller:
                             
                             # ==================== IMAGE/DOCUMENT HANDLING ====================
                             if msg_type == 'image':
-                                from newapp.image_pdf_service import analyze_media_message
+                                from newapp.image_pdf_service import analyze_media_message, save_chat_media
                                 
                                 image_info = m.get('image', {})
                                 media_id = image_info.get('id')
                                 caption = image_info.get('caption', 'What can you see in this image? Describe it in detail.')
                                 
+                                # Save media locally
+                                local_url = save_chat_media(media_id, admin_check.whatsapp_token)
+                                msg_content = f"[Image] {caption}"
+                                if local_url:
+                                    msg_content = f"[Image: {local_url}] {caption}"
+                                
                                 # Save incoming message
                                 Message.objects.create(
                                     user_id=existing_user,
-                                    messages=f"[Image] {caption}",
+                                    messages=msg_content,
                                     created_at=timezone.now(),
                                     who='human'
                                 )
@@ -311,7 +332,7 @@ class whatsappcontroller:
                                 msg_text = f"I have uploaded an image. content: {reply}"
                             
                             elif msg_type == 'document':
-                                from newapp.image_pdf_service import analyze_media_message
+                                from newapp.image_pdf_service import analyze_media_message, save_chat_media
                                 
                                 doc_info = m.get('document', {})
                                 media_id = doc_info.get('id')
@@ -319,10 +340,16 @@ class whatsappcontroller:
                                 filename = doc_info.get('filename', 'document')
                                 caption = doc_info.get('caption', 'Please analyze this document and tell me what it contains.')
                                 
+                                # Save media locally
+                                local_url = save_chat_media(media_id, admin_check.whatsapp_token)
+                                msg_content = f"[Document: {filename}] {caption}"
+                                if local_url:
+                                    msg_content = f"[Document: {local_url}] {caption}"
+                                
                                 # Save incoming message
                                 Message.objects.create(
                                     user_id=existing_user,
-                                    messages=f"[Document: {filename}] {caption}",
+                                    messages=msg_content,
                                     created_at=timezone.now(),
                                     who='human'
                                 )
@@ -368,7 +395,12 @@ class whatsappcontroller:
                                 # continue 
                                 
                                 # Inject Analysis into Message Text for AI Processing
-                                msg_text = f"I have uploaded a document. content: {reply}"
+                                # Keep it generic - let the AI decide what to do based on configured External APIs
+                                msg_text = f"""The user has uploaded a document. Here is the extracted content:
+
+{reply}
+
+If you have any relevant tools/functions available that can process or validate this document, use them. Otherwise, respond helpfully based on the document content."""
                                 
                                 # Need to skip the 'msg_text' retrieval block below since we just set it
 
@@ -500,12 +532,42 @@ If the user's question relates to this document, answer based on your analysis a
 
                                         # --- TOOL INTEGRATION START ---
                                         from newapp.models import ExternalAPI
-                                        from newapp.logic import execute_tool
+                                        from newapp.logic import execute_tool, set_current_context
+                                        import re
+                                        
+                                        # Set context for built-in tools like apply_tag
+                                        set_current_context(phone, admin_check)
                                         
                                         db_tools = ExternalAPI.objects.filter(admin=admin_check)
                                         openai_tools = []
                                         if db_tools.exists():
                                             for tool in db_tools:
+                                                # Extract parameter names from payload placeholders like {{param_name}}
+                                                payload_str = json.dumps(tool.payload or {})
+                                                url_str = tool.url or ""
+                                                combined = payload_str + url_str
+                                                
+                                                # Find all {{xxx}} placeholders
+                                                param_pattern = r'\{\{(\w+)\}\}'
+                                                param_names = list(set(re.findall(param_pattern, combined)))
+                                                
+                                                # Build dynamic properties from extracted params
+                                                if param_names:
+                                                    properties = {}
+                                                    for pname in param_names:
+                                                        properties[pname] = {
+                                                            "type": "string",
+                                                            "description": f"Value for {pname}"
+                                                        }
+                                                else:
+                                                    # Fallback: allow any parameters
+                                                    properties = {
+                                                        "data": {
+                                                            "type": "object",
+                                                            "description": "Data to send to the API"
+                                                        }
+                                                    }
+                                                
                                                 openai_tools.append({
                                                     "type": "function",
                                                     "function": {
@@ -513,13 +575,45 @@ If the user's question relates to this document, answer based on your analysis a
                                                         "description": tool.description,
                                                         "parameters": {
                                                             "type": "object",
-                                                            "properties": {
-                                                                "param_name": {"type": "string", "description": "Parameter value"} 
-                                                            },
+                                                            "properties": properties,
                                                             "additionalProperties": True 
                                                         }
                                                     }
                                                 })
+                                            print(f"[Tools] Registered {len(openai_tools)} External API tool(s)")
+                                        
+                                        # --- TAG INTEGRATION ---
+                                        from newapp.models import Tag
+                                        admin_tags = Tag.objects.filter(admin=admin_check)
+                                        
+                                        if admin_tags.exists():
+                                            # Inject available tags into system prompt
+                                            tag_info = "\n\n## AVAILABLE TAGS\nYou can apply the following tags to users using the apply_tag function:\n"
+                                            for tag in admin_tags:
+                                                tag_info += f"- **{tag.name}** (ID: {tag.id}): {tag.description or 'No description'}\n"
+                                            tag_info += "\nWhen you believe a tag matches the user's intent or status, call apply_tag(tag_name='TagName').\n"
+                                            system_prompt += tag_info
+                                            
+                                            # Add apply_tag as a built-in tool
+                                            openai_tools.append({
+                                                "type": "function",
+                                                "function": {
+                                                    "name": "apply_tag",
+                                                    "description": "Apply a tag to the current user to categorize them. Use this when the user's intent or status matches a tag.",
+                                                    "parameters": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "tag_name": {
+                                                                "type": "string",
+                                                                "description": "The name of the tag to apply to this user"
+                                                            }
+                                                        },
+                                                        "required": ["tag_name"]
+                                                    }
+                                                }
+                                            })
+                                            print(f"[Tags] Injected {admin_tags.count()} tags + apply_tag tool")
+                                        # --- END TAG INTEGRATION ---
                                         
                                         # Prepare API Call Params
                                         api_params = {
@@ -645,35 +739,74 @@ If the user's question relates to this document, answer based on your analysis a
 
 
 
-                            # Sending WhatsApp response
+                            # Sending WhatsApp response (with image tag processing)
                             try:
-                                # Send directly to WhatsApp API
-                                whatsapp_api_url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
-                                headers = {
-                                    "Authorization": f"Bearer {admin_check.whatsapp_token}",
-                                    "Content-Type": "application/json"
-                                }
-                                payload = {
-                                    "messaging_product": "whatsapp",
-                                    "to": existing_user.phone_no,
-                                    "type": "text",
-                                    "text": {"body": final_reply_text}
-                                }
-                                r = requests.post(whatsapp_api_url, json=payload, headers=headers, timeout=15)
+                                # 1. Process Action Tags (Tags & APIs)
+                                from newapp.action_tag_processor import process_response_actions
+                                
+                                action_result = process_response_actions(
+                                    final_reply_text,
+                                    admin_check,
+                                    existing_user.phone_no
+                                )
+                                
+                                # Update text with actions removed
+                                final_reply_text = action_result.get('final_text', final_reply_text)
+                                
+                                # Append any API responses to the text
+                                api_responses = action_result.get('api_responses', [])
+                                if api_responses:
+                                    final_reply_text += "\n\n" + "\n".join(api_responses)
+                                    
+                                with open('debug_log.txt', 'a') as f:
+                                    f.write(f"[Debug] Actions executed: {len(action_result.get('actions_executed', []))}\n")
+
+                                # 2. Process Image Tags
+                                from newapp.image_tag_processor import process_response_with_images
+                                
+                                img_result = process_response_with_images(
+                                    final_reply_text,
+                                    admin_check,
+                                    existing_user.phone_no,
+                                    phone_number_id,
+                                    admin_check.whatsapp_token
+                                )
+                                
+                                # Update final_reply_text with the processed version (tags removed)
+                                final_reply_text = img_result.get('final_text', final_reply_text)
                                 
                                 with open('debug_log.txt', 'a') as f:
-                                    f.write(f"[Debug] Sent to WhatsApp. Status: {r.status_code}\n")
-                                    if r.status_code != 200:
-                                        f.write(f"[Error] WhatsApp API Response: {r.text}\n")
-
-                                if r.status_code != 200:
-                                    print(f"send_whatsapp_message error: {r.status_code} - {r.text}")
+                                    f.write(f"[Debug] Response processed. Images sent: {img_result.get('images_sent', 0)}, Text sent: {img_result.get('text_sent', False)}\n")
+                                
+                                if img_result.get('success'):
+                                    print(f"✅ Bot reply sent to {existing_user.phone_no} (images: {img_result.get('images_sent', 0)})")
                                 else:
-                                    print(f"✅ Bot reply sent to {existing_user.phone_no}")
+                                    print(f"⚠️ Partial success sending to {existing_user.phone_no}")
+                                    
                             except Exception as e:
                                 with open('debug_log.txt', 'a') as f:
                                     f.write(f"[Error] Sending Exception: {str(e)}\n")
                                 print(f"Exception calling send_whatsapp_message: {e}")
+                                
+                                # Fallback to regular text sending if image processing fails
+                                try:
+                                    whatsapp_api_url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
+                                    headers = {
+                                        "Authorization": f"Bearer {admin_check.whatsapp_token}",
+                                        "Content-Type": "application/json"
+                                    }
+                                    payload = {
+                                        "messaging_product": "whatsapp",
+                                        "to": existing_user.phone_no,
+                                        "type": "text",
+                                        "text": {"body": final_reply_text}
+                                    }
+                                    r = requests.post(whatsapp_api_url, json=payload, headers=headers, timeout=15)
+                                    if r.status_code == 200:
+                                        print(f"✅ Fallback text sent to {existing_user.phone_no}")
+                                except Exception as fallback_e:
+                                    print(f"Fallback also failed: {fallback_e}")
+                                    
                             if not Message.objects.filter(
                                 user_id=existing_user,
                                 messages=final_reply_text,
@@ -689,6 +822,7 @@ If the user's question relates to this document, answer based on your analysis a
                                 )
                             else:
                                 print("Duplicate bot reply prevented for user:", existing_user)
+
 
                             # ===== FOLLOW-UP MESSAGE SCHEDULING =====
                             # Schedule a follow-up message if enabled in admin settings

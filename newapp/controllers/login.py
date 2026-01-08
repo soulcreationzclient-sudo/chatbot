@@ -38,7 +38,7 @@ class Logincontroller:
     def logout(request):
         request.session.flush()
         messages.warning(request,"you have been logged out")
-        return redirect('/login_view')
+        return redirect('/login/')
     
     def enter(request):
-        return redirect('/login_view')
+        return redirect('/login/')

@@ -7,17 +7,23 @@ class Settingcontroller :
         # return HttpResponse('hi')
         return render(request,'set/dashboard.html')
     def channels_view(request):
-        # return render(re)
-        whatsapp_connected=None
-        admin_id=request.session.get('admin_id')
-        if admin_id:
-            admin=Admin.objects.filter(id=admin_id).only('whatsapp_phone_id','whatsapp_token').first()
-            if admin:
-              if admin.whatsapp_token!='' and admin.whatsapp_phone_id!='':
-                  whatsapp_connected=True
-        # return HttpResponse(whatsapp_connected)
-        # return HttpResponse(whatsapp_connected)
-        return render(request,'set/channels.html',{'whatsapp_connected':whatsapp_connected})
+        whatsapp_connected = None
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        if org_id:
+            # Organization-based auth
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_token and org.whatsapp_phone_id:
+                whatsapp_connected = True
+        elif admin_id:
+            # Legacy admin-based auth
+            admin = Admin.objects.filter(id=admin_id).only('whatsapp_phone_id', 'whatsapp_token').first()
+            if admin and admin.whatsapp_token and admin.whatsapp_phone_id:
+                whatsapp_connected = True
+        
+        return render(request, 'set/channels.html', {'whatsapp_connected': whatsapp_connected})
     
     def integration(request):
         pinecone_connected = None
@@ -25,9 +31,21 @@ class Settingcontroller :
         calendly_connected = False
         admin = None 
         chatgpt_mode = "N/A"
+        chatgpt_mode = "N/A"
         admin_id = request.session.get('admin_id')
-
-        if admin_id:
+        org_id = request.session.get('organization_id')
+        
+        if org_id:
+            # New Organization Logic
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                if org.pinecone_token: pinecone_connected = True
+                if org.openai_api_key: chatgpt_connected = True
+                if org.calendly_token: calendly_connected = True
+                chatgpt_mode = org.chatgpt_mode
+                
+        elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
             
             if admin:
@@ -247,6 +265,71 @@ class Settingcontroller :
 
     # ==================== IMAGE ASSETS ====================
     
+    @staticmethod
+    def compress_uploaded_image(image_file, max_dimension=1024, quality=85):
+        """
+        Compress an uploaded image file before saving.
+        Resizes to max_dimension and compresses to JPEG.
+        
+        Args:
+            image_file: Django UploadedFile object
+            max_dimension: Maximum width/height in pixels
+            quality: JPEG quality (1-100)
+            
+        Returns:
+            Compressed image file (InMemoryUploadedFile or original)
+        """
+        try:
+            from PIL import Image
+            from io import BytesIO
+            from django.core.files.uploadedfile import InMemoryUploadedFile
+            import os
+            
+            # Open image
+            img = Image.open(image_file)
+            original_format = img.format
+            
+            # Convert to RGB if necessary (for PNG with transparency)
+            if img.mode in ('RGBA', 'P'):
+                img = img.convert('RGB')
+            
+            # Resize if too large
+            if max(img.size) > max_dimension:
+                ratio = max_dimension / max(img.size)
+                new_size = (int(img.size[0] * ratio), int(img.size[1] * ratio))
+                img = img.resize(new_size, Image.Resampling.LANCZOS)
+                print(f"[ImageAsset] Resized from {img.size} to {new_size}")
+            
+            # Save to buffer
+            buffer = BytesIO()
+            img.save(buffer, 'JPEG', quality=quality, optimize=True)
+            buffer.seek(0)
+            
+            # Get new filename with .jpg extension
+            original_name = image_file.name
+            base_name = os.path.splitext(original_name)[0]
+            new_name = f"{base_name}.jpg"
+            
+            # Create new InMemoryUploadedFile
+            compressed_file = InMemoryUploadedFile(
+                file=buffer,
+                field_name='image',
+                name=new_name,
+                content_type='image/jpeg',
+                size=buffer.getbuffer().nbytes,
+                charset=None
+            )
+            
+            print(f"[ImageAsset] Compressed image: {buffer.getbuffer().nbytes / 1024:.1f}KB")
+            return compressed_file
+            
+        except ImportError:
+            print("[ImageAsset] Warning: Pillow not installed. Cannot compress images.")
+            return image_file
+        except Exception as e:
+            print(f"[ImageAsset] Error compressing image: {e}")
+            return image_file
+    
     def image_assets(request):
         from ..models import ImageAsset
         admin_id = request.session.get('admin_id')
@@ -289,11 +372,14 @@ class Settingcontroller :
             if ImageAsset.objects.filter(admin=admin, name=name).exists():
                 return JsonResponse({'error': f'An image with name "{name}" already exists'}, status=400)
             
+            # Compress image before saving
+            compressed_image = Settingcontroller.compress_uploaded_image(image_file)
+            
             asset = ImageAsset.objects.create(
                 admin=admin,
                 name=name,
                 description=description,
-                image=image_file,
+                image=compressed_image,
             )
             return JsonResponse({
                 'success': True,
@@ -339,7 +425,9 @@ class Settingcontroller :
             if image_file:
                 if asset.image:
                     asset.image.delete(save=False)
-                asset.image = image_file
+                # Compress image before saving
+                compressed_image = Settingcontroller.compress_uploaded_image(image_file)
+                asset.image = compressed_image
             
             asset.save()
             return JsonResponse({
@@ -373,4 +461,285 @@ class Settingcontroller :
             asset.image.delete(save=False)
         
         asset.delete()
+        return JsonResponse({'success': True})
+
+    # ===================== FOLLOW-UP SETTINGS =====================
+    
+    @staticmethod
+    def followup_settings(request):
+        from ..models import FollowUpMessage
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        print(f"[DEBUG] followup_settings: admin_id={admin_id}, org_id={org_id}")
+        
+        if org_id:
+             # TODO: implement FollowUps for Organization
+             return render(request, 'set/followup_settings.html', {
+                'admin': None,
+                'followups': []
+            })
+            
+        if not admin_id:
+            return redirect('/login/')
+        
+        admin = Admin.objects.filter(id=admin_id).first()
+        if not admin:
+            return redirect('/login/')
+        
+        followups = FollowUpMessage.objects.filter(admin=admin).order_by('step')
+        
+        return render(request, 'set/followup_settings.html', {
+            'admin': admin,
+            'followups': followups
+        })
+    
+    @staticmethod
+    def followup_create(request):
+        from django.http import JsonResponse
+        from ..models import FollowUpMessage
+        import json
+        
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        if not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        admin = Admin.objects.filter(id=admin_id).first()
+        if not admin:
+            return JsonResponse({'error': 'Admin not found'}, status=404)
+        
+        # Check limit (max 4)
+        existing_count = FollowUpMessage.objects.filter(admin=admin).count()
+        if existing_count >= 4:
+            return JsonResponse({'error': 'Maximum 4 follow-ups allowed'}, status=400)
+        
+        try:
+            data = json.loads(request.body)
+            next_step = existing_count + 1
+            
+            followup = FollowUpMessage.objects.create(
+                admin=admin,
+                step=next_step,
+                delay_minutes=data.get('delay_minutes', 10),
+                message=data.get('message', ''),
+                tag_id=data.get('tag_id') or None
+            )
+            
+            return JsonResponse({'success': True, 'id': followup.id})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    @staticmethod
+    def followup_update(request, followup_id):
+        from django.http import JsonResponse
+        from ..models import FollowUpMessage
+        import json
+        
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        if not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        admin = Admin.objects.filter(id=admin_id).first()
+        if not admin:
+            return JsonResponse({'error': 'Admin not found'}, status=404)
+        
+        followup = FollowUpMessage.objects.filter(id=followup_id, admin=admin).first()
+        if not followup:
+            return JsonResponse({'error': 'Follow-up not found'}, status=404)
+        
+        try:
+            data = json.loads(request.body)
+            followup.delay_minutes = data.get('delay_minutes', followup.delay_minutes)
+            followup.message = data.get('message', followup.message)
+            if 'tag_id' in data:
+                followup.tag_id = data.get('tag_id') or None
+            followup.save()
+            
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    @staticmethod
+    def followup_delete(request, followup_id):
+        from django.http import JsonResponse
+        from ..models import FollowUpMessage
+        
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        if not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        admin = Admin.objects.filter(id=admin_id).first()
+        if not admin:
+            return JsonResponse({'error': 'Admin not found'}, status=404)
+        
+        followup = FollowUpMessage.objects.filter(id=followup_id, admin=admin).first()
+        if not followup:
+            return JsonResponse({'error': 'Follow-up not found'}, status=404)
+        
+        deleted_step = followup.step
+        followup.delete()
+        
+        # Renumber remaining steps
+        remaining = FollowUpMessage.objects.filter(admin=admin, step__gt=deleted_step).order_by('step')
+        for i, f in enumerate(remaining, start=deleted_step):
+            f.step = i
+            f.save()
+        
+        return JsonResponse({'success': True})
+    
+    @staticmethod
+    def followup_toggle(request):
+        from django.http import JsonResponse
+        import json
+        
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        if not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        admin = Admin.objects.filter(id=admin_id).first()
+        if not admin:
+            return JsonResponse({'error': 'Admin not found'}, status=404)
+        
+        try:
+            data = json.loads(request.body)
+            admin.followup_enabled = data.get('enabled', True)
+            admin.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    # ===================== TAG MANAGEMENT =====================
+    
+    @staticmethod
+    def tags_view(request):
+        from ..models import Tag
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        if org_id:
+             # TODO: implement Tags for Organization
+             return render(request, 'set/tags.html', {
+                'admin': None,
+                'tags': []
+            })
+            
+        if not admin_id:
+            return redirect('/login/')
+        
+        admin = Admin.objects.filter(id=admin_id).first()
+        if not admin:
+            return redirect('/login/')
+        
+        tags = Tag.objects.filter(admin=admin).order_by('-created_at')
+        
+        return render(request, 'set/tags.html', {
+            'admin': admin,
+            'tags': tags
+        })
+    
+    @staticmethod
+    def tag_create(request):
+        from django.http import JsonResponse
+        from ..models import Tag
+        import json
+        
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        if not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        admin = Admin.objects.filter(id=admin_id).first()
+        if not admin:
+            return JsonResponse({'error': 'Admin not found'}, status=404)
+        
+        try:
+            data = json.loads(request.body)
+            name = data.get('name', '').strip()
+            description = data.get('description', '').strip()
+            
+            if not name:
+                return JsonResponse({'error': 'Tag name is required'}, status=400)
+            
+            # Check for duplicate
+            if Tag.objects.filter(admin=admin, name__iexact=name).exists():
+                return JsonResponse({'error': 'Tag already exists'}, status=400)
+            
+            tag = Tag.objects.create(
+                admin=admin,
+                name=name,
+                description=description
+            )
+            
+            return JsonResponse({'success': True, 'id': tag.id, 'name': tag.name})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    @staticmethod
+    def tag_update(request, tag_id):
+        from django.http import JsonResponse
+        from ..models import Tag
+        import json
+        
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        if not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        admin = Admin.objects.filter(id=admin_id).first()
+        if not admin:
+            return JsonResponse({'error': 'Admin not found'}, status=404)
+        
+        tag = Tag.objects.filter(id=tag_id, admin=admin).first()
+        if not tag:
+            return JsonResponse({'error': 'Tag not found'}, status=404)
+        
+        try:
+            data = json.loads(request.body)
+            tag.name = data.get('name', tag.name).strip()
+            tag.description = data.get('description', tag.description).strip()
+            tag.save()
+            
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    @staticmethod
+    def tag_delete(request, tag_id):
+        from django.http import JsonResponse
+        from ..models import Tag
+        
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        if not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        admin = Admin.objects.filter(id=admin_id).first()
+        if not admin:
+            return JsonResponse({'error': 'Admin not found'}, status=404)
+        
+        tag = Tag.objects.filter(id=tag_id, admin=admin).first()
+        if not tag:
+            return JsonResponse({'error': 'Tag not found'}, status=404)
+        
+        tag.delete()
         return JsonResponse({'success': True})

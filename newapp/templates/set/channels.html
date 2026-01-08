@@ -116,23 +116,26 @@
     color: var(--danger) !important;
   }
 
-  /* MODAL */
-  .modal-backdrop {
+  /* WHATSAPP MODAL - using wa- prefix to avoid Bootstrap conflicts */
+  .wa-backdrop {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background: rgba(15, 23, 42, .45);
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 99999;
   }
 
-  .modal-backdrop.show {
-    display: flex;
+  .wa-backdrop.show {
+    display: flex !important;
   }
 
-  .modal {
-    background: var(--bg-card);
+  .wa-modal-box {
+    background: #ffffff;
     border-radius: 16px;
     width: 100%;
     max-width: 460px;
@@ -141,9 +144,10 @@
     transform: scale(.96);
     opacity: 0;
     transition: all .2s ease;
+    z-index: 100000;
   }
 
-  .modal.show {
+  .wa-backdrop.show .wa-modal-box {
     transform: scale(1);
     opacity: 1;
   }
@@ -302,8 +306,8 @@
 </div>
 
 <!-- WhatsApp Modal -->
-<div id="waBackdrop" class="modal-backdrop" aria-hidden="true">
-  <div id="waModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="waTitle">
+<div id="waBackdrop" class="wa-backdrop" aria-hidden="true">
+  <div id="waModal" class="wa-modal-box" role="dialog" aria-modal="true" aria-labelledby="waTitle">
     <div class="modal-header">
       <div class="modal-title" id="waTitle">
         <span class="wa-dot"><i class="fa-brands fa-whatsapp"></i></span>
@@ -345,17 +349,32 @@
     const idEl = document.getElementById("waId");
     const tokenEl = document.getElementById("waToken");
 
+    console.log("WhatsApp Modal Init:", {
+      openBtn: !!openBtn,
+      disconnect: !!disconnect,
+      backdrop: !!backdrop,
+      modal: !!modal
+    });
+
     function openModal() {
-      backdrop.classList.add("show");
-      modal.classList.add("show");
-      backdrop.setAttribute("aria-hidden", "false");
-      setTimeout(() => idEl.focus(), 60);
+      console.log("Opening modal...");
+      if (backdrop) {
+        backdrop.classList.add("show");
+        backdrop.setAttribute("aria-hidden", "false");
+        console.log("Modal opened - backdrop classes:", backdrop.classList);
+        setTimeout(() => idEl && idEl.focus(), 100);
+      } else {
+        console.error("Backdrop element not found!");
+      }
     }
+
     function closeModal() {
-      modal.classList.remove("show");
-      backdrop.classList.remove("show");
-      backdrop.setAttribute("aria-hidden", "true");
+      if (backdrop) {
+        backdrop.classList.remove("show");
+        backdrop.setAttribute("aria-hidden", "true");
+      }
     }
+
     function dis() {
       let baseurl = window.location.origin;
       let disconnectUrl = baseurl + "/disconnect/";
@@ -364,10 +383,20 @@
         window.location.assign(disconnectUrl);
       }
     }
+
     if (openBtn) {
-      openBtn.addEventListener("click", openModal);
-    } else if (disconnect) {
-      disconnect.addEventListener("click", dis);
+      console.log("Adding click listener to openBtn");
+      openBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        openModal();
+      });
+    }
+    if (disconnect) {
+      console.log("Adding click listener to disconnect");
+      disconnect.addEventListener("click", function (e) {
+        e.preventDefault();
+        dis();
+      });
     }
 
     closeBtn.addEventListener("click", closeModal);

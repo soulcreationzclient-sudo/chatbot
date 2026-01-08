@@ -337,24 +337,7 @@
     });
   }
 
-  const saveFollowupSettingsBtn = document.getElementById('saveFollowupSettings');
-  if (saveFollowupSettingsBtn) {
-    saveFollowupSettingsBtn.addEventListener('click', async () => {
-      clearAlert('calendlyAlert');
-      const delayMinutes = document.getElementById('followupDelayRange')?.value || 10;
-      const enabled = document.getElementById('followupEnabled')?.checked || false;
-      try {
-        const res = await fetch('/update_followup_settings/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-          body: JSON.stringify({ followup_delay_minutes: parseInt(delayMinutes), followup_enabled: enabled })
-        });
-        const data = await res.json();
-        if (data.success) { showAlert(data.msg || 'Settings saved!', 'success', 'calendlyAlert'); setTimeout(() => window.location.reload(), 600); }
-        else showAlert(data.error || 'Failed to save', 'danger', 'calendlyAlert');
-      } catch (err) { showAlert('Failed to save. ' + err.message, 'danger', 'calendlyAlert'); }
-    });
-  }
+
 </script>
 {% endblock %}
 
@@ -381,13 +364,15 @@
             </div>
             <div class="fw-semibold">Pinecone</div>
           </div>
-          <span class="text-muted">&rsaquo;</span>
-          {% if pinecone_connected %}
-          <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected"
-            id="connected"></i>
-          {% else %}
-          <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected" aria-label="not connected"></i>
-          {% endif %}
+          <div class="d-flex align-items-center gap-3">
+            {% if pinecone_connected %}
+            <i class="fa-solid fa-circle-check text-success" title="connected" aria-label="connected"
+              id="connected"></i>
+            {% else %}
+            <i class="fa-solid fa-circle-xmark text-danger" title="not connected" aria-label="not connected"></i>
+            {% endif %}
+            <span class="text-muted fs-5">&rsaquo;</span>
+          </div>
         </div>
       </a>
 
@@ -412,12 +397,14 @@
                 {% else %}Not Set{% endif %}
               </span>
             </div>
-            <span class="text-muted">&rsaquo;</span>
-            {% if chatgpt_connected %}
-            <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected"></i>
-            {% else %}
-            <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected" aria-label="not connected"></i>
-            {% endif %}
+            <div class="d-flex align-items-center gap-3">
+              {% if chatgpt_connected %}
+              <i class="fa-solid fa-circle-check text-success" title="connected" aria-label="connected"></i>
+              {% else %}
+              <i class="fa-solid fa-circle-xmark text-danger" title="not connected" aria-label="not connected"></i>
+              {% endif %}
+              <span class="text-muted fs-5">&rsaquo;</span>
+            </div>
           </div>
         </a>
 
@@ -437,16 +424,17 @@
                 </div>
                 <div class="fw-semibold">Calendly</div>
                 {% if calendly_connected %}
-                <span class="badge rounded-pill bg-secondary ms-2">Follow-up: {{
-                  admin.followup_delay_minutes|default:"10" }} min</span>
+
                 {% endif %}
               </div>
-              <span class="text-muted">&rsaquo;</span>
-              {% if calendly_connected %}
-              <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected"></i>
-              {% else %}
-              <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected" aria-label="not connected"></i>
-              {% endif %}
+              <div class="d-flex align-items-center gap-3">
+                {% if calendly_connected %}
+                <i class="fa-solid fa-circle-check text-success" title="connected" aria-label="connected"></i>
+                {% else %}
+                <i class="fa-solid fa-circle-xmark text-danger" title="not connected" aria-label="not connected"></i>
+                {% endif %}
+                <span class="text-muted fs-5">&rsaquo;</span>
+              </div>
             </div>
           </a>
   </div>
@@ -540,18 +528,7 @@
           <input type="text" class="form-control" value="{{ admin.calendly_scheduling_url }}" disabled>
         </div>
         <hr>
-        <h6>Follow-up Settings</h6>
-        <div class="mb-3">
-          <label for="followupDelayRange" class="form-label">
-            Delay: <span id="followupDelayValue">{{ admin.followup_delay_minutes|default:"10" }}</span> minutes
-          </label>
-          <input type="range" class="form-range" id="followupDelayRange" min="1" max="60"
-            value="{{ admin.followup_delay_minutes|default:10 }}">
-        </div>
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" id="followupEnabled" {% if admin.followup_enabled %}checked{% endif %}>
-          <label class="form-check-label" for="followupEnabled">Enable follow-up messages</label>
-        </div>
+
         {% else %}
         <div class="mb-3">
           <label for="calendlyToken" class="form-label">Calendly Personal Access Token</label>
@@ -570,7 +547,7 @@
       </div>
       <div class="modal-footer">
         {% if calendly_connected %}
-        <button type="button" class="btn btn-primary" id="saveFollowupSettings">Save Settings</button>
+
         <button type="button" class="btn btn-danger" id="confirmCalendlyDisconnect">Disconnect</button>
         {% else %}
         <button type="button" class="btn btn-success" id="confirmCalendlyConnect">Connect</button>

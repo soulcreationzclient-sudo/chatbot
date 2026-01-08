@@ -134,7 +134,8 @@
             color: #166534;
         }
 
-        .api-method.put, .api-method.patch {
+        .api-method.put,
+        .api-method.patch {
             background: #fef3c7;
             color: #92400e;
         }
@@ -505,18 +506,32 @@
             <button class="btn" onclick="openAddModal()">+ Add API</button>
         </div>
 
+        <div class="usage-hint"
+            style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px; margin-bottom: 24px; font-size: 13px; color: #0369a1;">
+            💡 <strong>Usage:</strong> Trigger these APIs from your AI response using
+            <code>{% templatetag openvariable %}api:name{% templatetag closevariable %}</code> syntax.
+            The result will be sent as a message.
+        </div>
+
         {% if apis %}
         {% for api in apis %}
         <div class="api-card" data-api-id="{{ api.id }}">
             <div class="api-header">
-                <span class="api-name">{{ api.name }}</span>
-                <span class="api-method {% if api.method == 'POST' %}post{% elif api.method == 'PUT' or api.method == 'PATCH' %}put{% elif api.method == 'DELETE' %}delete{% endif %}">{{ api.method }}</span>
+                <div>
+                    <span class="api-name">{{ api.name }}</span>
+                    <code
+                        style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">{% templatetag openvariable %}api:{{ api.name }}{% templatetag closevariable %}</code>
+                </div>
+                <span
+                    class="api-method {% if api.method == 'POST' %}post{% elif api.method == 'PUT' or api.method == 'PATCH' %}put{% elif api.method == 'DELETE' %}delete{% endif %}">{{
+                    api.method }}</span>
             </div>
             <p class="api-description">{{ api.description }}</p>
             <div class="api-url">{{ api.url }}</div>
             <div class="api-actions">
                 <button class="btn btn-outline" onclick="openEditModal({{ api.id }})">Edit</button>
-                <button class="btn btn-outline" style="color: var(--danger);" onclick="deleteApi({{ api.id }})">Delete</button>
+                <button class="btn btn-outline" style="color: var(--danger);"
+                    onclick="deleteApi({{ api.id }})">Delete</button>
             </div>
         </div>
         {% endfor %}
@@ -538,18 +553,18 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="apiId" value="">
-                
+
                 <!-- Basic Info -->
                 <div class="form-group">
                     <label>API Name</label>
                     <input type="text" id="apiName" placeholder="e.g., process_booking_slip">
                 </div>
-                
+
                 <div class="form-group">
                     <label>Description</label>
                     <textarea id="apiDescription" placeholder="Describe when the AI should call this API"></textarea>
                 </div>
-                
+
                 <div class="form-row">
                     <div class="form-group" style="flex: 0 0 120px;">
                         <label>Request Type</label>
@@ -641,7 +656,7 @@
     <script>
         // Tab switching
         document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', function() {
+            tab.addEventListener('click', function () {
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                 this.classList.add('active');
@@ -659,7 +674,7 @@
             document.getElementById('apiUrl').value = '';
             document.getElementById('apiPayload').value = '';
             document.querySelector('input[name="bodyType"][value="json"]').checked = true;
-            
+
             // Reset headers
             document.getElementById('headersContainer').innerHTML = `
                 <div class="kv-row">
@@ -668,7 +683,7 @@
                     <button class="kv-remove" onclick="removeRow(this)">&times;</button>
                 </div>
             `;
-            
+
             // Reset mappings
             document.getElementById('mappingContainer').innerHTML = `
                 <div class="mapping-row">
@@ -677,16 +692,16 @@
                     <button class="kv-remove" onclick="removeRow(this)">&times;</button>
                 </div>
             `;
-            
+
             // Reset test result
             document.getElementById('testResult').style.display = 'none';
-            
+
             // Switch to first tab
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelector('.tab').classList.add('active');
             document.getElementById('tab-headers').classList.add('active');
-            
+
             document.getElementById('apiModal').classList.add('active');
         }
 
@@ -698,25 +713,25 @@
                         alert(data.error);
                         return;
                     }
-                    
+
                     document.getElementById('modalTitle').textContent = 'Edit External API';
                     document.getElementById('apiId').value = data.id;
                     document.getElementById('apiName').value = data.name;
                     document.getElementById('apiDescription').value = data.description;
                     document.getElementById('apiMethod').value = data.method;
                     document.getElementById('apiUrl').value = data.url;
-                    
+
                     // Set body type
                     const bodyType = data.body_type || 'json';
                     document.querySelector(`input[name="bodyType"][value="${bodyType}"]`).checked = true;
-                    
+
                     // Set payload
                     if (typeof data.payload === 'object') {
                         document.getElementById('apiPayload').value = JSON.stringify(data.payload, null, 2);
                     } else {
                         document.getElementById('apiPayload').value = data.payload || '';
                     }
-                    
+
                     // Populate headers
                     const headersContainer = document.getElementById('headersContainer');
                     headersContainer.innerHTML = '';
@@ -734,7 +749,7 @@
                             `;
                         }
                     }
-                    
+
                     // Populate mappings
                     const mappingContainer = document.getElementById('mappingContainer');
                     mappingContainer.innerHTML = '';
@@ -752,16 +767,16 @@
                             `;
                         });
                     }
-                    
+
                     // Reset test result
                     document.getElementById('testResult').style.display = 'none';
-                    
+
                     // Switch to first tab
                     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                     document.querySelector('.tab').classList.add('active');
                     document.getElementById('tab-headers').classList.add('active');
-                    
+
                     document.getElementById('apiModal').classList.add('active');
                 })
                 .catch(err => {
@@ -855,7 +870,7 @@
         function saveApi() {
             const apiId = document.getElementById('apiId').value;
             const data = collectFormData();
-            
+
             if (!data.name) {
                 alert('Please enter an API name');
                 return;
@@ -866,7 +881,7 @@
             }
 
             const url = apiId ? `/api/external-api/${apiId}/update/` : '/api/external-api/create/';
-            
+
             fetch(url, {
                 method: 'POST',
                 headers: {
@@ -875,18 +890,18 @@
                 },
                 body: JSON.stringify(data)
             })
-            .then(res => res.json())
-            .then(result => {
-                if (result.success) {
-                    closeModal();
-                    location.reload();
-                } else {
-                    alert('Error: ' + (result.error || 'Unknown error'));
-                }
-            })
-            .catch(err => {
-                alert('Error saving API: ' + err.message);
-            });
+                .then(res => res.json())
+                .then(result => {
+                    if (result.success) {
+                        closeModal();
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (result.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => {
+                    alert('Error saving API: ' + err.message);
+                });
         }
 
         // Delete API
@@ -902,17 +917,17 @@
                     'X-CSRFToken': getCookie('csrftoken')
                 }
             })
-            .then(res => res.json())
-            .then(result => {
-                if (result.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + (result.error || 'Unknown error'));
-                }
-            })
-            .catch(err => {
-                alert('Error deleting API: ' + err.message);
-            });
+                .then(res => res.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (result.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => {
+                    alert('Error deleting API: ' + err.message);
+                });
         }
 
         // Test API
@@ -920,12 +935,12 @@
             const apiId = document.getElementById('apiId').value;
             const testResult = document.getElementById('testResult');
             const testBtn = document.getElementById('testBtn');
-            
+
             if (!apiId) {
                 alert('Please save the API first before testing');
                 return;
             }
-            
+
             testBtn.disabled = true;
             testBtn.textContent = 'Testing...';
             testResult.style.display = 'none';
@@ -937,36 +952,36 @@
                     'X-CSRFToken': getCookie('csrftoken')
                 }
             })
-            .then(res => res.json())
-            .then(result => {
-                testBtn.disabled = false;
-                testBtn.textContent = 'Test Now';
-                testResult.style.display = 'block';
-                
-                if (result.success) {
-                    testResult.className = 'test-result success';
-                    testResult.innerHTML = `
+                .then(res => res.json())
+                .then(result => {
+                    testBtn.disabled = false;
+                    testBtn.textContent = 'Test Now';
+                    testResult.style.display = 'block';
+
+                    if (result.success) {
+                        testResult.className = 'test-result success';
+                        testResult.innerHTML = `
                         <span class="status-badge success">Status: ${result.status_code}</span>
                         <pre>${JSON.stringify(result.response, null, 2)}</pre>
                     `;
-                } else {
-                    testResult.className = 'test-result error';
-                    testResult.innerHTML = `
+                    } else {
+                        testResult.className = 'test-result error';
+                        testResult.innerHTML = `
                         <span class="status-badge error">Failed</span>
                         <pre>${result.error || 'Unknown error'}</pre>
                     `;
-                }
-            })
-            .catch(err => {
-                testBtn.disabled = false;
-                testBtn.textContent = 'Test Now';
-                testResult.style.display = 'block';
-                testResult.className = 'test-result error';
-                testResult.innerHTML = `
+                    }
+                })
+                .catch(err => {
+                    testBtn.disabled = false;
+                    testBtn.textContent = 'Test Now';
+                    testResult.style.display = 'block';
+                    testResult.className = 'test-result error';
+                    testResult.innerHTML = `
                     <span class="status-badge error">Error</span>
                     <pre>${err.message}</pre>
                 `;
-            });
+                });
         }
 
         // CSRF Token helper
@@ -986,14 +1001,14 @@
         }
 
         // Close modal on overlay click
-        document.getElementById('apiModal').addEventListener('click', function(e) {
+        document.getElementById('apiModal').addEventListener('click', function (e) {
             if (e.target === this) {
                 closeModal();
             }
         });
 
         // Close modal on Escape key
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 closeModal();
             }

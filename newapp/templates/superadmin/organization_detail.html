@@ -1,0 +1,542 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ organization.name }} - SpeedBots Super Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --primary: #667eea;
+            --primary-dark: #5a67d8;
+            --text: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --success: #10b981;
+            --sidebar-bg: #1f2937;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-main);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: var(--sidebar-bg);
+            padding: 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .logo .badge {
+            background: var(--primary);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            border-radius: 10px;
+            margin-bottom: 5px;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+        }
+
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 30px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .header h2 {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .back-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 15px;
+        }
+
+        .status-active {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .status-inactive {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            background: #f9fafb;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-sm {
+            padding: 8px 14px;
+            font-size: 12px;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            text-align: left;
+        }
+
+        th {
+            color: var(--text-muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 600;
+            background: #f9fafb;
+        }
+
+        tr {
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child {
+            border-bottom: none;
+        }
+
+        .messages {
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="logo"><span style="font-size: 24px;">🚀</span>
+            <h1>SpeedBots</h1><span class="badge">ADMIN</span>
+        </div>
+        <nav>
+            <a href="{% url 'super_admin_dashboard' %}" class="nav-item"><svg viewBox="0 0 24 24">
+                    <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+                </svg><span>Dashboard</span></a>
+            <a href="{% url 'organization_list' %}" class="nav-item active"><svg viewBox="0 0 24 24">
+                    <path d="M12 7V3H2v18h20V7H12z" />
+                </svg><span>Organizations</span></a>
+            <a href="{% url 'super_admin_user_list' %}" class="nav-item"><svg viewBox="0 0 24 24">
+                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3z" />
+                </svg><span>Users</span></a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="header">
+            <a href="{% url 'organization_list' %}" class="back-btn">← Back</a>
+            <h2>{{ organization.name }}</h2>
+            {% if organization.is_active %}
+            <span class="status-badge status-active">Active</span>
+            {% else %}
+            <span class="status-badge status-inactive">Inactive</span>
+            {% endif %}
+        </div>
+
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <h3 class="card-title">Organization Info</h3>
+            <form method="post" action="{% url 'organization_update' organization.id %}">
+                {% csrf_token %}
+                <div class="info-grid">
+                    <div class="form-group">
+                        <label>Organization Name</label>
+                        <input type="text" name="name" value="{{ organization.name }}">
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 25px;">
+                        <input type="checkbox" name="is_active" id="is_active" {% if organization.is_active %}checked{% endif %}>
+                        <label for="is_active" style="margin: 0;">Active</label>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title">
+                Members ({{ members|length }})
+                <button onclick="document.getElementById('addUserModal').classList.add('active')"
+                    class="btn btn-primary btn-sm">+ Add User</button>
+            </h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Joined</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in members %}
+                    <tr>
+                        <td>
+                            <strong>{{ member.user.first_name }} {{ member.user.last_name }}</strong><br>
+                            <small style="color: var(--text-muted);">{{ member.user.username }}</small>
+                        </td>
+                        <td>{{ member.user.email }}</td>
+                        <td>{{ member.role.get_name_display }}</td>
+                        <td>
+                            {% if member.is_active %}
+                            <span class="status-badge status-active">Active</span>
+                            {% else %}
+                            <span class="status-badge status-inactive">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ member.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline"
+                                onclick="openEditModal('{{ member.id }}', '{{ member.user.username }}', '{{ member.user.email }}', '{{ member.user.first_name }}', '{{ member.user.last_name }}')">Edit</button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">No members
+                            yet</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title">Recent Contacts ({{ contacts|length }})</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Source</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contact in contacts %}
+                    <tr>
+                        <td>{{ contact.name }}</td>
+                        <td>{{ contact.phone_no }}</td>
+                        <td>{{ contact.source }}</td>
+                        <td>{{ contact.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 30px; color: var(--text-muted);">No contacts
+                            yet</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <h3 class="modal-title">Add User to {{ organization.name }}</h3>
+            <form method="post" action="{% url 'add_user_to_organization' organization.id %}">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group"><label>Username *</label><input type="text" name="username" required></div>
+                    <div class="form-group"><label>Email</label><input type="email" name="email"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>First Name</label><input type="text" name="first_name"></div>
+                    <div class="form-group"><label>Password *</label><input type="password" name="password" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Role *</label>
+                    <select name="role_id" required>
+                        {% for role in roles %}
+                        {% if role.name != 'super_admin' %}
+                        <option value="{{ role.id }}">{{ role.get_name_display }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" onclick="document.getElementById('addUserModal').classList.remove('active')"
+                        class="btn btn-outline">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <h3 class="modal-title">Edit User</h3>
+            <form method="post" action="{% url 'super_admin_user_update' 0 %}" id="editUserForm">
+                {% csrf_token %}
+                <input type="hidden" name="org_user_id" id="edit_org_user_id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Username *</label>
+                        <input type="text" name="username" id="edit_username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" id="edit_email">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" name="first_name" id="edit_first_name">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" name="last_name" id="edit_last_name">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>New Password (leave blank to keep current)</label>
+                    <input type="password" name="password" id="edit_password" placeholder="Enter new password">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" onclick="document.getElementById('editUserModal').classList.remove('active')"
+                        class="btn btn-outline">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEditModal(memberId, username, email, firstName, lastName) {
+            document.getElementById('edit_org_user_id').value = memberId;
+            document.getElementById('edit_username').value = username;
+            document.getElementById('edit_email').value = email;
+            document.getElementById('edit_first_name').value = firstName;
+            document.getElementById('edit_last_name').value = lastName;
+            document.getElementById('edit_password').value = '';
+
+            // Update form action with correct member ID
+            var form = document.getElementById('editUserForm');
+            form.action = form.action.replace('/0/', '/' + memberId + '/');
+
+            document.getElementById('editUserModal').classList.add('active');
+        }
+    </script>
+</body>
+
+</html>

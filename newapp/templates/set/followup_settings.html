@@ -1,0 +1,295 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Follow-up Settings{% endblock %}
+
+{% block head_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    :root {
+        --bg-card: #ffffff;
+        --border-soft: #e5e7eb;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --accent: #3b82f6;
+        --success: #22c55e;
+        --danger: #ef4444;
+    }
+
+    .settings-wrap {
+        padding: 24px 32px;
+        max-width: 900px;
+    }
+
+    .breadcrumb-nav {
+        font-size: 14px;
+        color: var(--text-muted);
+        margin-bottom: 20px;
+    }
+
+    .breadcrumb-nav a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .page-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .page-desc {
+        color: var(--text-muted);
+        margin-bottom: 24px;
+    }
+
+    .followup-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-soft);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 16px;
+    }
+
+    .step-badge {
+        background: var(--accent);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .btn-add {
+        background: var(--success);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-add:hover {
+        background: #16a34a;
+    }
+
+    .btn-add:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+    }
+
+    .btn-delete {
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .btn-delete:hover {
+        background: #fef2f2;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-muted);
+        background: #f8fafc;
+        border-radius: 14px;
+        border: 1px dashed var(--border-soft);
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--text-main);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-wrap">
+    <div class="breadcrumb-nav">
+        <a href="{% url 'settings' %}">Settings</a> &gt; <b>Follow-up Settings</b>
+    </div>
+
+    <h1 class="page-title">📬 Follow-up Settings</h1>
+    <p class="page-desc">Configure automatic follow-up messages sent to users who haven't responded. You can add up to 4
+        sequential follow-ups.</p>
+
+    <!-- Global Enable Toggle -->
+    <div class="followup-card d-flex justify-content-between align-items-center">
+        <div>
+            <strong>Enable Follow-ups</strong>
+            <p class="text-muted mb-0 small">When enabled, follow-up messages will be sent automatically</p>
+        </div>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="globalFollowupEnabled" {% if admin.followup_enabled %}checked{% endif %} style="transform: scale(1.3);">
+        </div>
+    </div>
+
+    <!-- Follow-up Steps -->
+    <div id="followupList">
+        {% for followup in followups %}
+        <div class="followup-card" data-id="{{ followup.id }}">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <span class="step-badge">Step {{ followup.step }}</span>
+                <button class="btn-delete" onclick="deleteFollowup({{ followup.id }})">Delete</button>
+            </div>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Delay (minutes)</label>
+                    <input type="number" class="form-control delay-input" value="{{ followup.delay_minutes }}" min="1"
+                        max="1440" data-id="{{ followup.id }}">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Tag Filter (Optional)</label>
+                    <select class="form-select tag-input" data-id="{{ followup.id }}">
+                        <option value="">All Users</option>
+                        {% for t in tags %}
+                        <option value="{{ t.id }}" {% if followup.tag_id == t.id %}selected{% endif %}>{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Message</label>
+                    <textarea class="form-control message-input" rows="3"
+                        data-id="{{ followup.id }}">{{ followup.message }}</textarea>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="saveFollowup({{ followup.id }})">Save Changes</button>
+        </div>
+        {% empty %}
+        <div class="empty-state" id="emptyState">
+            <p class="mb-3">No follow-up messages configured yet.</p>
+            <p class="small">Click "Add Follow-up" to create your first one.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Add Button -->
+    <div class="mt-4">
+        <button class="btn-add" id="addFollowupBtn" {% if followups|length >= 4 %}disabled{% endif %}>
+            + Add Follow-up ({{ followups|length }}/4)
+        </button>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Follow-up Step</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Delay (minutes)</label>
+                    <input type="number" class="form-control" id="newDelay" value="10" min="1" max="1440">
+                    <div class="form-text">Time to wait before sending this follow-up</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tag Filter (Optional)</label>
+                    <select class="form-select" id="newTag">
+                        <option value="">All Users</option>
+                        {% for t in tags %}
+                        <option value="{{ t.id }}">{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Message</label>
+                    <textarea class="form-control" id="newMessage" rows="4"
+                        placeholder="Hi! Just following up on my previous message..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="createFollowup()">Add Follow-up</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const addModal = new bootstrap.Modal(document.getElementById('addModal'));
+
+    document.getElementById('addFollowupBtn').addEventListener('click', () => {
+        addModal.show();
+    });
+
+    document.getElementById('globalFollowupEnabled').addEventListener('change', async (e) => {
+        await fetch('/api/followup/toggle/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+            body: JSON.stringify({ enabled: e.target.checked })
+        });
+    });
+
+    async function createFollowup() {
+        const delay = document.getElementById('newDelay').value;
+        const message = document.getElementById('newMessage').value;
+
+        const res = await fetch('/api/followup/create/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+            body: JSON.stringify({ delay_minutes: parseInt(delay), message: message, tag_id: document.getElementById('newTag').value })
+        });
+
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            alert('Failed to create follow-up');
+        }
+    }
+
+    async function saveFollowup(id) {
+        const card = document.querySelector(`.followup-card[data-id="${id}"]`);
+        const delay = card.querySelector('.delay-input').value;
+        const message = card.querySelector('.message-input').value;
+        const tag = card.querySelector('.tag-input').value;
+
+        const res = await fetch(`/api/followup/${id}/update/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+            body: JSON.stringify({ delay_minutes: parseInt(delay), message: message, tag_id: document.getElementById('newTag').value })
+        });
+
+        if (res.ok) {
+            alert('Saved!');
+        } else {
+            alert('Failed to save');
+        }
+    }
+
+    async function deleteFollowup(id) {
+        if (!confirm('Delete this follow-up step?')) return;
+
+        const res = await fetch(`/api/followup/${id}/delete/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            alert('Failed to delete');
+        }
+    }
+
+    function getCsrfToken() {
+        const name = 'csrftoken=';
+        const decoded = decodeURIComponent(document.cookie);
+        const ca = decoded.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i].trim();
+            if (c.indexOf(name) === 0) return c.substring(name.length, c.length);
+        }
+        return '';
+    }
+</script>
+{% endblock %}

@@ -9,14 +9,20 @@ class AdminAuthMiddleware:
     def __call__(self, request):
         path = request.path or "/"
 
-        # Don't block login, logout, or static/media, or API webhooks
-        allowlist = ("/login", "/logout", "/static/", "/media/",'/get_message','/send_whatsapp_message','/send_trigger','/appointment_date','/create-event','/api/calendly/webhook')
+        # Don't block login, logout, or static/media, or API webhooks, or Super Admin routes
+        allowlist = ("/login", "/logout", "/static/", "/media/",'/get_message','/send_whatsapp_message','/send_trigger','/appointment_date','/create-event','/api/calendly/webhook', '/super-admin/', '/favicon.ico')
 
         # Check if path is protected
         if not path.startswith(allowlist):
+            # NEW: Check Django's built-in auth first
+            if request.user.is_authenticated:
+                # User is logged in via Django auth - allow access
+                return self.get_response(request)
+            
+            # LEGACY: Check session-based admin auth
             admin_id = request.session.get("admin_id")
             if not admin_id or not Admin.objects.filter(id=admin_id).exists():
-                return redirect("/login_view")
+                return redirect("/login/")
 
         return self.get_response(request)
 

@@ -1,0 +1,12 @@
+{% for u in users %}
+<a class="item {% if selected_user and selected_user.id == u.id %}active{% endif %}" href="{% url 'inbox_dashboard' %}?user_id={{ u.id }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.tag_id %}&tag_id={{ request.GET.tag_id }}{% endif %}">
+  <div class="avatar">{{ u.name|default:u.phone_no|slice:":2"|upper }}</div>
+  <div>
+    <div class="name">{{ u.name|default:"User" }}</div>
+    <div class="preview">{{ u.phone_no }}</div>
+  </div>
+  <div class="time"></div>
+</a>
+{% empty %}
+<div class="p-3 text-muted">No users found.</div>
+{% endfor %}

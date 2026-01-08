@@ -28,7 +28,10 @@
 
   .inbox-container {
     display: flex;
-    min-height: calc(100vh - 60px);
+    height: calc(100vh - 60px);
+    /* Fixed height to force internal scrolling */
+    overflow: hidden;
+    /* Prevent outer scroll */
   }
 
   /* CONVERSATION LIST */
@@ -39,6 +42,8 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    overflow-y: auto;
+    /* List itself scrolls */
   }
 
   .list-head {
@@ -125,6 +130,7 @@
     overflow-y: auto;
     padding: 20px;
     background: var(--bg-thread);
+    /* Remove CSS smooth scroll to prevent animation on load */
   }
 
   /* MESSAGES */
@@ -206,22 +212,20 @@
 <div class="inbox-container">
   <!-- Conversation list -->
   <section class="list">
-    <div class="list-head">Inbox</div>
-    <div class="items">
-      {% for u in users %}
-      <a class="item {% if is_active %}active{% endif %}" href="{% url 'inbox_dashboard' %}?user_id={{ u.id }}">
-        <div class="avatar">{{ u.name|default:u.phone_no|slice:":2"|upper }}</div>
-        <div>
-          <div class="name">{{ u.name|default:"User" }}</div>
-          <div class="preview">{{ u.phone_no }}</div>
-        </div>
-        <div class="time">
-          {% if is_active and messages|length %}{% endif %}
-        </div>
-      </a>
-      {% empty %}
-      <div class="p-3 text-muted">No users.</div>
-      {% endfor %}
+    <div class="list-head">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span>Inbox</span>
+        <select id="tagFilter" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
+          <option value="">All Tags</option>
+          {% for t in all_tags %}
+          <option value="{{ t.id }}" {% if request.GET.tag_id == t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <input type="text" id="userSearch" class="form-control form-control-sm" placeholder="Search name or phone..." value="{{ request.GET.search|default:'' }}" onkeyup="debounceSearch()">
+    </div>
+    <div class="items" id="userListContainer">
+      {% include "inbox/partials/user_list.html" %}
     </div>
   </section>
 
@@ -229,8 +233,7 @@
   <section class="thread">
     <div class="thread-head">
       {% if selected_user %}
-      <div class="avatar" style="width:36px;height:36px">{{
-        selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
+      <div class="avatar" style="width:36px;height:36px">{{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
       <div>
         <div style="font-weight:700">{{ selected_user.name|default:"User" }}</div>
         <div class="text-muted" style="font-size:12px">{{ selected_user.phone_no }}</div>
@@ -258,6 +261,10 @@
     <div class="p-3 border-top" style="background:#fff;">
       <form id="chatForm" onsubmit="return sendMessage(event);">
         <div class="input-group">
+          <input type="file" id="mediaInput" style="display:none;" onchange="handleFileUpload(this)">
+          <button type="button" class="btn btn-light border" onclick="document.getElementById('mediaInput').click()">
+            <i class="fa-solid fa-paperclip"></i> 📎
+          </button>
           <input id="userMessage" type="text" class="form-control" placeholder="Type your message..." autocomplete="off"
             required />
           <button type="submit" class="btn btn-primary">Send</button>
@@ -268,7 +275,133 @@
 </div>
 
 <script>
-  (function () { var el = document.getElementById('threadBody'); if (el) el.scrollTop = el.scrollHeight; })();
+  // Robust Scroll & Auto-Refresh Logic (Final)
+  
+  // Filter Logic
+  // SEARCH & FILTER
+  let searchTimeout;
+  function debounceSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        applyFilters();
+    }, 500);
+  }
+
+  
+  async function applyFilters() {
+    const tagId = document.getElementById('tagFilter').value;
+    const search = document.getElementById('userSearch').value.trim();
+    
+    const url = new URL(window.location.href);
+    
+    if (tagId) url.searchParams.set('tag_id', tagId);
+    else url.searchParams.delete('tag_id');
+    
+    if (search) url.searchParams.set('search', search);
+    else url.searchParams.delete('search');
+    
+    // Update Browser URL without reload
+    window.history.pushState({}, '', url);
+
+    // Fetch Partial
+    url.searchParams.set('ajax', '1');
+    try {
+        const res = await fetch(url);
+        if (res.ok) {
+            const html = await res.text();
+            document.getElementById('userListContainer').innerHTML = html;
+        }
+    } catch (e) {
+        console.error("Search error:", e);
+    }
+  }
+
+
+  function applyInboxFilter(tagId) {
+    const url = new URL(window.location.href);
+    if (tagId) url.searchParams.set('tag_id', tagId);
+    else url.searchParams.delete('tag_id');
+    window.location.href = url.toString();
+  }
+
+  // File Upload Logic
+  async function handleFileUpload(input) {
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Show loading?
+    const msgInput = document.getElementById('userMessage');
+    const originalPlaceholder = msgInput.placeholder;
+    msgInput.placeholder = "Uploading...";
+    msgInput.disabled = true;
+
+    try {
+        const res = await fetch('/api/inbox/upload', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        
+        if (data.url) {
+            let tag = "";
+            if (data.type === 'image') tag = `[Image: ${data.url}] `;
+            else tag = `[Document: ${data.url}] `;
+            
+            msgInput.value = (msgInput.value + " " + tag).trim();
+            msgInput.focus();
+        } else {
+            alert("Upload failed: " + (data.error || "Unknown error"));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Upload network error");
+    } finally {
+        msgInput.placeholder = originalPlaceholder;
+        msgInput.disabled = false;
+        input.value = ""; // reset
+    }
+  }
+
+
+  const threadBody = document.getElementById('threadBody');
+  // Track displayed IDs to prevent duplicates
+  const displayedMessageIds = new Set();
+
+  function scrollToBottom() {
+    if (threadBody) {
+      threadBody.scrollTop = threadBody.scrollHeight;
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // 1. Index existing messages
+    const existingIds = document.querySelectorAll('.rowmsg');
+    // We don't have IDs on the DOM elements easily unless we add them. 
+    // But we can just rely on the Set for NEW messages. 
+    // Actually, let's try to populate the Set from the initial `lastMessageId` logic strictly?
+    // No, better to just let the Set track what we fetch via API.
+    // The initial messages are "static". We won't re-fetch them because lastMessageId starts at the end.
+    
+    scrollToBottom();
+    setTimeout(scrollToBottom, 100);
+
+    // 2. Start Polling
+    console.log("Starting Auto-Refresh Polling...");
+    setInterval(fetchNewMessages, 2000); // 2 seconds
+  });
+
+  // Resize Observer for images/content
+  if (threadBody) {
+    const observer = new ResizeObserver(() => {
+      const isNearBottom = threadBody.scrollHeight - threadBody.scrollTop - threadBody.clientHeight < 300;
+      if (isNearBottom) scrollToBottom();
+    });
+    observer.observe(threadBody);
+  }
+
+  window.onload = function () { scrollToBottom(); };
 
   async function sendMessage(event) {
     event.preventDefault();
@@ -276,6 +409,7 @@
     const message = input.value.trim();
     if (!message) return false;
 
+    // Optimistic append (ID unknown, so not in Set)
     appendMessage(message, 'user');
     input.value = '';
     input.disabled = true;
@@ -305,16 +439,107 @@
     return false;
   }
 
-  function appendMessage(msg, sender) {
-    const threadBody = document.getElementById('threadBody');
+  function appendMessage(msg, sender, msgId = null) {
+    // De-duplication check
+    if (msgId && displayedMessageIds.has(msgId)) {
+        console.log("Duplicate message ignored:", msgId);
+        return; 
+    }
+    if (msgId) displayedMessageIds.add(msgId);
+
     const row = document.createElement('div');
     row.classList.add('rowmsg', sender);
     const bubble = document.createElement('div');
     bubble.classList.add('bubble');
-    bubble.textContent = msg;
+
+    bubble.innerHTML = formatMessage(msg);
+
     row.appendChild(bubble);
     threadBody.appendChild(row);
-    threadBody.scrollTop = threadBody.scrollHeight;
+    
+    scrollToBottom();
+    setTimeout(scrollToBottom, 50);
+  }
+
+  function formatMessage(text) {
+    if (!text) return '';
+    // Image
+    const imgMatch = text.match(/^\[Image:\s*(.*?)\]\s*(.*)/is);
+    if (imgMatch) {
+      const url = imgMatch[1].trim();
+      const caption = imgMatch[2].trim();
+      return `
+        <a href="${url}" target="_blank">
+          <img src="${url}" style="max-width:100%; border-radius:8px; margin-bottom:4px;" onerror="this.style.display='none'" onload="scrollToBottom()">
+        </a>
+        ${caption ? `<div class="mt-1">${caption}</div>` : ''}
+      `;
+    }
+    // Document
+    const docMatch = text.match(/^\[Document:\s*(.*?)\]\s*(.*)/is);
+    if (docMatch) {
+      const url = docMatch[1].trim();
+      const caption = docMatch[2].trim();
+      if (url.startsWith('/') || url.startsWith('http')) {
+        return `
+          <div class="d-flex align-items-center gap-2 p-2 bg-light rounded text-dark">
+            <i class="fa-solid fa-file-lines fs-4 text-primary"></i>
+            <a href="${url}" target="_blank" class="text-decoration-underline text-break" download>Download Document</a>
+          </div>
+          ${caption ? `<div class="mt-1 small">${caption}</div>` : ''}
+        `;
+      }
+    }
+    // Text
+    const safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    return safeText.replace(/\n/g, '<br>');
+  }
+
+  // Auto-format existing
+  document.addEventListener("DOMContentLoaded", function () {
+    const bubbles = document.querySelectorAll('.bubble > div:first-child');
+    bubbles.forEach(el => {
+      // Logic to auto-format existing can be simplified or kept if needed
+      if (!el.classList.contains('meta')) {
+        const raw = el.innerText;
+        if (raw.trim().startsWith('[Image:') || raw.trim().startsWith('[Document:')) {
+            el.innerHTML = formatMessage(raw);
+        }
+      }
+    });
+  });
+
+  // Polling Logic
+  let lastMessageId = 0;
+  {% if messages %}
+  lastMessageId = {{ messages.last.id|default:0 }};
+  {% endif %}
+  const currentUserId = "{{ selected_user.id|default:'' }}";
+
+  async function fetchNewMessages() {
+    if (!currentUserId) return;
+    
+    // Cache buster
+    const ts = new Date().getTime();
+
+    try {
+      const url = `/api/inbox/new_messages?user_id=${currentUserId}&last_id=${lastMessageId}&_t=${ts}`;
+      const response = await fetch(url);
+      if (!response.ok) return;
+      
+      const data = await response.json();
+      if (data.messages && data.messages.length > 0) {
+        console.log(`Fetched ${data.messages.length} new messages.`);
+        data.messages.forEach(msg => {
+          // Pass ID to appendMessage for de-dupe
+          const mId = parseInt(msg.id);
+          appendMessage(msg.messages, msg.who, mId);
+          lastMessageId = Math.max(lastMessageId, mId);
+        });
+      }
+    } catch (e) {
+      console.error("Polling error:", e);
+    }
   }
 
   function getCsrfToken() {
@@ -322,7 +547,8 @@
     const decoded = decodeURIComponent(document.cookie);
     const ca = decoded.split(';');
     for (let i = 0; i < ca.length; i++) {
-      let c = ca[i].trim();
+      let c = ca[i];
+      while (c.charAt(0) == ' ') c = c.substring(1);
       if (c.indexOf(name) === 0) return c.substring(name.length, c.length);
     }
     return '';

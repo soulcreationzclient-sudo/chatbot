@@ -1,5 +1,7 @@
 from django.contrib import admin
+
 from django.urls import path
+from django.views.generic import RedirectView
 from newapp.views import send_whatsapp_message
 from newapp import views
 from newapp.controllers.login import Logincontroller
@@ -18,19 +20,48 @@ from newapp.views import delete_pdf
 from newapp import calendly_views
 from newapp import calendly_integration_views
 
+# Multi-tenant admin imports
+from newapp.controllers import auth_views, superadmin_views, client_views
+
 
 
 urlpatterns = [
+    # ==================== SUPER ADMIN PORTAL ====================
+    path('super-login/', RedirectView.as_view(url='/super-admin/login/', permanent=False)), # CONVENIENCE REDIRECT
+    path('super-admin/', superadmin_views.super_admin_dashboard, name='super_admin_dashboard'),
+    path('super-admin/login/', auth_views.super_admin_login, name='super_admin_login'),
+    path('super-admin/logout/', auth_views.super_admin_logout, name='super_admin_logout'),
+    path('super-admin/organizations/', superadmin_views.organization_list, name='organization_list'),
+    path('super-admin/organizations/create/', superadmin_views.organization_create, name='organization_create'),
+    path('super-admin/organizations/<int:pk>/', superadmin_views.organization_detail, name='organization_detail'),
+    path('super-admin/organizations/<int:pk>/update/', superadmin_views.organization_update, name='organization_update'),
+    path('super-admin/organizations/<int:pk>/toggle/', superadmin_views.organization_toggle_status, name='organization_toggle_status'),
+    path('super-admin/organizations/<int:org_pk>/add-user/', superadmin_views.add_user_to_organization, name='add_user_to_organization'),
+    path('super-admin/users/', superadmin_views.super_admin_user_list, name='super_admin_user_list'),
+    path('super-admin/users/create/', superadmin_views.super_admin_user_create, name='super_admin_user_create'),
+    path('super-admin/users/<int:pk>/toggle/', superadmin_views.super_admin_user_toggle_status, name='super_admin_user_toggle_status'),
+    path('super-admin/users/<int:pk>/update/', superadmin_views.super_admin_user_update, name='super_admin_user_update'),
+    
+    # ==================== CLIENT PORTAL AUTH ====================
+    path('login/', auth_views.client_login, name='login'),
+    path('client-logout/', auth_views.client_logout, name='client_logout'),
+    
+    # ==================== CLIENT SETTINGS ====================
+    path('client/settings/', client_views.client_settings, name='client_settings'),
+    path('client/settings/update/', client_views.client_settings_update, name='client_settings_update'),
+    
+    # ==================== LEGACY ROUTES (backward compatibility) ====================
     # logout
     path('',Logincontroller.enter,name=''),
     path('logout/',Logincontroller.logout,name='logout'),
     
-    path('login_view/',Logincontroller.login_view),
+    path('login_view/',Logincontroller.login_view, name='login_view'),
     path('login_post/',Logincontroller.login_post,name='login_post'),
     
     path('dashboard/', views.dashboard_view, name='dashboard'),
     # inbox
     path('inbox/dashboard', Inboxcontroller.dashboard, name='inbox_dashboard'),
+    path('api/inbox/new_messages', Inboxcontroller.get_new_messages, name='get_new_messages_api'),
     
     # contact
     path('contact/dashboard',Contactcontroller.dashboard,name='contact_dashboard'),
@@ -41,6 +72,8 @@ urlpatterns = [
     path('api/users/', views.user_search_api, name='user_search_api'),
     path('contact/edit/<int:id>/', Contactcontroller.edit_user, name='edit_user'),
     path('contact/delete/<int:id>/', Contactcontroller.delete_user, name='delete_user'),
+    path('api/user/tag/add/', Contactcontroller.add_user_tag, name='add_user_tag'),
+    path('api/user/tag/remove/', Contactcontroller.remove_user_tag, name='remove_user_tag'),
     
     # setting
     path('settings/',Settingcontroller.dashboard , name='settings'),
@@ -60,6 +93,17 @@ urlpatterns = [
     path('api/image-asset/create/', Settingcontroller.image_asset_create, name='image_asset_create'),
     path('api/image-asset/<int:asset_id>/update/', Settingcontroller.image_asset_update, name='image_asset_update'),
     path('api/image-asset/<int:asset_id>/delete/', Settingcontroller.image_asset_delete, name='image_asset_delete'),
+    # Follow-up Settings
+    path('setting/followup', Settingcontroller.followup_settings, name='followup_settings_view'),
+    path('api/followup/create/', Settingcontroller.followup_create, name='followup_create'),
+    path('api/followup/<int:followup_id>/update/', Settingcontroller.followup_update, name='followup_update'),
+    path('api/followup/<int:followup_id>/delete/', Settingcontroller.followup_delete, name='followup_delete'),
+    path('api/followup/toggle/', Settingcontroller.followup_toggle, name='followup_toggle'),
+    # Tag Management
+    path('setting/tags', Settingcontroller.tags_view, name='tags_view'),
+    path('api/tag/create/', Settingcontroller.tag_create, name='settings_tag_create'),
+    path('api/tag/<int:tag_id>/update/', Settingcontroller.tag_update, name='settings_tag_update'),
+    path('api/tag/<int:tag_id>/delete/', Settingcontroller.tag_delete, name='settings_tag_delete'),
     path('whatsapp_connect',whatsappcontroller.connect,name='whatsapp_connect'),
     #path('admin/connect_google_calendar/', Integrationcontroller.connect_google_calendar, name='connect_google_calendar'),
     #path('admin/disconnect_google_calendar/', Integrationcontroller.disconnect_google_calendar, name='disconnect_google_calendar'),
