@@ -425,8 +425,8 @@
       });
       const data = await response.json();
 
-      if (response.ok && data.reply) {
-        appendMessage(data.reply, 'bot');
+      if (response.ok && (data.reply || data.response)) {
+        appendMessage(data.reply || data.response, 'bot');
       } else {
         appendMessage("Error: " + (data.error || "No response"), 'bot');
       }

@@ -547,22 +547,36 @@ from django.shortcuts import render
 #     count=User.objects.count()
 #     return render(request, 'dashboard.html',{'count':count,'phone_id':user_phone})
 def dashboard_view(request):
+    org_id = request.session.get('organization_id')
     admin_id = request.session.get('admin_id')
-    user = Admin.objects.filter(id=admin_id).only('display_phone_no', 'whatsapp_token', 'whatsapp_phone_id').first()
     
-    display_phone_number = ''.join((user.display_phone_no).split()) if user else ''
-    user_phone = f"https://wa.me/{display_phone_number}"
-
-    whatsapp_connected = bool(user and user.whatsapp_token)
-
-    count = User.objects.count()
-    active_contacts_count = 0  # Replace with your logic if available
+    display_phone_number = ''
+    whatsapp_connected = False
+    count = 0
+    
+    if org_id:
+        # Organization-based auth
+        from .models import Organization
+        org = Organization.objects.filter(id=org_id).first()
+        if org:
+            display_phone_number = ''.join((org.display_phone_no or '').split())
+            whatsapp_connected = bool(org.whatsapp_token)
+            count = User.objects.filter(organization=org).count()
+    elif admin_id:
+        # Legacy admin-based auth
+        user = Admin.objects.filter(id=admin_id).first()
+        if user:
+            display_phone_number = ''.join((user.display_phone_no or '').split())
+            whatsapp_connected = bool(user.whatsapp_token)
+            count = User.objects.filter(admin_id=user).count()
+    
+    user_phone = f"https://wa.me/{display_phone_number}" if display_phone_number else "#"
 
     context = {
         'count': count,
         'phone_id': user_phone,
         'whatsapp_connected': whatsapp_connected,
-        'active_contacts_count': active_contacts_count,
+        'active_contacts_count': 0,
     }
     return render(request, 'dashboard.html', context)
 
@@ -776,14 +790,31 @@ def chatgpt_respond(request):
             if not user_prompt:
                 return JsonResponse({"error": "Message cannot be empty."}, status=400)
 
-            # Get admin from session or default
+            # Get OpenAI key from organization or admin
+            org_id = request.session.get('organization_id')
             admin_id = request.session.get('admin_id')
-            if admin_id:
+            
+            openai_key = None
+            admin = None
+            
+            if org_id:
+                from .models import Organization
+                org = Organization.objects.filter(id=org_id).first()
+                if org and org.openai_api_key:
+                    openai_key = org.openai_api_key
+            
+            if not openai_key and admin_id:
                 admin = Admin.objects.filter(id=admin_id).first()
-            else:
+                if admin and admin.openai_api_key:
+                    openai_key = admin.openai_api_key
+            
+            # Fallback to first admin if no key found
+            if not openai_key:
                 admin = Admin.objects.first()
+                if admin and admin.openai_api_key:
+                    openai_key = admin.openai_api_key
                 
-            if not admin or not admin.openai_api_key:
+            if not openai_key:
                 return JsonResponse({"error": "ChatGPT API key not configured."}, status=403)
 
             # Get system prompt
@@ -792,7 +823,7 @@ def chatgpt_respond(request):
 
             # Use new OpenAI v1.0+ API format
             from openai import OpenAI
-            client = OpenAI(api_key=admin.openai_api_key)
+            client = OpenAI(api_key=openai_key)
 
             # Load External Tools
             from .models import ExternalAPI
@@ -1150,29 +1181,54 @@ def connect_openai_key(request):
         if not api_key:
             return JsonResponse({"msg": "API key is required."}, status=400)
 
-        admin = Admin.objects.first()
-        if not admin:
-            return JsonResponse({"msg": "Admin not found."}, status=404)
-
-        # Disconnect Pinecone
-        admin.pinecone_token = ""
-
-        # Save ChatGPT API key
-        admin.openai_api_key = api_key
-        admin.save(update_fields=['pinecone_token', 'openai_api_key'])
-        return JsonResponse({"msg": "ChatGPT API key connected. Pinecone disconnected."})
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        if org_id:
+            # Organization-based auth
+            from .models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if not org:
+                return JsonResponse({"msg": "Organization not found."}, status=404)
+            org.pinecone_token = ""
+            org.openai_api_key = api_key
+            org.save(update_fields=['pinecone_token', 'openai_api_key'])
+            return JsonResponse({"msg": "ChatGPT API key connected."})
+        elif admin_id:
+            # Legacy admin-based auth
+            admin = Admin.objects.filter(id=admin_id).first()
+            if not admin:
+                return JsonResponse({"msg": "Admin not found."}, status=404)
+            admin.pinecone_token = ""
+            admin.openai_api_key = api_key
+            admin.save(update_fields=['pinecone_token', 'openai_api_key'])
+            return JsonResponse({"msg": "ChatGPT API key connected. Pinecone disconnected."})
+        else:
+            return JsonResponse({"msg": "Not authenticated."}, status=401)
+            
     return JsonResponse({"msg": "Invalid request."}, status=405)
 
 @csrf_exempt
 def disconnect_openai_key(request):
     if request.method == "POST":
-        admin = Admin.objects.first()
-        if not admin:
-            return JsonResponse({"msg": "Admin not found."}, status=404)
-
-        admin.openai_api_key = ""
-        admin.save(update_fields=['openai_api_key'])
-        return JsonResponse({"msg": "ChatGPT API key disconnected."})
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        if org_id:
+            from .models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                org.openai_api_key = ""
+                org.save(update_fields=['openai_api_key'])
+                return JsonResponse({"msg": "ChatGPT API key disconnected."})
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                admin.openai_api_key = ""
+                admin.save(update_fields=['openai_api_key'])
+                return JsonResponse({"msg": "ChatGPT API key disconnected."})
+        
+        return JsonResponse({"msg": "Not authenticated."}, status=401)
     return JsonResponse({"msg": "Invalid request."}, status=405)
 
 # import logging
@@ -1233,7 +1289,7 @@ def send_whatsapp_reply(message_text, to_phone, phone_id, token):
 import csv
 from django.shortcuts import redirect
 from django.contrib import messages
-from .models import User, Tag, UserTag
+from .models import User, Tag, UserTag, Organization
 import traceback
 @csrf_exempt
 def import_contacts(request):
@@ -1242,49 +1298,69 @@ def import_contacts(request):
             tag_name = request.POST.get('tag_name', '').strip()
             csv_file = request.FILES.get('csv_file')
 
-            # Get admin_id from session
+            # Get organization or admin from session
+            org_id = request.session.get('organization_id')
             admin_id_value = request.session.get('admin_id')
-            if not admin_id_value:
-                messages.error(request, "You must be logged in.")
-                return redirect('login')  # or your login page
             
-            # Fetch the Admin instance
-            try:
-                admin_instance = Admin.objects.get(id=admin_id_value)
-            except Admin.DoesNotExist:
-                messages.error(request, "Invalid admin.")
+            org_instance = None
+            admin_instance = None
+            
+            if org_id:
+                org_instance = Organization.objects.filter(id=org_id).first()
+                if not org_instance:
+                    messages.error(request, "Organization not found.")
+                    return redirect('login')
+            elif admin_id_value:
+                try:
+                    admin_instance = Admin.objects.get(id=admin_id_value)
+                except Admin.DoesNotExist:
+                    messages.error(request, "Invalid admin.")
+                    return redirect('login')
+            else:
+                messages.error(request, "You must be logged in.")
                 return redirect('login')
 
             if not tag_name or not csv_file:
                 messages.error(request, "Tag name and CSV file are required.")
                 return redirect('contact_dashboard')
 
-            tag, created = Tag.objects.get_or_create(name=tag_name)
+            # Create/get tag (for org or admin)
+            if admin_instance:
+                tag, created = Tag.objects.get_or_create(admin=admin_instance, name=tag_name)
+            else:
+                tag, created = Tag.objects.get_or_create(name=tag_name)
 
             decoded_file = csv_file.read().decode('utf-8-sig').splitlines()
             reader = csv.DictReader(decoded_file)
-
+            
+            import_count = 0
             for row in reader:
-                print("Raw row dict:", row)
                 name = (row.get('name') or '').strip()
                 phone = row.get('phone', '').strip()
-                print(f"Processing name={name} phone={phone}")
                 if not phone:
                     continue
                 if not name:
-                    name = 'Unknown'  # or any default name
+                    name = 'Unknown'
 
-                # Create or get User with admin instance properly assigned
-                user, created = User.objects.get_or_create(phone_no=phone, defaults={'name': name, 'admin_id': admin_instance})
+                # Create or get User with organization/admin
+                user, created = User.objects.get_or_create(
+                    phone_no=phone, 
+                    defaults={
+                        'name': name, 
+                        'admin_id': admin_instance,
+                        'organization': org_instance
+                    }
+                )
 
-                # If user exists but admin_id not set or different, update it
-                if not created and user.admin_id != admin_instance:
-                    user.admin_id = admin_instance
+                # Update organization if needed
+                if not created and org_instance and user.organization != org_instance:
+                    user.organization = org_instance
                     user.save()
 
                 UserTag.objects.get_or_create(user=user, tag=tag)
+                import_count += 1
 
-            messages.success(request, f"Contacts imported under tag '{tag_name}'.")
+            messages.success(request, f"Imported {import_count} contacts under tag '{tag_name}'.")
             return redirect('contact_dashboard')
 
         return redirect('contact_dashboard')

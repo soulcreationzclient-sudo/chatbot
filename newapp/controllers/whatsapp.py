@@ -1174,8 +1174,18 @@ If the user's question relates to this document, answer based on your analysis a
     def disconnect(request):
         
         admin_id=request.session.get('admin_id')
-        Admin.objects.filter(id=admin_id).update(whatsapp_phone_id='', whatsapp_token='')
-        messages.warning(request, 'Invalid email or password')
+        org_id = request.session.get('organization_id')
+        
+        # Clear Organization WhatsApp credentials (for organization-based auth)
+        if org_id:
+            from newapp.models import Organization
+            Organization.objects.filter(id=org_id).update(whatsapp_phone_id='', whatsapp_token='')
+        
+        # Also clear Admin WhatsApp credentials (for legacy auth)
+        if admin_id:
+            Admin.objects.filter(id=admin_id).update(whatsapp_phone_id='', whatsapp_token='')
+        
+        messages.success(request, 'WhatsApp disconnected successfully')
         return redirect('/setting/channels')
         
 

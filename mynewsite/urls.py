@@ -27,9 +27,9 @@ from newapp.controllers import auth_views, superadmin_views, client_views
 
 urlpatterns = [
     # ==================== SUPER ADMIN PORTAL ====================
-    path('super-login/', RedirectView.as_view(url='/super-admin/login/', permanent=False)), # CONVENIENCE REDIRECT
+    path('super-login/', RedirectView.as_view(url='/login/', permanent=False)), # CONVENIENCE REDIRECT
     path('super-admin/', superadmin_views.super_admin_dashboard, name='super_admin_dashboard'),
-    path('super-admin/login/', auth_views.super_admin_login, name='super_admin_login'),
+    path('super-admin/login/', RedirectView.as_view(url='/login/', permanent=False), name='super_admin_login'),  # Redirects to common login
     path('super-admin/logout/', auth_views.super_admin_logout, name='super_admin_logout'),
     path('super-admin/organizations/', superadmin_views.organization_list, name='organization_list'),
     path('super-admin/organizations/create/', superadmin_views.organization_create, name='organization_create'),
