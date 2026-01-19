@@ -29,11 +29,19 @@ DEBUG = True
 ALLOWED_HOSTS = [
      'localhost',
     '127.0.0.1',
-    '1d947b3a8e32.ngrok-free.app',  # ← Add this    
+    'chatbotad.io',
+    '13.218.231.109',
+    '1d947b3a8e32.ngrok-free.app',
     '.ngrok-free.app',
     '.ngrok-free.dev',
     'overslight-shirley-overhearty.ngrok-free.dev',
     "https://07377353818c.ngrok-free.app"
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://chatbotad.io',
+    'http://chatbotad.io',
+    'https://overslight-shirley-overhearty.ngrok-free.dev',
 ]
 
 

@@ -472,19 +472,13 @@ class Settingcontroller :
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         
-        print(f"[DEBUG] followup_settings: admin_id={admin_id}, org_id={org_id}")
-        
-        if org_id:
-             # TODO: implement FollowUps for Organization
-             return render(request, 'set/followup_settings.html', {
-                'admin': None,
-                'followups': []
-            })
+        # Get admin - either from session or fallback for org users
+        admin = None
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            admin = Admin.objects.first()
             
-        if not admin_id:
-            return redirect('/login/')
-        
-        admin = Admin.objects.filter(id=admin_id).first()
         if not admin:
             return redirect('/login/')
         
@@ -505,12 +499,18 @@ class Settingcontroller :
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
         
-        admin = Admin.objects.filter(id=admin_id).first()
+        # Get admin - either from session or fallback to first admin for org users
+        admin = None
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            # For organization users, use first admin as fallback
+            admin = Admin.objects.first()
+        
         if not admin:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
+            return JsonResponse({'error': 'Admin not found. Please configure admin settings.'}, status=404)
         
         # Check limit (max 4)
         existing_count = FollowUpMessage.objects.filter(admin=admin).count()
@@ -543,10 +543,14 @@ class Settingcontroller :
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
         
-        admin = Admin.objects.filter(id=admin_id).first()
+        admin = None
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            admin = Admin.objects.first()
+        
         if not admin:
             return JsonResponse({'error': 'Admin not found'}, status=404)
         
@@ -575,10 +579,14 @@ class Settingcontroller :
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
         
-        admin = Admin.objects.filter(id=admin_id).first()
+        admin = None
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            admin = Admin.objects.first()
+        
         if not admin:
             return JsonResponse({'error': 'Admin not found'}, status=404)
         
@@ -606,10 +614,14 @@ class Settingcontroller :
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
         
-        admin = Admin.objects.filter(id=admin_id).first()
+        admin = None
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            admin = Admin.objects.first()
+        
         if not admin:
             return JsonResponse({'error': 'Admin not found'}, status=404)
         
