@@ -41,8 +41,18 @@ ALLOWED_HOSTS = [
 CSRF_TRUSTED_ORIGINS = [
     'https://chatbotad.io',
     'http://chatbotad.io',
+    'https://www.chatbotad.io',
+    'http://www.chatbotad.io',
+    'http://50.17.107.173',
+    'https://50.17.107.173',
     'https://overslight-shirley-overhearty.ngrok-free.dev',
 ]
+
+# Proxy settings for nginx reverse proxy
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+CSRF_COOKIE_SECURE = False  # Allow CSRF over HTTP
+SESSION_COOKIE_SECURE = False  # Allow sessions over HTTP
 
 
 # Application definition
