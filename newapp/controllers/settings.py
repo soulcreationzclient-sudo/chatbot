@@ -637,26 +637,27 @@ class Settingcontroller :
     
     @staticmethod
     def tags_view(request):
-        from ..models import Tag
+        from ..models import Tag, Organization
         
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         
+        tags = []
+        admin = None
+        org = None
+        
         if org_id:
-             # TODO: implement Tags for Organization
-             return render(request, 'set/tags.html', {
-                'admin': None,
-                'tags': []
-            })
-            
-        if not admin_id:
+            # Organization user - filter tags by organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                tags = Tag.objects.filter(organization=org).order_by('-created_at')
+        elif admin_id:
+            # Admin user - filter tags by admin
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                tags = Tag.objects.filter(admin=admin).order_by('-created_at')
+        else:
             return redirect('/login/')
-        
-        admin = Admin.objects.filter(id=admin_id).first()
-        if not admin:
-            return redirect('/login/')
-        
-        tags = Tag.objects.filter(admin=admin).order_by('-created_at')
         
         return render(request, 'set/tags.html', {
             'admin': admin,
@@ -666,7 +667,7 @@ class Settingcontroller :
     @staticmethod
     def tag_create(request):
         from django.http import JsonResponse
-        from ..models import Tag
+        from ..models import Tag, Organization
         import json
         
         if request.method != 'POST':
@@ -675,15 +676,8 @@ class Settingcontroller :
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         
-        # Get admin - either from session or fallback to first admin for org users
-        admin = None
-        if admin_id:
-            admin = Admin.objects.filter(id=admin_id).first()
-        elif org_id:
-            admin = Admin.objects.first()
-        
-        if not admin:
-            return JsonResponse({'error': 'Admin not found. Please configure admin settings.'}, status=404)
+        if not admin_id and not org_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
         
         try:
             data = json.loads(request.body)
@@ -693,15 +687,36 @@ class Settingcontroller :
             if not name:
                 return JsonResponse({'error': 'Tag name is required'}, status=400)
             
-            # Check for duplicate
-            if Tag.objects.filter(admin=admin, name__iexact=name).exists():
-                return JsonResponse({'error': 'Tag already exists'}, status=400)
-            
-            tag = Tag.objects.create(
-                admin=admin,
-                name=name,
-                description=description
-            )
+            if org_id:
+                # Organization user - create tag for organization
+                org = Organization.objects.filter(id=org_id).first()
+                if not org:
+                    return JsonResponse({'error': 'Organization not found'}, status=404)
+                
+                # Check for duplicate within organization
+                if Tag.objects.filter(organization=org, name__iexact=name).exists():
+                    return JsonResponse({'error': 'Tag already exists'}, status=400)
+                
+                tag = Tag.objects.create(
+                    organization=org,
+                    name=name,
+                    description=description
+                )
+            else:
+                # Admin user - create tag for admin
+                admin = Admin.objects.filter(id=admin_id).first()
+                if not admin:
+                    return JsonResponse({'error': 'Admin not found'}, status=404)
+                
+                # Check for duplicate within admin
+                if Tag.objects.filter(admin=admin, name__iexact=name).exists():
+                    return JsonResponse({'error': 'Tag already exists'}, status=400)
+                
+                tag = Tag.objects.create(
+                    admin=admin,
+                    name=name,
+                    description=description
+                )
             
             return JsonResponse({'success': True, 'id': tag.id, 'name': tag.name})
         except Exception as e:
@@ -710,7 +725,7 @@ class Settingcontroller :
     @staticmethod
     def tag_update(request, tag_id):
         from django.http import JsonResponse
-        from ..models import Tag
+        from ..models import Tag, Organization
         import json
         
         if request.method != 'POST':
@@ -719,17 +734,20 @@ class Settingcontroller :
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         
-        # Get admin - either from session or fallback to first admin for org users
-        admin = None
-        if admin_id:
+        if not admin_id and not org_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        # Find tag based on user type
+        tag = None
+        if org_id:
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                tag = Tag.objects.filter(id=tag_id, organization=org).first()
+        elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
-        elif org_id:
-            admin = Admin.objects.first()
+            if admin:
+                tag = Tag.objects.filter(id=tag_id, admin=admin).first()
         
-        if not admin:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
-        
-        tag = Tag.objects.filter(id=tag_id, admin=admin).first()
         if not tag:
             return JsonResponse({'error': 'Tag not found'}, status=404)
         
@@ -746,7 +764,7 @@ class Settingcontroller :
     @staticmethod
     def tag_delete(request, tag_id):
         from django.http import JsonResponse
-        from ..models import Tag
+        from ..models import Tag, Organization
         
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -754,17 +772,20 @@ class Settingcontroller :
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         
-        # Get admin - either from session or fallback to first admin for org users
-        admin = None
-        if admin_id:
+        if not admin_id and not org_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        # Find tag based on user type
+        tag = None
+        if org_id:
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                tag = Tag.objects.filter(id=tag_id, organization=org).first()
+        elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
-        elif org_id:
-            admin = Admin.objects.first()
+            if admin:
+                tag = Tag.objects.filter(id=tag_id, admin=admin).first()
         
-        if not admin:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
-        
-        tag = Tag.objects.filter(id=tag_id, admin=admin).first()
         if not tag:
             return JsonResponse({'error': 'Tag not found'}, status=404)
         

@@ -264,6 +264,7 @@ class Message(models.Model):
 class Tag(models.Model):
     id = models.AutoField(primary_key=True)
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True, related_name='tags')
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True, related_name='tags')
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, help_text="Description for the AI explaining when to apply this tag")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -273,7 +274,8 @@ class Tag(models.Model):
 
     class Meta:
         db_table = 'tags'
-        unique_together = ('admin', 'name')  # Same tag name can exist for different admins
+        # Note: unique_together with nullable fields needs careful handling
+        # Django allows multiple NULL values in unique_together
 
 
 class UserTag(models.Model):
