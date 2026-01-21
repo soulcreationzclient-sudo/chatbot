@@ -673,12 +673,17 @@ class Settingcontroller :
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
         
-        admin = Admin.objects.filter(id=admin_id).first()
+        # Get admin - either from session or fallback to first admin for org users
+        admin = None
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            admin = Admin.objects.first()
+        
         if not admin:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
+            return JsonResponse({'error': 'Admin not found. Please configure admin settings.'}, status=404)
         
         try:
             data = json.loads(request.body)
@@ -712,10 +717,15 @@ class Settingcontroller :
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
         
-        admin = Admin.objects.filter(id=admin_id).first()
+        # Get admin - either from session or fallback to first admin for org users
+        admin = None
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            admin = Admin.objects.first()
+        
         if not admin:
             return JsonResponse({'error': 'Admin not found'}, status=404)
         
@@ -742,10 +752,15 @@ class Settingcontroller :
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
         
-        admin = Admin.objects.filter(id=admin_id).first()
+        # Get admin - either from session or fallback to first admin for org users
+        admin = None
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            admin = Admin.objects.first()
+        
         if not admin:
             return JsonResponse({'error': 'Admin not found'}, status=404)
         

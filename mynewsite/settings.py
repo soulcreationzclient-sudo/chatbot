@@ -30,7 +30,7 @@ ALLOWED_HOSTS = [
      'localhost',
     '127.0.0.1',
     'chatbotad.io',
-    '13.218.231.109',
+    '50.17.107.173',
     '1d947b3a8e32.ngrok-free.app',
     '.ngrok-free.app',
     '.ngrok-free.dev',

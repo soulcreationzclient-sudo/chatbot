@@ -271,11 +271,10 @@
   }
 
   async function updateChatGPTMode(mode) {
-    const adminId = '{{ admin.id }}';
     const response = await fetch('/set_chatgpt_mode/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': CSRF_TOKEN },
-      body: new URLSearchParams({ 'admin_id': adminId, 'mode': mode }),
+      body: new URLSearchParams({ 'mode': mode }),
     });
     const data = await response.json();
     if (data.success) alert('Bot mode changed to: ' + data.mode);

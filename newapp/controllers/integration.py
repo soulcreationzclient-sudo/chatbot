@@ -110,12 +110,35 @@ class Integrationcontroller:
     @csrf_exempt
     def set_chatgpt_mode(request):
         if request.method == "POST":
-            admin_id = request.POST.get('admin_id')
             mode = request.POST.get('mode')  # 'prompt' or 'ai_agent'
             if mode not in ['prompt', 'ai_agent']:
                 return JsonResponse({"error": "Invalid mode"}, status=400)
-            Admin.objects.filter(id=admin_id).update(chatgpt_mode=mode)
-            return JsonResponse({"success": True, "mode": mode})
+            
+            # Get admin or org from session
+            admin_id = request.session.get('admin_id')
+            org_id = request.session.get('organization_id')
+            
+            if org_id:
+                # Organization-based: update org's chatgpt_mode
+                from ..models import Organization
+                org = Organization.objects.filter(id=org_id).first()
+                if org:
+                    org.chatgpt_mode = mode
+                    org.save()
+                    return JsonResponse({"success": True, "mode": mode})
+            elif admin_id:
+                # Admin-based: update admin's chatgpt_mode
+                Admin.objects.filter(id=admin_id).update(chatgpt_mode=mode)
+                return JsonResponse({"success": True, "mode": mode})
+            
+            # Fallback: if admin_id in POST (legacy support)
+            admin_id_post = request.POST.get('admin_id')
+            if admin_id_post:
+                Admin.objects.filter(id=admin_id_post).update(chatgpt_mode=mode)
+                return JsonResponse({"success": True, "mode": mode})
+            
+            return JsonResponse({"error": "Not authenticated"}, status=401)
+
     # @csrf_exempt
     # def ai_agent_upload(request):
     #     if request.method == 'POST':
