@@ -25,7 +25,13 @@ class Inboxcontroller:
 
         # 3. Base Query - filter by organization or admin
         if org_id:
-            users = User.objects.filter(organization_id=org_id).annotate(
+            # Get organization and its linked admin
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            # Try organization field first, then fall back to admin
+            users = User.objects.filter(
+                Q(organization_id=org_id) | Q(admin_id=org.admin_id if org else None)
+            ).annotate(
                 last_msg_time=Max('message__created_at')
             ).order_by('-last_msg_time', 'id')
         elif admin_id:

@@ -235,8 +235,15 @@ class whatsappcontroller:
                         metadata = value.get("metadata") or {}
                         phone_number_id = metadata.get('phone_number_id')
 
+                        # Check both Admin and Organization for this phone_number_id
                         admin_check = Admin.objects.filter(whatsapp_phone_id=phone_number_id).first()
-                        if not admin_check:
+                        org_check = None
+                        
+                        # Also check Organization
+                        from newapp.models import Organization
+                        org_check = Organization.objects.filter(whatsapp_phone_id=phone_number_id).first()
+                        
+                        if not admin_check and not org_check:
                             continue
 
                         for m in value.get('messages') or []:
@@ -258,6 +265,14 @@ class whatsappcontroller:
                                     created_at=datetime.now(),
                                     admin_id=admin_check,
                                 )
+                                # Set organization if found
+                                if org_check:
+                                    existing_user.organization = org_check
+                            else:
+                                # Existing user - ensure organization is set if missing
+                                if org_check and not existing_user.organization:
+                                    existing_user.organization = org_check
+                                    
                             if wa_name:
                                 existing_user.name = wa_name
                             
@@ -266,6 +281,7 @@ class whatsappcontroller:
                             existing_user.followup_count = 0
                             existing_user.save()
                             print(f"🔄 Reset follow-up counter for {phone}")
+
                             
                             # ==================== IMAGE/DOCUMENT HANDLING ====================
                             if msg_type == 'image':
@@ -433,9 +449,30 @@ If you have any relevant tools/functions available that can process or validate 
                                 who='human'
                             ) 
 
+                            # ==================== KEYWORD MACRO TAGGING ====================
+                            # Check if user input matches any tag keywords (Manual Rule Mode)
+                            try:
+                                msg_lower = msg_text.lower().strip()
+                                # Get all tags with keywords for this admin/org
+                                keyword_tags = Tag.objects.filter(
+                                    Q(admin=admin_check) | Q(organization=org_check) if org_check else Q(admin=admin_check),
+                                    auto_apply=True,
+                                    keyword__isnull=False
+                                ).exclude(keyword='')
+                                
+                                for tag in keyword_tags:
+                                    if tag.keyword and tag.keyword.lower() in msg_lower:
+                                        # Apply tag to user
+                                        UserTag.objects.get_or_create(user=existing_user, tag=tag)
+                                        print(f"🏷️ Auto-applied tag '{tag.name}' to {phone} (keyword: {tag.keyword})")
+                            except Exception as kt_e:
+                                print(f"[Keyword Tag] Error: {kt_e}")
+                            # ==================== END KEYWORD MACRO TAGGING ====================
+
                             bot_response = None
                             trigger = False
                             resp = None
+
 
                             # ==================== CALENDLY INTEGRATION ====================
                             # Check for booking/cancellation intent BEFORE calling OpenAI

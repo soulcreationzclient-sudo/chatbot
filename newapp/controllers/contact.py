@@ -75,8 +75,8 @@ class Contactcontroller:
         from ..models import Tag
         
         if org_id:
-            # TODO: Add organization_id to Tag model. For now, empty list for new orgs.
-            all_tags = []
+            # Filter tags by organization
+            all_tags = Tag.objects.filter(organization_id=org_id)
         else:
             all_tags = Tag.objects.filter(admin_id=admin_id)
         
@@ -92,20 +92,43 @@ class Contactcontroller:
     
     @csrf_exempt
     def add_admin_user(request):
-        # return HttpResponse('hi')
         if(request.method=='POST'):
             name=(request.POST.get('name').strip() or '').strip()
             phone_no=(request.POST.get('phone_no')or '').strip()
             if name=='' or phone_no=='':
                 messages.warning(request,'name and phone fields cannot be empty')
+                return redirect(request.META.get("HTTP_REFERER", "contact/add"))
+            
             if(not User.objects.filter(phone_no=phone_no)):
-                admin_id=Admin.objects.get(id=request.session.get('admin_id'))
-                User.objects.create(
-                    admin_id=admin_id,
-                    name=name,
-                    phone_no=phone_no,
-                    created_at=datetime.now()
-                )
+                # Support both organization and admin auth
+                org_id = request.session.get('organization_id')
+                admin_id = request.session.get('admin_id')
+                
+                if org_id:
+                    from ..models import Organization
+                    org = Organization.objects.filter(id=org_id).first()
+                    User.objects.create(
+                        organization=org,
+                        admin_id=org.admin if hasattr(org, 'admin') else None,
+                        name=name,
+                        phone_no=phone_no,
+                        created_at=datetime.now()
+                    )
+                elif admin_id:
+                    admin = Admin.objects.filter(id=admin_id).first()
+                    if not admin:
+                        messages.error(request, 'Admin not found')
+                        return redirect(request.META.get("HTTP_REFERER", "contact/add"))
+                    User.objects.create(
+                        admin_id=admin,
+                        name=name,
+                        phone_no=phone_no,
+                        created_at=datetime.now()
+                    )
+                else:
+                    messages.error(request, 'Not authenticated')
+                    return redirect('/login')
+                    
                 messages.success(request,'successfully inserted')
                 return redirect(request.META.get("HTTP_REFERER", "contact/add"))
             else:
@@ -113,6 +136,7 @@ class Contactcontroller:
                  return redirect(request.META.get("HTTP_REFERER", "contact/add"))
         else:
             return HttpResponse('not correct method')
+
     
     def edit_user(request, id):
         user = get_object_or_404(User, id=id)
@@ -158,7 +182,7 @@ class Contactcontroller:
     @staticmethod
     def add_user_tag(request):
         from django.http import JsonResponse
-        from ..models import Tag, UserTag
+        from ..models import Tag, UserTag, Organization
         import json
 
         if request.method != 'POST':
@@ -172,13 +196,21 @@ class Contactcontroller:
             if not user_id or not tag_id:
                 return JsonResponse({'error': 'Missing user_id or tag_id'}, status=400)
             
-            # Verify user and tag belong to admin
+            # Support both organization and admin auth
+            org_id = request.session.get('organization_id')
             admin_id = request.session.get('admin_id')
-            if not admin_id:
-                return JsonResponse({'error': 'Not authenticated'}, status=401)
             
-            user = User.objects.filter(id=user_id, admin_id=admin_id).first()
-            tag = Tag.objects.filter(id=tag_id, admin_id=admin_id).first()
+            if org_id:
+                org = Organization.objects.filter(id=org_id).first()
+                user = User.objects.filter(id=user_id).filter(
+                    Q(organization_id=org_id) | Q(admin_id=org.admin_id if org else None)
+                ).first()
+                tag = Tag.objects.filter(id=tag_id, organization_id=org_id).first()
+            elif admin_id:
+                user = User.objects.filter(id=user_id, admin_id=admin_id).first()
+                tag = Tag.objects.filter(id=tag_id, admin_id=admin_id).first()
+            else:
+                return JsonResponse({'error': 'Not authenticated'}, status=401)
             
             if not user or not tag:
                 return JsonResponse({'error': 'User or Tag not found'}, status=404)
@@ -193,7 +225,7 @@ class Contactcontroller:
     @staticmethod
     def remove_user_tag(request):
         from django.http import JsonResponse
-        from ..models import Tag, UserTag
+        from ..models import Tag, UserTag, Organization
         import json
 
         if request.method != 'POST':
@@ -207,13 +239,21 @@ class Contactcontroller:
             if not user_id or not tag_id:
                 return JsonResponse({'error': 'Missing user_id or tag_id'}, status=400)
             
-            # Verify user and tag belong to admin
+            # Support both organization and admin auth
+            org_id = request.session.get('organization_id')
             admin_id = request.session.get('admin_id')
-            if not admin_id:
-                return JsonResponse({'error': 'Not authenticated'}, status=401)
             
-            user = User.objects.filter(id=user_id, admin_id=admin_id).first()
-            tag = Tag.objects.filter(id=tag_id, admin_id=admin_id).first()
+            if org_id:
+                org = Organization.objects.filter(id=org_id).first()
+                user = User.objects.filter(id=user_id).filter(
+                    Q(organization_id=org_id) | Q(admin_id=org.admin_id if org else None)
+                ).first()
+                tag = Tag.objects.filter(id=tag_id, organization_id=org_id).first()
+            elif admin_id:
+                user = User.objects.filter(id=user_id, admin_id=admin_id).first()
+                tag = Tag.objects.filter(id=tag_id, admin_id=admin_id).first()
+            else:
+                return JsonResponse({'error': 'Not authenticated'}, status=401)
             
             if not user or not tag:
                 return JsonResponse({'error': 'User or Tag not found'}, status=404)

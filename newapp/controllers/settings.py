@@ -700,7 +700,9 @@ class Settingcontroller :
                 tag = Tag.objects.create(
                     organization=org,
                     name=name,
-                    description=description
+                    description=description,
+                    keyword=data.get('keyword', '').strip() or None,
+                    auto_apply=data.get('auto_apply', False)
                 )
             else:
                 # Admin user - create tag for admin
@@ -715,7 +717,9 @@ class Settingcontroller :
                 tag = Tag.objects.create(
                     admin=admin,
                     name=name,
-                    description=description
+                    description=description,
+                    keyword=data.get('keyword', '').strip() or None,
+                    auto_apply=data.get('auto_apply', False)
                 )
             
             return JsonResponse({'success': True, 'id': tag.id, 'name': tag.name})
@@ -755,6 +759,8 @@ class Settingcontroller :
             data = json.loads(request.body)
             tag.name = data.get('name', tag.name).strip()
             tag.description = data.get('description', tag.description).strip()
+            tag.keyword = data.get('keyword', tag.keyword or '').strip() or None
+            tag.auto_apply = data.get('auto_apply', tag.auto_apply)
             tag.save()
             
             return JsonResponse({'success': True})

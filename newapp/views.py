@@ -1375,19 +1375,43 @@ from django.http import JsonResponse
 import requests
 
 def whatsapp_templates(request):
-    waba_id = "1356495696480176"
-    access_token = "EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD"  
-
+    # Get credentials from admin or organization
+    org_id = request.session.get('organization_id')
+    admin_id = request.session.get('admin_id')
+    
+    waba_id = None
+    access_token = None
+    
+    if org_id:
+        from newapp.models import Organization
+        org = Organization.objects.filter(id=org_id).first()
+        if org:
+            waba_id = getattr(org, 'waba_id', None) or getattr(org, 'whatsapp_phone_id', None)
+            access_token = org.whatsapp_token
+    elif admin_id:
+        from newapp.models import Admin
+        admin = Admin.objects.filter(id=admin_id).first()
+        if admin:
+            waba_id = getattr(admin, 'waba_id', None) or admin.whatsapp_phone_id
+            access_token = admin.whatsapp_token
+    
+    if not waba_id or not access_token:
+        return JsonResponse({"error": "WhatsApp not configured", "templates": []}, status=200)
+    
+    # Fetch templates from Meta API
     url = f"https://graph.facebook.com/v22.0/{waba_id}/message_templates"
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        templates = response.json().get("data", [])
-        template_names = [t["name"] for t in templates]
-        return JsonResponse({"templates": template_names})
-    else:
-        return JsonResponse({"error": "Failed to fetch templates", "details": response.text}, status=500)
+    try:
+        response = requests.get(url, headers=headers, timeout=15)
+        if response.status_code == 200:
+            templates = response.json().get("data", [])
+            template_names = [t["name"] for t in templates]
+            return JsonResponse({"templates": template_names})
+        else:
+            return JsonResponse({"error": "Failed to fetch templates", "templates": []}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e), "templates": []}, status=200)
     
 from django.shortcuts import redirect, get_object_or_404
 from newapp.models import Tag

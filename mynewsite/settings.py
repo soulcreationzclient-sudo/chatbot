@@ -38,6 +38,9 @@ ALLOWED_HOSTS = [
     "https://07377353818c.ngrok-free.app"
 ]
 
+# Allow CSRF over HTTP for development
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
 CSRF_TRUSTED_ORIGINS = [
     'https://chatbotad.io',
     'http://chatbotad.io',
@@ -160,11 +163,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://494b6c088862.ngrok-free.app",
-    "https://overslight-shirley-overhearty.ngrok-free.dev"
-]
-
 
 # PUBLIC_PATHS = [
 #     "/appointment_date/",
@@ -182,5 +180,3 @@ CELERY_TASK_SERIALIZER = 'json'
 
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
-
-

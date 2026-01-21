@@ -267,6 +267,9 @@ class Tag(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True, related_name='tags')
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, help_text="Description for the AI explaining when to apply this tag")
+    # Manual Rule Mode (Macros) - keyword-based auto-tagging
+    keyword = models.CharField(max_length=100, blank=True, null=True, help_text="Keyword that triggers this tag when user types it (e.g., 'STOP')")
+    auto_apply = models.BooleanField(default=False, help_text="If True, tag is auto-applied when keyword matches user input")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -276,6 +279,7 @@ class Tag(models.Model):
         db_table = 'tags'
         # Note: unique_together with nullable fields needs careful handling
         # Django allows multiple NULL values in unique_together
+
 
 
 class UserTag(models.Model):

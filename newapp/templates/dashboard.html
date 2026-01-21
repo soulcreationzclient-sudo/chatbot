@@ -193,12 +193,10 @@
             <i class="fab fa-whatsapp" style="color: #25D366;"></i>
             <div>WhatsApp</div>
             {% if whatsapp_connected %}
-            <button>
-                <a href="{{ phone_id }}">Test Now</a>
-            </button>
+            <button style="background:#22c55e; cursor:default;">Connected</button>
             {% else %}
-            <button style="background:#25D366;">
-                <a href="{% url 'connect_whatsapp' %}">Connect</a>
+            <button>
+                <a href="{% url 'settings' %}">Test Now</a>
             </button>
             {% endif %}
         </div>
