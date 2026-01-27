@@ -139,6 +139,7 @@ def client_login(request):
                     # Store organization ID in session for quick access
                     request.session['organization_id'] = org_user.organization.id
                     request.session['organization_name'] = org_user.organization.name
+                    request.session.save()  # Ensure session is saved before redirect
                     messages.success(request, f'Welcome, {user.first_name or user.username}!')
                     next_url = request.GET.get('next', 'dashboard')
                     return redirect(next_url)

@@ -218,11 +218,13 @@
         <select id="tagFilter" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
           <option value="">All Tags</option>
           {% for t in all_tags %}
-          <option value="{{ t.id }}" {% if request.GET.tag_id == t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>
+          <option value="{{ t.id }}" {% if request.GET.tag_id==t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}
+          </option>
           {% endfor %}
         </select>
       </div>
-      <input type="text" id="userSearch" class="form-control form-control-sm" placeholder="Search name or phone..." value="{{ request.GET.search|default:'' }}" onkeyup="debounceSearch()">
+      <input type="text" id="userSearch" class="form-control form-control-sm" placeholder="Search name or phone..."
+        value="{{ request.GET.search|default:'' }}" onkeyup="debounceSearch()">
     </div>
     <div class="items" id="userListContainer">
       {% include "inbox/partials/user_list.html" %}
@@ -233,7 +235,8 @@
   <section class="thread">
     <div class="thread-head">
       {% if selected_user %}
-      <div class="avatar" style="width:36px;height:36px">{{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
+      <div class="avatar" style="width:36px;height:36px">{{
+        selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
       <div>
         <div style="font-weight:700">{{ selected_user.name|default:"User" }}</div>
         <div class="text-muted" style="font-size:12px">{{ selected_user.phone_no }}</div>
@@ -276,43 +279,43 @@
 
 <script>
   // Robust Scroll & Auto-Refresh Logic (Final)
-  
+
   // Filter Logic
   // SEARCH & FILTER
   let searchTimeout;
   function debounceSearch() {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-        applyFilters();
+      applyFilters();
     }, 500);
   }
 
-  
+
   async function applyFilters() {
     const tagId = document.getElementById('tagFilter').value;
     const search = document.getElementById('userSearch').value.trim();
-    
+
     const url = new URL(window.location.href);
-    
+
     if (tagId) url.searchParams.set('tag_id', tagId);
     else url.searchParams.delete('tag_id');
-    
+
     if (search) url.searchParams.set('search', search);
     else url.searchParams.delete('search');
-    
+
     // Update Browser URL without reload
     window.history.pushState({}, '', url);
 
     // Fetch Partial
     url.searchParams.set('ajax', '1');
     try {
-        const res = await fetch(url);
-        if (res.ok) {
-            const html = await res.text();
-            document.getElementById('userListContainer').innerHTML = html;
-        }
+      const res = await fetch(url);
+      if (res.ok) {
+        const html = await res.text();
+        document.getElementById('userListContainer').innerHTML = html;
+      }
     } catch (e) {
-        console.error("Search error:", e);
+      console.error("Search error:", e);
     }
   }
 
@@ -330,7 +333,7 @@
     const file = input.files[0];
     const formData = new FormData();
     formData.append('file', file);
-    
+
     // Show loading?
     const msgInput = document.getElementById('userMessage');
     const originalPlaceholder = msgInput.placeholder;
@@ -338,29 +341,29 @@
     msgInput.disabled = true;
 
     try {
-        const res = await fetch('/api/inbox/upload', {
-            method: 'POST',
-            body: formData
-        });
-        const data = await res.json();
-        
-        if (data.url) {
-            let tag = "";
-            if (data.type === 'image') tag = `[Image: ${data.url}] `;
-            else tag = `[Document: ${data.url}] `;
-            
-            msgInput.value = (msgInput.value + " " + tag).trim();
-            msgInput.focus();
-        } else {
-            alert("Upload failed: " + (data.error || "Unknown error"));
-        }
+      const res = await fetch('/api/inbox/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+
+      if (data.url) {
+        let tag = "";
+        if (data.type === 'image') tag = `[Image: ${data.url}] `;
+        else tag = `[Document: ${data.url}] `;
+
+        msgInput.value = (msgInput.value + " " + tag).trim();
+        msgInput.focus();
+      } else {
+        alert("Upload failed: " + (data.error || "Unknown error"));
+      }
     } catch (e) {
-        console.error(e);
-        alert("Upload network error");
+      console.error(e);
+      alert("Upload network error");
     } finally {
-        msgInput.placeholder = originalPlaceholder;
-        msgInput.disabled = false;
-        input.value = ""; // reset
+      msgInput.placeholder = originalPlaceholder;
+      msgInput.disabled = false;
+      input.value = ""; // reset
     }
   }
 
@@ -383,7 +386,7 @@
     // Actually, let's try to populate the Set from the initial `lastMessageId` logic strictly?
     // No, better to just let the Set track what we fetch via API.
     // The initial messages are "static". We won't re-fetch them because lastMessageId starts at the end.
-    
+
     scrollToBottom();
     setTimeout(scrollToBottom, 100);
 
@@ -417,6 +420,7 @@
     try {
       const formData = new FormData();
       formData.append('message', message);
+      formData.append('user_id', currentUserId);  // Include user_id for saving messages
 
       const response = await fetch('/chatgpt/respond/', {
         method: 'POST',
@@ -442,8 +446,8 @@
   function appendMessage(msg, sender, msgId = null) {
     // De-duplication check
     if (msgId && displayedMessageIds.has(msgId)) {
-        console.log("Duplicate message ignored:", msgId);
-        return; 
+      console.log("Duplicate message ignored:", msgId);
+      return;
     }
     if (msgId) displayedMessageIds.add(msgId);
 
@@ -456,7 +460,7 @@
 
     row.appendChild(bubble);
     threadBody.appendChild(row);
-    
+
     scrollToBottom();
     setTimeout(scrollToBottom, 50);
   }
@@ -503,7 +507,7 @@
       if (!el.classList.contains('meta')) {
         const raw = el.innerText;
         if (raw.trim().startsWith('[Image:') || raw.trim().startsWith('[Document:')) {
-            el.innerHTML = formatMessage(raw);
+          el.innerHTML = formatMessage(raw);
         }
       }
     });
@@ -512,13 +516,13 @@
   // Polling Logic
   let lastMessageId = 0;
   {% if messages %}
-  lastMessageId = {{ messages.last.id|default:0 }};
+  lastMessageId = {{ messages.last.id |default: 0 }};
   {% endif %}
   const currentUserId = "{{ selected_user.id|default:'' }}";
 
   async function fetchNewMessages() {
     if (!currentUserId) return;
-    
+
     // Cache buster
     const ts = new Date().getTime();
 
@@ -526,7 +530,7 @@
       const url = `/api/inbox/new_messages?user_id=${currentUserId}&last_id=${lastMessageId}&_t=${ts}`;
       const response = await fetch(url);
       if (!response.ok) return;
-      
+
       const data = await response.json();
       if (data.messages && data.messages.length > 0) {
         console.log(`Fetched ${data.messages.length} new messages.`);

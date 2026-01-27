@@ -351,7 +351,8 @@ class ExternalAPI(models.Model):
     ]
     
     id = models.AutoField(primary_key=True)
-    admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True, related_name='external_apis')
     name = models.CharField(max_length=100, help_text="Name of the function for the AI to call (e.g., check_booking)")
     description = models.TextField(help_text="Description for the AI explaining when to use this tool")
     url = models.URLField(max_length=500)

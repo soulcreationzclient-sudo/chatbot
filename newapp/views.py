@@ -776,46 +776,95 @@ import openai
 
 @csrf_exempt
 def chatgpt_respond(request):
-    """Handle chat from inbox UI - accepts both JSON and FormData"""
+    """Handle chat from inbox UI - saves messages to DB and sends to WhatsApp"""
     if request.method == "POST":
         try:
             # Handle both JSON and FormData
             if request.content_type == 'application/json':
                 data = json.loads(request.body)
                 user_prompt = data.get("prompt", "") or data.get("message", "")
+                user_id = data.get("user_id")
             else:
                 user_prompt = request.POST.get("message", "") or request.POST.get("prompt", "")
+                user_id = request.POST.get("user_id")
             
             user_prompt = user_prompt.strip()
             if not user_prompt:
                 return JsonResponse({"error": "Message cannot be empty."}, status=400)
 
-            # Get OpenAI key from organization or admin
+            # Get organization/admin from session
             org_id = request.session.get('organization_id')
             admin_id = request.session.get('admin_id')
             
             openai_key = None
             admin = None
+            org = None
+            whatsapp_phone_id = None
+            whatsapp_token = None
             
             if org_id:
                 from .models import Organization
                 org = Organization.objects.filter(id=org_id).first()
-                if org and org.openai_api_key:
+                if org:
                     openai_key = org.openai_api_key
+                    whatsapp_phone_id = org.whatsapp_phone_id
+                    whatsapp_token = org.whatsapp_token
             
             if not openai_key and admin_id:
                 admin = Admin.objects.filter(id=admin_id).first()
-                if admin and admin.openai_api_key:
+                if admin:
                     openai_key = admin.openai_api_key
+                    whatsapp_phone_id = admin.whatsapp_phone_id
+                    whatsapp_token = admin.whatsapp_token
             
             # Fallback to first admin if no key found
             if not openai_key:
                 admin = Admin.objects.first()
-                if admin and admin.openai_api_key:
+                if admin:
                     openai_key = admin.openai_api_key
-                
+                    whatsapp_phone_id = whatsapp_phone_id or admin.whatsapp_phone_id
+                    whatsapp_token = whatsapp_token or admin.whatsapp_token
+            
+            # Get user object for saving messages
+            user_obj = None
+            if user_id:
+                user_obj = User.objects.filter(id=user_id).first()
+            
+            # Save user message to DB
+            if user_obj:
+                Message.objects.create(
+                    user_id=user_obj,
+                    messages=user_prompt,
+                    created_at=timezone.now(),
+                    who='human'
+                )
+            
+            # If no OpenAI key, just save as manual message (no AI response)
             if not openai_key:
-                return JsonResponse({"error": "ChatGPT API key not configured."}, status=403)
+                # Send to WhatsApp without AI
+                if user_obj and whatsapp_phone_id and whatsapp_token:
+                    whatsapp_api_url = f"https://graph.facebook.com/v17.0/{whatsapp_phone_id}/messages"
+                    headers = {
+                        "Authorization": f"Bearer {whatsapp_token}",
+                        "Content-Type": "application/json"
+                    }
+                    payload = {
+                        "messaging_product": "whatsapp",
+                        "to": user_obj.phone_no,
+                        "type": "text",
+                        "text": {"body": user_prompt}
+                    }
+                    requests.post(whatsapp_api_url, json=payload, headers=headers)
+                    
+                    # Save as bot message (since it's from agent/admin)
+                    Message.objects.create(
+                        user_id=user_obj,
+                        messages=user_prompt,
+                        created_at=timezone.now(),
+                        who='bot'
+                    )
+                    return JsonResponse({"response": "Message sent (no AI configured)"})
+                return JsonResponse({"error": "OpenAI API key not configured."}, status=403)
 
             # Get system prompt
             prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
@@ -829,9 +878,17 @@ def chatgpt_respond(request):
             from .models import ExternalAPI
             from .logic import execute_tool
             
-            db_tools = ExternalAPI.objects.filter(admin=admin)
+            # Get tools for admin or organization
+            db_tools = []
+            if org_id:
+                # For organization users, filter by organization
+                db_tools = ExternalAPI.objects.filter(organization_id=org_id)
+            elif admin:
+                # For legacy admin users, filter by admin
+                db_tools = ExternalAPI.objects.filter(admin=admin)
+
             openai_tools = []
-            if db_tools.exists():
+            if db_tools and (hasattr(db_tools, 'exists') and db_tools.exists() or len(db_tools) > 0):
                 for tool in db_tools:
                     openai_tools.append({
                         "type": "function",
@@ -842,18 +899,15 @@ def chatgpt_respond(request):
                                 "type": "object",
                                 "properties": {
                                     "param_name": {"type": "string", "description": "Parameter value"} 
-                                    # Note: ideally we store param schema in DB too, but for generic usage we can imply it or use a generic 'arguments' dict
-                                    # For a truly generic simplified version, let's ask the AI to put all args in a single dict or infer from description.
-                                    # To make it robust:
                                 },
-                                "additionalProperties": True # Allow AI to invent properties based on description
+                                "additionalProperties": True
                             }
                         }
                     })
 
             # Prepare API Call Params
             api_params = {
-                "model": "gpt-4-turbo", # Upgrade to model supporting tools
+                "model": "gpt-4-turbo",
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
@@ -868,17 +922,14 @@ def chatgpt_respond(request):
 
             # Handle Tool Calls
             if response_message.tool_calls:
-                # Append the assistant's message (with tool calls) to history
                 api_params["messages"].append(response_message)
                 
                 for tool_call in response_message.tool_calls:
                     function_name = tool_call.function.name
                     arguments = json.loads(tool_call.function.arguments)
                     
-                    # Execute
                     tool_result = execute_tool(function_name, arguments, admin)
                     
-                    # Append result
                     api_params["messages"].append({
                         "tool_call_id": tool_call.id,
                         "role": "tool",
@@ -886,11 +937,34 @@ def chatgpt_respond(request):
                         "content": tool_result,
                     })
                 
-                # Verify / Get Final Response
                 second_response = client.chat.completions.create(**api_params)
                 final_content = second_response.choices[0].message.content
             else:
                 final_content = response_message.content
+
+            # Save bot response to DB
+            if user_obj and final_content:
+                Message.objects.create(
+                    user_id=user_obj,
+                    messages=final_content,
+                    created_at=timezone.now(),
+                    who='bot'
+                )
+                
+                # Send to WhatsApp
+                if whatsapp_phone_id and whatsapp_token:
+                    whatsapp_api_url = f"https://graph.facebook.com/v17.0/{whatsapp_phone_id}/messages"
+                    headers = {
+                        "Authorization": f"Bearer {whatsapp_token}",
+                        "Content-Type": "application/json"
+                    }
+                    payload = {
+                        "messaging_product": "whatsapp",
+                        "to": user_obj.phone_no,
+                        "type": "text",
+                        "text": {"body": final_content}
+                    }
+                    requests.post(whatsapp_api_url, json=payload, headers=headers)
 
             return JsonResponse({"response": final_content})
 
