@@ -1,4 +1,4 @@
-{% extends "layouts/base.html" %}
+﻿{% extends "layouts/base.html" %}
 {% load static %}
 {% load tz %}
 {% block title %}Inbox{% endblock %}
@@ -218,7 +218,7 @@
         <select id="tagFilter" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
           <option value="">All Tags</option>
           {% for t in all_tags %}
-          <option value="{{ t.id }}" {% if request.GET.tag_id==t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}
+          <option value="{{ t.id }}" {% if request.GET.tag_id == t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}
           </option>
           {% endfor %}
         </select>
@@ -515,7 +515,7 @@
   // Polling Logic
   let lastMessageId = 0;
   {% if messages %}
-  lastMessageId = {{ messages.last.id |default: 0 }};
+  lastMessageId = {{ messages.last.id |default:0 }};
   {% endif %}
   const currentUserId = "{{ selected_user.id|default:'' }}";
 
