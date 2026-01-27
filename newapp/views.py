@@ -246,21 +246,43 @@ def send_voice_bot(request):
 
 
 def show_people(request):
-    users = User.objects.all().values('id', 'phone_no')
+    org_id = request.session.get('organization_id')
+    admin_id = request.session.get('admin_id')
+    if org_id:
+        users = User.objects.filter(organization_id=org_id).values('id', 'phone_no')
+    elif admin_id:
+        users = User.objects.filter(admin_id=admin_id).values('id', 'phone_no')
+    else:
+        users = User.objects.none()
     return render(request, 'show_people.html', {'users': users})
 
 
 # views.py
 def show_chatbox(request):
-    users = User.objects.only('id', 'phone_no').order_by('id')
+    org_id = request.session.get('organization_id')
+    admin_id = request.session.get('admin_id')
+    
+    if org_id:
+        users = User.objects.filter(organization_id=org_id).only('id', 'phone_no').order_by('id')
+    elif admin_id:
+        users = User.objects.filter(admin_id=admin_id).only('id', 'phone_no').order_by('id')
+    else:
+        users = User.objects.none()
+        
     selected_user_id = request.GET.get('user_id')
 
     selected_user = None
     messages = []
 
     if selected_user_id:
-        selected_user = User.objects.filter(id=selected_user_id).first()
-        messages = Message.objects.filter(user_id=selected_user_id).order_by('created_at', 'id')
+        # Securely fetch user matching org/admin
+        if org_id:
+            selected_user = User.objects.filter(id=selected_user_id, organization_id=org_id).first()
+        elif admin_id:
+            selected_user = User.objects.filter(id=selected_user_id, admin_id=admin_id).first()
+            
+        if selected_user:
+            messages = Message.objects.filter(user_id=selected_user_id).order_by('created_at', 'id')
 
     return render(request, 'show_people.html', {
         'users': users,
@@ -378,7 +400,17 @@ def show_chatbox(request):
 # def broadcast_msg(request):
 #     return render(request, 'broadcast_form.html')
 def broadcast_msg(request):
-    tags = Tag.objects.all()
+    # Filter tags by organization or admin
+    org_id = request.session.get('organization_id')
+    admin_id = request.session.get('admin_id')
+    
+    if org_id:
+        tags = Tag.objects.filter(organization_id=org_id)
+    elif admin_id:
+        tags = Tag.objects.filter(admin_id=admin_id)
+    else:
+        tags = Tag.objects.none()
+    
     return render(request, 'broadcast_form.html', {'tags': tags})
 
 
@@ -442,18 +474,47 @@ def send_broadcast(request):
         return HttpResponse("Tag selection is required", status=400)
     if not template_name:
         return HttpResponse("Template selection is required", status=400)
-
-    try:
-        tag = Tag.objects.get(name=selected_tag_name)
-    except Tag.DoesNotExist:
-        return HttpResponse(f"Tag '{selected_tag_name}' not found.", status=400)
+    
+    # Get organization/admin from session
+    org_id = request.session.get('organization_id')
+    admin_id = request.session.get('admin_id')
+    
+    whatsapp_phone_id = None
+    whatsapp_token = None
+    tag = None
+    
+    if org_id:
+        from .models import Organization
+        org = Organization.objects.filter(id=org_id).first()
+        if org:
+            whatsapp_phone_id = org.whatsapp_phone_id
+            whatsapp_token = org.whatsapp_token
+        try:
+            tag = Tag.objects.get(name=selected_tag_name, organization_id=org_id)
+        except Tag.DoesNotExist:
+            return HttpResponse(f"Tag '{selected_tag_name}' not found.", status=400)
+    elif admin_id:
+        admin = Admin.objects.filter(id=admin_id).first()
+        if admin:
+            whatsapp_phone_id = admin.whatsapp_phone_id
+            whatsapp_token = admin.whatsapp_token
+        try:
+            tag = Tag.objects.get(name=selected_tag_name, admin_id=admin_id)
+        except Tag.DoesNotExist:
+            return HttpResponse(f"Tag '{selected_tag_name}' not found.", status=400)
+    else:
+        return HttpResponse("Not authenticated", status=401)
+    
+    if not whatsapp_phone_id or not whatsapp_token:
+        return HttpResponse("WhatsApp not configured", status=403)
 
     # Get all users linked to the selected tag
     user_ids = UserTag.objects.filter(tag=tag).values_list('user_id', flat=True)
     users = User.objects.filter(id__in=user_ids)
-
+    
+    whatsapp_api_url = f"https://graph.facebook.com/v17.0/{whatsapp_phone_id}/messages"
     headers = {
-        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Authorization": f"Bearer {whatsapp_token}",
         "Content-Type": "application/json"
     }
 
@@ -467,7 +528,7 @@ def send_broadcast(request):
                 "language": {"code": "en_US"}
             }
         }
-        r = requests.post(WHATSAPP_API_URL, headers=headers, json=payload)
+        r = requests.post(whatsapp_api_url, headers=headers, json=payload)
         print(f"Sent to {user.phone_no}, Status: {r.status_code}, Response: {r.text}")
         
         # Log each message sent in your DB
@@ -602,12 +663,23 @@ from .forms import TaggingForm
 from .models import Tag, User, UserTag
 @csrf_exempt
 def tag_view(request):
+    # Get organization/admin from session
+    org_id = request.session.get('organization_id')
+    admin_id = request.session.get('admin_id')
+    
     if request.method == 'POST':
         form = TaggingForm(request.POST)
         if form.is_valid():
             tag_name = form.cleaned_data['tag_name']
             selected_users = form.cleaned_data['users']
-            tag, created = Tag.objects.get_or_create(name=tag_name)
+            
+            # Create tag with org/admin
+            if org_id:
+                tag, created = Tag.objects.get_or_create(organization_id=org_id, name=tag_name)
+            elif admin_id:
+                tag, created = Tag.objects.get_or_create(admin_id=admin_id, name=tag_name)
+            else:
+                tag, created = Tag.objects.get_or_create(name=tag_name)
 
             # Delete all existing users from this tag
             UserTag.objects.filter(tag=tag).delete()
@@ -624,16 +696,28 @@ def tag_view(request):
         form = TaggingForm()
         tag_name = request.GET.get('tag_name', None)
         if tag_name:
-            tag = Tag.objects.filter(name=tag_name).first()
+            if org_id:
+                tag = Tag.objects.filter(name=tag_name, organization_id=org_id).first()
+            elif admin_id:
+                tag = Tag.objects.filter(name=tag_name, admin_id=admin_id).first()
+            else:
+                tag = Tag.objects.filter(name=tag_name).first()
             if tag:
                 users_of_tag = User.objects.filter(usertag__tag=tag)
                 form = TaggingForm(initial={
                     'tag_name': tag.name,
                     'users': users_of_tag,
                 })
-    # supply tag_list as before
+    
+    # supply tag_list filtered by org/admin
     tag_list = []
-    tags = Tag.objects.all()
+    if org_id:
+        tags = Tag.objects.filter(organization_id=org_id)
+    elif admin_id:
+        tags = Tag.objects.filter(admin_id=admin_id)
+    else:
+        tags = Tag.objects.none()
+    
     for tag in tags:
         tagged_users = User.objects.filter(usertag__tag=tag)
         tag_list.append({'tag': tag, 'users': tagged_users})
@@ -1483,7 +1567,9 @@ def import_contacts(request):
                 return redirect('contact_dashboard')
 
             # Create/get tag (for org or admin)
-            if admin_instance:
+            if org_instance:
+                tag, created = Tag.objects.get_or_create(organization=org_instance, name=tag_name)
+            elif admin_instance:
                 tag, created = Tag.objects.get_or_create(admin=admin_instance, name=tag_name)
             else:
                 tag, created = Tag.objects.get_or_create(name=tag_name)
@@ -1576,8 +1662,20 @@ from newapp.models import Tag
 
 def delete_tag(request, tag_id):
     if request.method == "POST":
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
         tag = get_object_or_404(Tag, id=tag_id)
-        tag.delete()
+        
+        # Verify ownership
+        if org_id and tag.organization_id == org_id:
+            tag.delete()
+        elif admin_id and tag.admin_id == admin_id:
+            tag.delete()
+        else:
+            # Unauthorized or tag doesn't belong to user
+            pass
+            
     return redirect('add_tag')
 
 from django.shortcuts import get_object_or_404, redirect

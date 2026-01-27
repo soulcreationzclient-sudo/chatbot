@@ -49,11 +49,11 @@ class Inboxcontroller:
 
         # 5. Context Data - filter tags by org/admin too
         if org_id:
-            all_tags = Tag.objects.filter(organization_id=org_id) if hasattr(Tag, 'organization_id') else Tag.objects.all()
+            all_tags = Tag.objects.filter(organization_id=org_id)
         elif admin_id:
             all_tags = Tag.objects.filter(admin_id=admin_id)
         else:
-            all_tags = Tag.objects.all()
+            all_tags = Tag.objects.none()
         selected_user = None
         messages = []
 
