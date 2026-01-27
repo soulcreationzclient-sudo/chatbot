@@ -109,7 +109,6 @@ class Contactcontroller:
                     org = Organization.objects.filter(id=org_id).first()
                     User.objects.create(
                         organization=org,
-                        admin_id=org.admin if hasattr(org, 'admin') else None,
                         name=name,
                         phone_no=phone_no,
                         created_at=datetime.now()
@@ -201,10 +200,7 @@ class Contactcontroller:
             admin_id = request.session.get('admin_id')
             
             if org_id:
-                org = Organization.objects.filter(id=org_id).first()
-                user = User.objects.filter(id=user_id).filter(
-                    Q(organization_id=org_id) | Q(admin_id=org.admin_id if org else None)
-                ).first()
+                user = User.objects.filter(id=user_id, organization_id=org_id).first()
                 tag = Tag.objects.filter(id=tag_id, organization_id=org_id).first()
             elif admin_id:
                 user = User.objects.filter(id=user_id, admin_id=admin_id).first()
@@ -244,10 +240,7 @@ class Contactcontroller:
             admin_id = request.session.get('admin_id')
             
             if org_id:
-                org = Organization.objects.filter(id=org_id).first()
-                user = User.objects.filter(id=user_id).filter(
-                    Q(organization_id=org_id) | Q(admin_id=org.admin_id if org else None)
-                ).first()
+                user = User.objects.filter(id=user_id, organization_id=org_id).first()
                 tag = Tag.objects.filter(id=tag_id, organization_id=org_id).first()
             elif admin_id:
                 user = User.objects.filter(id=user_id, admin_id=admin_id).first()

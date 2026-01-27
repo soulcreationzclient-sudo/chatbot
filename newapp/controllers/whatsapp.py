@@ -575,7 +575,11 @@ If the user's question relates to this document, answer based on your analysis a
                                         # Set context for built-in tools like apply_tag
                                         set_current_context(phone, admin_check)
                                         
-                                        db_tools = ExternalAPI.objects.filter(admin=admin_check)
+                                        # Get tools - check organization first, then admin
+                                        if org_check:
+                                            db_tools = ExternalAPI.objects.filter(organization=org_check)
+                                        else:
+                                            db_tools = ExternalAPI.objects.filter(admin=admin_check)
                                         openai_tools = []
                                         if db_tools.exists():
                                             for tool in db_tools:

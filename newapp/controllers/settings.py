@@ -73,9 +73,13 @@ class Settingcontroller :
     def external_apis(request):
         from ..models import ExternalAPI
         admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
         apis = []
         
-        if admin_id:
+        if org_id:
+            # Organization user - filter by organization
+            apis = ExternalAPI.objects.filter(organization_id=org_id)
+        elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 apis = ExternalAPI.objects.filter(admin=admin)

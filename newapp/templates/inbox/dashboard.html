@@ -413,27 +413,26 @@
     if (!message) return false;
 
     // Optimistic append (ID unknown, so not in Set)
-    appendMessage(message, 'user');
+    appendMessage(message, 'bot');  // 'bot' = from admin/agent side
     input.value = '';
     input.disabled = true;
 
     try {
       const formData = new FormData();
       formData.append('message', message);
-      formData.append('user_id', currentUserId);  // Include user_id for saving messages
+      formData.append('user_id', currentUserId);
 
-      const response = await fetch('/chatgpt/respond/', {
+      const response = await fetch('/inbox/send/', {
         method: 'POST',
         headers: { 'X-CSRFToken': getCsrfToken() },
         body: formData
       });
       const data = await response.json();
 
-      if (response.ok && (data.reply || data.response)) {
-        appendMessage(data.reply || data.response, 'bot');
-      } else {
-        appendMessage("Error: " + (data.error || "No response"), 'bot');
+      if (!response.ok) {
+        appendMessage("Error: " + (data.error || "Failed to send"), 'bot');
       }
+      // Message already appended optimistically, no need to append again
     } catch (error) {
       appendMessage("Network error. Please try again.", 'bot');
     } finally {

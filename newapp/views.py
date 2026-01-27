@@ -775,6 +775,90 @@ from newapp.models import Admin  # or wherever you store the API keys
 import openai
 
 @csrf_exempt
+def send_inbox_message(request):
+    """Send a message from the inbox to a user via WhatsApp (no AI)"""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    try:
+        # Get message and user_id from form data
+        message = request.POST.get("message", "").strip()
+        user_id = request.POST.get("user_id")
+        
+        if not message:
+            return JsonResponse({"error": "Message cannot be empty."}, status=400)
+        if not user_id:
+            return JsonResponse({"error": "User ID is required."}, status=400)
+        
+        # Get organization/admin from session
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        whatsapp_phone_id = None
+        whatsapp_token = None
+        
+        if org_id:
+            from .models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                whatsapp_phone_id = org.whatsapp_phone_id
+                whatsapp_token = org.whatsapp_token
+        
+        if not whatsapp_phone_id and admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                whatsapp_phone_id = admin.whatsapp_phone_id
+                whatsapp_token = admin.whatsapp_token
+        
+        # Fallback to first admin
+        if not whatsapp_phone_id:
+            admin = Admin.objects.first()
+            if admin:
+                whatsapp_phone_id = admin.whatsapp_phone_id
+                whatsapp_token = admin.whatsapp_token
+        
+        # Get user object
+        user_obj = User.objects.filter(id=user_id).first()
+        if not user_obj:
+            return JsonResponse({"error": "User not found."}, status=404)
+        
+        # Send message to WhatsApp
+        if whatsapp_phone_id and whatsapp_token:
+            whatsapp_api_url = f"https://graph.facebook.com/v17.0/{whatsapp_phone_id}/messages"
+            headers = {
+                "Authorization": f"Bearer {whatsapp_token}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": user_obj.phone_no,
+                "type": "text",
+                "text": {"body": message}
+            }
+            wa_response = requests.post(whatsapp_api_url, json=payload, headers=headers)
+            
+            if wa_response.status_code != 200:
+                return JsonResponse({"error": f"WhatsApp API error: {wa_response.text}"}, status=502)
+        else:
+            return JsonResponse({"error": "WhatsApp not configured."}, status=403)
+        
+        # Save message to database
+        Message.objects.create(
+            user_id=user_obj,
+            messages=message,
+            created_at=timezone.now(),
+            who='bot'  # 'bot' means from agent/admin side
+        )
+        
+        return JsonResponse({"response": message, "success": True})
+        
+    except Exception as e:
+        print(f"send_inbox_message error: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+
+@csrf_exempt
 def chatgpt_respond(request):
     """Handle chat from inbox UI - saves messages to DB and sends to WhatsApp"""
     if request.method == "POST":

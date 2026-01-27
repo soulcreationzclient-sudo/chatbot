@@ -150,6 +150,7 @@ urlpatterns = [
     path('set_chatgpt_mode/', Integrationcontroller.set_chatgpt_mode, name='set_chatgpt_mode'),
     path('chatgpt_prompt/', views.chatgpt_prompt_page, name='chatgpt_prompt_page'),
     path('chatgpt/respond/', views.chatgpt_respond, name='chatgpt_respond'),
+    path('inbox/send/', views.send_inbox_message, name='send_inbox_message'),
     path('ai_agent/upload/', integration_controller.ai_agent_upload, name='ai_agent_upload'),
     path('ai_agent/delete/<int:pk>/', delete_pdf, name='delete_pdf'),
     path('whatsapp/chatgpt_webhook/', views.get_message_chatgpt, name='chatgpt_webhook'),
