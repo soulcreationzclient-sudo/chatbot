@@ -310,6 +310,11 @@ class UserTag(models.Model):
 class ChatGPTPrompt(models.Model):
     prompt_text = models.TextField()
     updated_at = models.DateTimeField(auto_now=True)
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, null=True, blank=True)
+    admin = models.ForeignKey('Admin', on_delete=models.CASCADE, null=True, blank=True)
+
+    class Meta:
+        db_table = 'chatgpt_prompts'
 
     def __str__(self):
         return f"ChatGPT Prompt (updated {self.updated_at})"

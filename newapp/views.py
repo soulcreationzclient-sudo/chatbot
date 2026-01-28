@@ -1146,7 +1146,18 @@ from django.shortcuts import render, redirect
 from .models import ChatGPTPrompt
 @csrf_exempt
 def chatgpt_prompt_page(request):
-    prompt_obj = ChatGPTPrompt.objects.first()
+    # Get organization/admin from session
+    org_id = request.session.get('organization_id')
+    admin_id = request.session.get('admin_id')
+    
+    # Get prompt for current org/admin
+    if org_id:
+        prompt_obj = ChatGPTPrompt.objects.filter(organization_id=org_id).first()
+    elif admin_id:
+        prompt_obj = ChatGPTPrompt.objects.filter(admin_id=admin_id).first()
+    else:
+        prompt_obj = None
+    
     current_prompt = prompt_obj.prompt_text if prompt_obj else ""
 
     if request.method == "POST":
@@ -1155,7 +1166,11 @@ def chatgpt_prompt_page(request):
             prompt_obj.prompt_text = new_prompt
             prompt_obj.save()
         else:
-            ChatGPTPrompt.objects.create(prompt_text=new_prompt)
+            # Create new prompt for this org/admin
+            if org_id:
+                ChatGPTPrompt.objects.create(prompt_text=new_prompt, organization_id=org_id)
+            elif admin_id:
+                ChatGPTPrompt.objects.create(prompt_text=new_prompt, admin_id=admin_id)
         return redirect('integration_view')
 
     return render(request, 'chatgpt_prompt.html', {"prompt": current_prompt})

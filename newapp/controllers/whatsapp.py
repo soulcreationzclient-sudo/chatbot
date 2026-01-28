@@ -26,6 +26,40 @@ from django.utils import timezone
 from datetime import timedelta
 
 
+def get_credentials(admin_check, org_check):
+    """Get WhatsApp/OpenAI credentials - prefer organization, fallback to admin"""
+    if org_check:
+        return {
+            'whatsapp_phone_id': org_check.whatsapp_phone_id or '',
+            'whatsapp_token': org_check.whatsapp_token or '',
+            'openai_key': (org_check.openai_api_key or '').strip(),
+            'pinecone_token': (org_check.pinecone_token or '').strip(),
+            'chatgpt_mode': getattr(org_check, 'chatgpt_mode', 'prompt'),
+            'calendly_url': getattr(org_check, 'calendly_scheduling_url', ''),
+            'source': 'organization',
+            'source_id': org_check.id,
+        }
+    elif admin_check:
+        return {
+            'whatsapp_phone_id': admin_check.whatsapp_phone_id or '',
+            'whatsapp_token': admin_check.whatsapp_token or '',
+            'openai_key': (getattr(admin_check, 'openai_api_key', '') or '').strip(),
+            'pinecone_token': (getattr(admin_check, 'pinecone_token', '') or '').strip(),
+            'chatgpt_mode': getattr(admin_check, 'chatgpt_mode', 'prompt'),
+            'calendly_url': getattr(admin_check, 'calendly_scheduling_url', ''),
+            'source': 'admin',
+            'source_id': admin_check.id,
+        }
+    return {
+        'whatsapp_phone_id': '',
+        'whatsapp_token': '',
+        'openai_key': '',
+        'pinecone_token': '',
+        'chatgpt_mode': 'prompt',
+        'calendly_url': '',
+        'source': None,
+        'source_id': None,
+    }
 
 
 
@@ -245,6 +279,9 @@ class whatsappcontroller:
                         
                         if not admin_check and not org_check:
                             continue
+                        
+                        # Get credentials from organization (preferred) or admin
+                        creds = get_credentials(admin_check, org_check)
 
                         for m in value.get('messages') or []:
                             msg_text = None # Reset for each message iteration
@@ -292,7 +329,7 @@ class whatsappcontroller:
                                 caption = image_info.get('caption', 'What can you see in this image? Describe it in detail.')
                                 
                                 # Save media locally
-                                local_url = save_chat_media(media_id, admin_check.whatsapp_token)
+                                local_url = save_chat_media(media_id, creds['whatsapp_token'])
                                 msg_content = f"[Image] {caption}"
                                 if local_url:
                                     msg_content = f"[Image: {local_url}] {caption}"
@@ -329,7 +366,7 @@ class whatsappcontroller:
                                 
                                 whatsapp_api_url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
                                 headers = {
-                                    "Authorization": f"Bearer {admin_check.whatsapp_token}",
+                                    "Authorization": f"Bearer {creds['whatsapp_token']}",
                                     "Content-Type": "application/json"
                                 }
                                 payload = {
@@ -357,7 +394,7 @@ class whatsappcontroller:
                                 caption = doc_info.get('caption', 'Please analyze this document and tell me what it contains.')
                                 
                                 # Save media locally
-                                local_url = save_chat_media(media_id, admin_check.whatsapp_token)
+                                local_url = save_chat_media(media_id, creds['whatsapp_token'])
                                 msg_content = f"[Document: {filename}] {caption}"
                                 if local_url:
                                     msg_content = f"[Document: {local_url}] {caption}"
@@ -395,7 +432,7 @@ class whatsappcontroller:
                                 
                                 whatsapp_api_url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
                                 headers = {
-                                    "Authorization": f"Bearer {admin_check.whatsapp_token}",
+                                    "Authorization": f"Bearer {creds['whatsapp_token']}",
                                     "Content-Type": "application/json"
                                 }
                                 payload = {
@@ -517,8 +554,8 @@ If you have any relevant tools/functions available that can process or validate 
                             # ==================== END CALENDLY INTEGRATION ====================
 
                             if not trigger:
-                                openai_key = (getattr(admin_check, "openai_api_key", "") or "").strip()
-                                pine_token = (getattr(admin_check, "pinecone_token", "") or "").strip()
+                                openai_key = creds['openai_key']
+                                pine_token = creds['pinecone_token']
 
                                 with open('debug_log.txt', 'a') as f:
                                     f.write(f"\n[Debug] Processing message from {phone}\n")
@@ -549,14 +586,19 @@ If the user's question relates to this document, answer based on your analysis a
 """
                                             print(f"[Context] Using document context for {phone}")
                                         
-                                        if admin_check.chatgpt_mode == 'ai_agent':
+                                        if creds['chatgpt_mode'] == 'ai_agent':
                                             ai_agent = AIAgentConfig.objects.filter(admin=admin_check, is_active=True).last()
                                             pdf_content = ai_agent.pdf_text if ai_agent else ""
                                             instructions = ai_agent.instruction if ai_agent else "Follow the owner's instructions and upload relevant FAQs."
                                             system_prompt = f"{instructions}\n\nREFER TO THE FOLLOWING FAQ/INSTRUCTIONS:\n{pdf_content}"
                                         else:
-                                            # Use latest ChatGPT prompt (for Prompt Mode)
-                                            prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
+                                            # Use latest ChatGPT prompt for this org/admin
+                                            if org_check:
+                                                prompt_obj = ChatGPTPrompt.objects.filter(organization=org_check).order_by('-updated_at').first()
+                                            elif admin_check:
+                                                prompt_obj = ChatGPTPrompt.objects.filter(admin=admin_check).order_by('-updated_at').first()
+                                            else:
+                                                prompt_obj = None
                                             system_prompt = (
                                                 prompt_obj.prompt_text.strip()
                                                 if prompt_obj and prompt_obj.prompt_text
@@ -625,7 +667,10 @@ If the user's question relates to this document, answer based on your analysis a
                                         
                                         # --- TAG INTEGRATION ---
                                         from newapp.models import Tag
-                                        admin_tags = Tag.objects.filter(admin=admin_check)
+                                        if org_check:
+                                            admin_tags = Tag.objects.filter(organization=org_check)
+                                        else:
+                                            admin_tags = Tag.objects.filter(admin=admin_check)
                                         
                                         if admin_tags.exists():
                                             # Inject available tags into system prompt
@@ -810,7 +855,7 @@ If the user's question relates to this document, answer based on your analysis a
                                     admin_check,
                                     existing_user.phone_no,
                                     phone_number_id,
-                                    admin_check.whatsapp_token
+                                    creds['whatsapp_token']
                                 )
                                 
                                 # Update final_reply_text with the processed version (tags removed)
@@ -833,7 +878,7 @@ If the user's question relates to this document, answer based on your analysis a
                                 try:
                                     whatsapp_api_url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
                                     headers = {
-                                        "Authorization": f"Bearer {admin_check.whatsapp_token}",
+                                        "Authorization": f"Bearer {creds['whatsapp_token']}",
                                         "Content-Type": "application/json"
                                     }
                                     payload = {
