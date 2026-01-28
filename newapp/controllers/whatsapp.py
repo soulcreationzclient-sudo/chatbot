@@ -911,18 +911,28 @@ If the user's question relates to this document, answer based on your analysis a
 
 
                             # ===== FOLLOW-UP MESSAGE SCHEDULING =====
-                            # Schedule a follow-up message if enabled in admin settings
+                            # Schedule a follow-up message if enabled in settings
                             try:
-                                # Check if follow-ups are enabled for this admin
-                                if getattr(admin_check, 'followup_enabled', True):
-                                    delay_seconds = getattr(admin_check, 'followup_delay_minutes', 10) * 60
+                                # Get follow-up settings from org or admin
+                                followup_enabled = False
+                                delay_minutes = 10  # default
+                                
+                                if org_check:
+                                    followup_enabled = getattr(org_check, 'followup_enabled', True)
+                                    delay_minutes = getattr(org_check, 'followup_delay_minutes', 10)
+                                elif admin_check:
+                                    followup_enabled = getattr(admin_check, 'followup_enabled', True)
+                                    delay_minutes = getattr(admin_check, 'followup_delay_minutes', 10)
+                                
+                                if followup_enabled:
+                                    delay_seconds = delay_minutes * 60
                                     send_followup_message.apply_async(
                                         args=[existing_user.id],
                                         countdown=delay_seconds
                                     )
-                                    print(f"✅ Follow-up scheduled for user {existing_user.phone_no} in {delay_seconds}s ({getattr(admin_check, 'followup_delay_minutes', 10)} min)")
+                                    print(f"✅ Follow-up scheduled for user {existing_user.phone_no} in {delay_seconds}s ({delay_minutes} min)")
                                 else:
-                                    print(f"⏭️ Follow-ups disabled for admin - skipping for {existing_user.phone_no}")
+                                    print(f"⏭️ Follow-ups disabled - skipping for {existing_user.phone_no}")
                             except Exception as fu_err:
                                 print(f"❌ Error scheduling follow-up: {fu_err}")
                             # ===== END FOLLOW-UP SCHEDULING =====
