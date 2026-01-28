@@ -894,12 +894,15 @@ def send_inbox_message(request):
                 whatsapp_phone_id = admin.whatsapp_phone_id
                 whatsapp_token = admin.whatsapp_token
         
-        # Fallback to first admin
-        if not whatsapp_phone_id:
-            admin = Admin.objects.first()
-            if admin:
-                whatsapp_phone_id = admin.whatsapp_phone_id
-                whatsapp_token = admin.whatsapp_token
+        # Debug: Log which credentials are being used
+        print(f"[send_inbox_message] org_id={org_id}, admin_id={admin_id}")
+        print(f"[send_inbox_message] Using phone_id: {whatsapp_phone_id[:10] if whatsapp_phone_id else 'NONE'}...")
+        
+        # No fallback - if no credentials found, return clear error
+        if not whatsapp_phone_id or not whatsapp_token:
+            return JsonResponse({
+                "error": f"WhatsApp not configured for this organization. Please go to Settings > WhatsApp to connect."
+            }, status=403)
         
         # Get user object
         user_obj = User.objects.filter(id=user_id).first()
