@@ -833,7 +833,8 @@ If the user's question relates to this document, answer based on your analysis a
                                 action_result = process_response_actions(
                                     final_reply_text,
                                     admin_check,
-                                    existing_user.phone_no
+                                    existing_user.phone_no,
+                                    organization=org_check
                                 )
                                 
                                 # Update text with actions removed
@@ -855,7 +856,8 @@ If the user's question relates to this document, answer based on your analysis a
                                     admin_check,
                                     existing_user.phone_no,
                                     phone_number_id,
-                                    creds['whatsapp_token']
+                                    creds['whatsapp_token'],
+                                    organization=org_check
                                 )
                                 
                                 # Update final_reply_text with the processed version (tags removed)

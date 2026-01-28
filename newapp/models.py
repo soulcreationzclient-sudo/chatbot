@@ -380,18 +380,20 @@ class ImageAsset(models.Model):
     Usage: {{image:menu_card}} in prompts to send the image named 'menu_card'
     """
     id = models.AutoField(primary_key=True)
-    admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=100, help_text="Unique name to reference this image (e.g., menu_card)")
     description = models.TextField(blank=True, help_text="Description for the AI explaining when to use this image")
     image = models.ImageField(upload_to='image_assets/')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
+        if self.organization:
+            return f"{self.name} ({self.organization.name})"
         return f"{self.name} ({self.admin.assistant_name if self.admin else 'No Admin'})"
 
     class Meta:
         db_table = 'image_assets'
-        unique_together = ('admin', 'name')
 
 
 class FollowUpMessage(models.Model):

@@ -37,20 +37,30 @@ def parse_image_tags(text):
     return list(zip(full_tags, matches))
 
 
-def get_image_asset(name, admin):
+def get_image_asset(name, admin, organization=None):
     """
-    Look up an ImageAsset by name for a specific admin.
+    Look up an ImageAsset by name for a specific admin or organization.
     
     Args:
         name: The image asset name (e.g., 'menu_card')
         admin: The Admin model instance
+        organization: The Organization model instance (optional)
         
     Returns:
         ImageAsset instance or None if not found
     """
     from newapp.models import ImageAsset
     try:
-        return ImageAsset.objects.filter(admin=admin, name=name).first()
+        if organization:
+            asset = ImageAsset.objects.filter(organization=organization, name=name).first()
+            if asset:
+                return asset
+        
+        # Fallback to admin if no org specific asset or org not provided
+        if admin:
+            return ImageAsset.objects.filter(admin=admin, name=name).first()
+            
+        return None
     except Exception as e:
         print(f"[ImageTag] Error looking up image asset '{name}': {e}")
         return None
@@ -289,7 +299,7 @@ def send_whatsapp_text(text, phone, phone_number_id, token):
         return False
 
 
-def process_response_with_images(response_text, admin, phone, phone_number_id, token):
+def process_response_with_images(response_text, admin, phone, phone_number_id, token, organization=None):
     """
     Process an AI response, extracting and sending any {{image:xxx}} tags as images.
     
@@ -302,6 +312,7 @@ def process_response_with_images(response_text, admin, phone, phone_number_id, t
         phone: Recipient's phone number
         phone_number_id: WhatsApp Business phone number ID
         token: WhatsApp API access token
+        organization: Organization model instance (optional)
         
     Returns:
         dict with:
@@ -335,7 +346,7 @@ def process_response_with_images(response_text, admin, phone, phone_number_id, t
     
     for full_tag, image_name in image_tags:
         # Look up the image asset
-        asset = get_image_asset(image_name, admin)
+        asset = get_image_asset(image_name, admin, organization)
         
         if asset and asset.image:
             # Get the full path to the image

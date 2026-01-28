@@ -335,11 +335,16 @@ class Settingcontroller :
             return image_file
     
     def image_assets(request):
-        from ..models import ImageAsset
+        from ..models import ImageAsset, Organization
         admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
         assets = []
         
-        if admin_id:
+        if org_id:
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                assets = ImageAsset.objects.filter(organization=org).order_by('-created_at')
+        elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 assets = ImageAsset.objects.filter(admin=admin).order_by('-created_at')
@@ -349,18 +354,25 @@ class Settingcontroller :
     @staticmethod
     def image_asset_create(request):
         from django.http import JsonResponse
-        from ..models import ImageAsset
+        from ..models import ImageAsset, Organization
         
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
+        # Support both organization and admin auth
+        org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'error': 'Not authenticated'}, status=401)
         
-        admin = Admin.objects.filter(id=admin_id).first()
-        if not admin:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
+        admin = None
+        org = None
+        
+        if org_id:
+            org = Organization.objects.filter(id=org_id).first()
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        
+        if not admin and not org:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
         
         try:
             name = request.POST.get('name', '').strip()
@@ -373,14 +385,19 @@ class Settingcontroller :
                 return JsonResponse({'error': 'Image file is required'}, status=400)
             
             # Check for duplicate name
-            if ImageAsset.objects.filter(admin=admin, name=name).exists():
-                return JsonResponse({'error': f'An image with name "{name}" already exists'}, status=400)
+            if org:
+                if ImageAsset.objects.filter(organization=org, name=name).exists():
+                    return JsonResponse({'error': f'An image with name "{name}" already exists'}, status=400)
+            elif admin:
+                if ImageAsset.objects.filter(admin=admin, name=name).exists():
+                    return JsonResponse({'error': f'An image with name "{name}" already exists'}, status=400)
             
             # Compress image before saving
             compressed_image = Settingcontroller.compress_uploaded_image(image_file)
             
             asset = ImageAsset.objects.create(
                 admin=admin,
+                organization=org,
                 name=name,
                 description=description,
                 image=compressed_image,
@@ -396,20 +413,30 @@ class Settingcontroller :
     @staticmethod
     def image_asset_update(request, asset_id):
         from django.http import JsonResponse
-        from ..models import ImageAsset
+        from ..models import ImageAsset, Organization
         
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
+        org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
-        if not admin_id:
+        
+        admin = None
+        org = None
+        
+        if org_id:
+            org = Organization.objects.filter(id=org_id).first()
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        
+        if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
         
-        admin = Admin.objects.filter(id=admin_id).first()
-        if not admin:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
-        
-        asset = ImageAsset.objects.filter(id=asset_id, admin=admin).first()
+        if org:
+            asset = ImageAsset.objects.filter(id=asset_id, organization=org).first()
+        else:
+            asset = ImageAsset.objects.filter(id=asset_id, admin=admin).first()
+            
         if not asset:
             return JsonResponse({'error': 'Image asset not found'}, status=404)
         
@@ -419,7 +446,13 @@ class Settingcontroller :
             image_file = request.FILES.get('image')
             
             if name and name != asset.name:
-                if ImageAsset.objects.filter(admin=admin, name=name).exclude(id=asset_id).exists():
+                exists = False
+                if org:
+                    exists = ImageAsset.objects.filter(organization=org, name=name).exclude(id=asset_id).exists()
+                else:
+                    exists = ImageAsset.objects.filter(admin=admin, name=name).exclude(id=asset_id).exists()
+                
+                if exists:
                     return JsonResponse({'error': f'An image with name "{name}" already exists'}, status=400)
                 asset.name = name
             
@@ -444,34 +477,43 @@ class Settingcontroller :
     @staticmethod
     def image_asset_delete(request, asset_id):
         from django.http import JsonResponse
-        from ..models import ImageAsset
+        from ..models import ImageAsset, Organization
         
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
+        org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
-        if not admin_id:
+        
+        admin = None
+        org = None
+        
+        if org_id:
+            org = Organization.objects.filter(id=org_id).first()
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        
+        if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
         
-        admin = Admin.objects.filter(id=admin_id).first()
-        if not admin:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
-        
-        asset = ImageAsset.objects.filter(id=asset_id, admin=admin).first()
-        if not asset:
-            return JsonResponse({'error': 'Image asset not found'}, status=404)
-        
-        if asset.image:
-            asset.image.delete(save=False)
-        
-        asset.delete()
-        return JsonResponse({'success': True})
-
+        try:
+            if org:
+                result = ImageAsset.objects.filter(id=asset_id, organization=org).delete()
+            else:
+                result = ImageAsset.objects.filter(id=asset_id, admin=admin).delete()
+            
+            if result[0] > 0:
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'error': 'Image asset not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
     # ===================== FOLLOW-UP SETTINGS =====================
     
     @staticmethod
     def followup_settings(request):
-        from ..models import FollowUpMessage
+        from ..models import FollowUpMessage, Admin
         
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')

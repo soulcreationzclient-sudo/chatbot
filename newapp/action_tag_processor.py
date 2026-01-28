@@ -64,7 +64,7 @@ def parse_action_tags(text):
     return actions
 
 
-def process_response_actions(text, admin, phone):
+def process_response_actions(text, admin, phone, organization=None):
     """
     Process an AI response, extracting and executing action tags.
     
@@ -88,7 +88,7 @@ def process_response_actions(text, admin, phone):
     }
     
     # Set context for logic functions
-    logic.set_current_context(phone, admin)
+    logic.set_current_context(phone, admin, organization)
     
     actions = parse_action_tags(text)
     
