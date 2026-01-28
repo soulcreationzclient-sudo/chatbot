@@ -248,11 +248,18 @@ class Contactcontroller:
             else:
                 return JsonResponse({'error': 'Not authenticated'}, status=401)
             
-            if not user or not tag:
-                return JsonResponse({'error': 'User or Tag not found'}, status=404)
+            if not user:
+                return JsonResponse({'error': 'User not found'}, status=404)
             
-            # Delete if exists
-            UserTag.objects.filter(user=user, tag=tag).delete()
+            # If tag exists, delete normally. If tag was deleted, clean up orphan UserTag
+            if tag:
+                UserTag.objects.filter(user=user, tag=tag).delete()
+            else:
+                # Tag was deleted - clean up orphan UserTag by tag_id directly
+                deleted_count, _ = UserTag.objects.filter(user=user, tag_id=tag_id).delete()
+                if deleted_count == 0:
+                    # Also try to clean up any orphan tags for this user
+                    UserTag.objects.filter(user=user, tag__isnull=True).delete()
             
             return JsonResponse({'success': True})
         except Exception as e:
