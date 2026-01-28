@@ -615,7 +615,7 @@ If the user's question relates to this document, answer based on your analysis a
                                         import re
                                         
                                         # Set context for built-in tools like apply_tag
-                                        set_current_context(phone, admin_check)
+                                        set_current_context(phone, admin_check, org_check)
                                         
                                         # Get tools - check organization first, then admin
                                         if org_check:

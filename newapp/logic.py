@@ -6,12 +6,14 @@ from .models import ExternalAPI
 # This gets set in whatsapp.py before calling execute_tool
 _current_user_phone = None
 _current_admin = None
+_current_org = None
 
-def set_current_context(phone, admin):
+def set_current_context(phone, admin, org=None):
     """Set the current user context for built-in tools like apply_tag"""
-    global _current_user_phone, _current_admin
+    global _current_user_phone, _current_admin, _current_org
     _current_user_phone = phone
     _current_admin = admin
+    _current_org = org
 
 def apply_user_tag(tag_name, admin, phone=None):
     """
@@ -31,13 +33,24 @@ def apply_user_tag(tag_name, admin, phone=None):
     if not user_phone:
         return "Error: No user phone number available"
     
-    # Find the tag
-    tag = Tag.objects.filter(admin=admin, name__iexact=tag_name).first()
+    # Find the tag - check organization first, then admin
+    tag = None
+    if _current_org:
+        tag = Tag.objects.filter(organization=_current_org, name__iexact=tag_name).first()
+    if not tag and admin:
+        tag = Tag.objects.filter(admin=admin, name__iexact=tag_name).first()
     if not tag:
         return f"Error: Tag '{tag_name}' not found"
     
-    # Find the user
-    user = User.objects.filter(phone_no__endswith=user_phone[-10:], admin_id=admin).first()
+    # Find the user - check by organization first, then admin
+    user = None
+    if _current_org:
+        user = User.objects.filter(phone_no__endswith=user_phone[-10:], organization=_current_org).first()
+    if not user and admin:
+        user = User.objects.filter(phone_no__endswith=user_phone[-10:], admin_id=admin).first()
+    if not user:
+        # Try without org/admin filter as fallback
+        user = User.objects.filter(phone_no__endswith=user_phone[-10:]).first()
     if not user:
         return f"Error: User with phone {user_phone} not found"
     
@@ -68,13 +81,23 @@ def remove_user_tag(tag_name, admin, phone=None):
     if not user_phone:
         return "Error: No user phone number available"
     
-    # Find the tag
-    tag = Tag.objects.filter(admin=admin, name__iexact=tag_name).first()
+    # Find the tag - check organization first, then admin
+    tag = None
+    if _current_org:
+        tag = Tag.objects.filter(organization=_current_org, name__iexact=tag_name).first()
+    if not tag and admin:
+        tag = Tag.objects.filter(admin=admin, name__iexact=tag_name).first()
     if not tag:
         return f"Error: Tag '{tag_name}' not found"
     
-    # Find the user
-    user = User.objects.filter(phone_no__endswith=user_phone[-10:], admin_id=admin).first()
+    # Find the user - check by organization first, then admin
+    user = None
+    if _current_org:
+        user = User.objects.filter(phone_no__endswith=user_phone[-10:], organization=_current_org).first()
+    if not user and admin:
+        user = User.objects.filter(phone_no__endswith=user_phone[-10:], admin_id=admin).first()
+    if not user:
+        user = User.objects.filter(phone_no__endswith=user_phone[-10:]).first()
     if not user:
         return f"Error: User with phone {user_phone} not found"
     
