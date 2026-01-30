@@ -459,7 +459,7 @@
         <div class="mb-3">
           <label for="assistantName" class="form-label">Assistant Name</label>
           <input type="text" id="assistantName" class="form-control" placeholder="Enter Assistant Name"
-            value="{{ admin.assistant_name|default:'' }}">
+            value="{% if org %}{{ org.assistant_name|default:'' }}{% else %}{{ admin.assistant_name|default:'' }}{% endif %}">
           <div class="form-text">Set the assistant name used for Pinecone connections.</div>
         </div>
         {% endif %}
@@ -524,7 +524,7 @@
         <p>Calendly is currently <b>connected</b>.</p>
         <div class="mb-3">
           <label class="form-label">Scheduling URL</label>
-          <input type="text" class="form-control" value="{{ admin.calendly_scheduling_url }}" disabled>
+          <input type="text" class="form-control" value="{% if org %}{{ org.calendly_scheduling_url }}{% else %}{{ admin.calendly_scheduling_url }}{% endif %}" disabled>
         </div>
         <hr>
 

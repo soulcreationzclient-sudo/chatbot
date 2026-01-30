@@ -26,9 +26,19 @@ def send_followup_message(user_id, step=1):
         user = User.objects.get(id=user_id)
         admin = user.admin_id
         
+        # Fallback: If user has organization but no admin, use first admin
+        # This matches the behavior in settings.py for org users
+        if not admin and user.organization:
+            admin = Admin.objects.first()
+        
         # Check if follow-ups are enabled for this admin
         if admin and not getattr(admin, 'followup_enabled', True):
             print(f"🛑 Follow-ups disabled for admin. Skipping for {user.phone_no}.")
+            return
+        
+        # Check if bot is disabled for this specific user
+        if not getattr(user, 'bot_enabled', True):
+            print(f"🛑 Bot disabled for user {user.phone_no}. Skipping follow-up.")
             return
         
         # Get configured follow-up messages for this admin

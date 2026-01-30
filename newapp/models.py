@@ -237,6 +237,8 @@ class User(models.Model):
     is_escalation = models.BooleanField(default=False)
     followup_count = models.IntegerField(default=0)  # Track follow-up attempts (max 3)
     source = models.CharField(max_length=50, default='Whatsapp')
+    # Per-user bot toggle: when False, bot won't auto-reply and follow-ups are paused
+    bot_enabled = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'users'

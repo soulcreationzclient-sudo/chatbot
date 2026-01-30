@@ -115,3 +115,84 @@ class Inboxcontroller:
                 
             return JsonResponse({'url': url, 'type': ftype})
         return JsonResponse({'error': 'No file provided'}, status=400)
+
+    @csrf_exempt
+    def delete_user(request, user_id):
+        """Delete a user from inbox (with all messages)"""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+        
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        if not org_id and not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        # Get user and verify ownership
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return JsonResponse({'error': 'User not found'}, status=404)
+        
+        # Security check: ensure user belongs to same org/admin
+        if org_id and user.organization_id != org_id:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        if admin_id and str(user.admin_id_id) != str(admin_id):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        # Delete messages first, then user
+        Message.objects.filter(user_id=user_id).delete()
+        user.delete()
+        
+        return JsonResponse({'success': True, 'msg': 'Contact deleted'})
+
+    @csrf_exempt
+    def toggle_bot(request, user_id):
+        """Toggle bot on/off for a specific user"""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+        
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        if not org_id and not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return JsonResponse({'error': 'User not found'}, status=404)
+        
+        # Security check
+        if org_id and user.organization_id != org_id:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        if admin_id and str(user.admin_id_id) != str(admin_id):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        # Toggle bot_enabled field
+        user.bot_enabled = not getattr(user, 'bot_enabled', True)
+        user.save(update_fields=['bot_enabled'])
+        
+        status = 'ON' if user.bot_enabled else 'OFF'
+        return JsonResponse({'success': True, 'bot_enabled': user.bot_enabled, 'msg': f'Bot {status}'})
+
+    @csrf_exempt
+    def list_assets(request):
+        """List all image assets for the logged-in user's org/admin"""
+        from ..models import ImageAsset
+        
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        if org_id:
+            assets = ImageAsset.objects.filter(organization_id=org_id)
+        elif admin_id:
+            assets = ImageAsset.objects.filter(admin_id=admin_id)
+        else:
+            return JsonResponse({'assets': []})
+        
+        asset_list = [{
+            'id': a.id,
+            'name': a.name,
+            'url': a.image.url if a.image else ''
+        } for a in assets]
+        
+        return JsonResponse({'assets': asset_list})

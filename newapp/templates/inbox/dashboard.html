@@ -218,7 +218,7 @@
         <select id="tagFilter" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
           <option value="">All Tags</option>
           {% for t in all_tags %}
-          <option value="{{ t.id }}" {% if request.GET.tag_id == t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}
+          <option value="{{ t.id }}" {% if request.GET.tag_id==t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}
           </option>
           {% endfor %}
         </select>
@@ -235,11 +235,21 @@
   <section class="thread">
     <div class="thread-head">
       {% if selected_user %}
-      <div class="avatar" style="width:36px;height:36px">{{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
-      <div>
+      <div class="avatar" style="width:36px;height:36px">{{
+        selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
+      <div style="flex:1">
         <div style="font-weight:700">{{ selected_user.name|default:"User" }}</div>
         <div class="text-muted" style="font-size:12px">{{ selected_user.phone_no }}</div>
       </div>
+      <button type="button" id="botToggleBtn"
+        class="btn btn-sm {% if selected_user.bot_enabled %}btn-success{% else %}btn-outline-secondary{% endif %}"
+        onclick="toggleBot({{ selected_user.id }})" title="Toggle bot auto-reply">
+        🤖 Bot {% if selected_user.bot_enabled %}ON{% else %}OFF{% endif %}
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteContact({{ selected_user.id }})"
+        title="Delete contact">
+        🗑️ Delete
+      </button>
       {% else %}
       <div style="font-weight:700">Select a conversation</div>
       {% endif %}
@@ -264,8 +274,13 @@
       <form id="chatForm" onsubmit="return sendMessage(event);">
         <div class="input-group">
           <input type="file" id="mediaInput" style="display:none;" onchange="handleFileUpload(this)">
-          <button type="button" class="btn btn-light border" onclick="document.getElementById('mediaInput').click()">
-            <i class="fa-solid fa-paperclip"></i> 📎
+          <button type="button" class="btn btn-light border" onclick="document.getElementById('mediaInput').click()"
+            title="Upload file">
+            📎
+          </button>
+          <button type="button" class="btn btn-light border" onclick="openAssetPicker()"
+            title="Select from Image Assets">
+            🖼️
           </button>
           <input id="userMessage" type="text" class="form-control" placeholder="Type your message..." autocomplete="off"
             required />
@@ -276,8 +291,215 @@
   </section>
 </div>
 
+<!-- Image Asset Picker Modal -->
+<div class="modal fade" id="assetPickerModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">📷 Select Image Asset</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="assetGrid" class="row g-3">
+          <p class="text-muted">Loading assets...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   // Robust Scroll & Auto-Refresh Logic (Final)
+
+  // DELETE CONTACT
+  async function deleteContact(userId) {
+    if (!confirm('Are you sure you want to delete this contact and all messages?')) return;
+
+    try {
+      const res = await fetch(`/api/inbox/delete_user/${userId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken')
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Contact deleted');
+        window.location.href = '/inbox/dashboard';
+      } else {
+        alert('Error: ' + (data.error || 'Failed to delete'));
+      }
+    } catch (e) {
+      alert('Network error');
+      console.error(e);
+    }
+  }
+
+  // TOGGLE BOT ON/OFF
+  async function toggleBot(userId) {
+    try {
+      const res = await fetch(`/api/inbox/toggle_bot/${userId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken')
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const btn = document.getElementById('botToggleBtn');
+        if (data.bot_enabled) {
+          btn.className = 'btn btn-sm btn-success';
+          btn.innerHTML = '🤖 Bot ON';
+        } else {
+          btn.className = 'btn btn-sm btn-outline-secondary';
+          btn.innerHTML = '🤖 Bot OFF';
+        }
+      } else {
+        alert('Error: ' + (data.error || 'Failed to toggle'));
+      }
+    } catch (e) {
+      alert('Network error');
+      console.error(e);
+    }
+  }
+
+  // IMAGE ASSET PICKER
+  let assetPickerModal = null;
+
+  async function openAssetPicker() {
+    const currentUserId = "{{ selected_user.id|default:'' }}";
+    if (!currentUserId) {
+      alert('Please select a conversation first');
+      return;
+    }
+
+    // Initialize modal if not exists
+    if (!assetPickerModal) {
+      assetPickerModal = new bootstrap.Modal(document.getElementById('assetPickerModal'));
+    }
+
+    const grid = document.getElementById('assetGrid');
+    grid.innerHTML = '<p class="text-muted">Loading...</p>';
+    assetPickerModal.show();
+
+    try {
+      const res = await fetch('/api/inbox/list_assets/');
+      const data = await res.json();
+
+      if (data.assets && data.assets.length > 0) {
+        grid.innerHTML = data.assets.map(a => `
+          <div class="col-4 col-md-3">
+            <div class="card" style="cursor:pointer" onclick="sendAsset('${a.url}', '${a.name}')">
+              <img src="${a.url}" class="card-img-top" style="height:100px;object-fit:cover">
+              <div class="card-body p-2 text-center">
+                <small class="text-truncate d-block">${a.name}</small>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        grid.innerHTML = '<p class="text-muted">No image assets found. Add them at Settings → Image Assets</p>';
+      }
+    } catch (e) {
+      grid.innerHTML = '<p class="text-danger">Failed to load assets</p>';
+      console.error(e);
+    }
+  }
+
+  async function sendAsset(url, name) {
+    const currentUserId = "{{ selected_user.id|default:'' }}";
+    if (!currentUserId) return;
+
+    // Close modal
+    if (assetPickerModal) assetPickerModal.hide();
+
+    const mediaMsg = `[Image: ${url}]`;
+
+    const sendData = new FormData();
+    sendData.append('message', mediaMsg);
+    sendData.append('user_id', currentUserId);
+
+    try {
+      await fetch('/inbox/send/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: sendData
+      });
+      appendMessage(mediaMsg, 'bot');
+    } catch (e) {
+      alert('Failed to send image');
+      console.error(e);
+    }
+  }
+
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  }
+
+  // FILE UPLOAD HANDLER
+  async function handleFileUpload(input) {
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+    const currentUserId = "{{ selected_user.id|default:'' }}";
+
+    if (!currentUserId) {
+      alert('Please select a conversation first');
+      input.value = '';
+      return;
+    }
+
+    // Show uploading state
+    const msgInput = document.getElementById('userMessage');
+    msgInput.value = 'Uploading...';
+    msgInput.disabled = true;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/inbox/upload_media/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.url) {
+        // Send the image as a message
+        const msgPrefix = data.type === 'image' ? '[Image: ' : '[Document: ';
+        const mediaMsg = `${msgPrefix}${data.url}]`;
+
+        // Send via WhatsApp
+        const sendData = new FormData();
+        sendData.append('message', mediaMsg);
+        sendData.append('user_id', currentUserId);
+
+        await fetch('/inbox/send/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+          body: sendData
+        });
+
+        appendMessage(mediaMsg, 'bot');
+        msgInput.value = '';
+      } else {
+        alert('Upload failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (e) {
+      alert('Upload network error');
+      console.error(e);
+    } finally {
+      msgInput.disabled = false;
+      msgInput.value = '';
+      input.value = '';  // Reset file input
+    }
+  }
 
   // Filter Logic
   // SEARCH & FILTER
@@ -514,7 +736,7 @@
   // Polling Logic
   let lastMessageId = 0;
   {% if messages %}
-  lastMessageId = {{ messages.last.id |default:0 }};
+  lastMessageId = {{ messages.last.id |default: 0 }};
   {% endif %}
   const currentUserId = "{{ selected_user.id|default:'' }}";
 

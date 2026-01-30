@@ -142,7 +142,14 @@ def client_login(request):
                     request.session.save()  # Ensure session is saved before redirect
                     messages.success(request, f'Welcome, {user.first_name or user.username}!')
                     next_url = request.GET.get('next', 'dashboard')
-                    return redirect(next_url)
+                    # Use HttpResponseRedirect with no-cache headers to prevent login page caching
+                    from django.http import HttpResponseRedirect
+                    from django.urls import reverse
+                    response = HttpResponseRedirect(reverse(next_url) if not next_url.startswith('/') else next_url)
+                    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                    response['Pragma'] = 'no-cache'
+                    response['Expires'] = '0'
+                    return response
                 else:
                     messages.error(request, 'Your organization is not active.')
                     

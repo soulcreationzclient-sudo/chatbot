@@ -62,6 +62,10 @@ urlpatterns = [
     # inbox
     path('inbox/dashboard', Inboxcontroller.dashboard, name='inbox_dashboard'),
     path('api/inbox/new_messages', Inboxcontroller.get_new_messages, name='get_new_messages_api'),
+    path('api/inbox/delete_user/<int:user_id>/', Inboxcontroller.delete_user, name='inbox_delete_user'),
+    path('api/inbox/toggle_bot/<int:user_id>/', Inboxcontroller.toggle_bot, name='inbox_toggle_bot'),
+    path('api/inbox/upload_media/', Inboxcontroller.upload_media, name='inbox_upload_media'),
+    path('api/inbox/list_assets/', Inboxcontroller.list_assets, name='inbox_list_assets'),
     
     # contact
     path('contact/dashboard',Contactcontroller.dashboard,name='contact_dashboard'),

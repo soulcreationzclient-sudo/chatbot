@@ -30,7 +30,7 @@ ALLOWED_HOSTS = [
      'localhost',
     '127.0.0.1',
     'chatbotad.io',
-    '50.17.107.173',
+    '18.232.180.166',
     '1d947b3a8e32.ngrok-free.app',
     '.ngrok-free.app',
     '.ngrok-free.dev',
@@ -46,8 +46,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://chatbotad.io',
     'https://www.chatbotad.io',
     'http://www.chatbotad.io',
-    'http://50.17.107.173',
-    'https://50.17.107.173',
+    'http://18.232.180.166',
+    'https://18.232.180.166',
     'https://overslight-shirley-overhearty.ngrok-free.dev',
 ]
 
@@ -171,9 +171,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # LOGIN_URL = "/login_view/"
 
-# Celery Configuration with Upstash Redis
-CELERY_BROKER_URL = 'rediss://default:ATruAAIncDIzNGRkNmNiYTY2NWU0OGE4OTg5YmFiZDBkZGNhODAzZHAyMTUwODY@devoted-cougar-15086.upstash.io:6379?ssl_cert_reqs=none'
-CELERY_RESULT_BACKEND = 'rediss://default:ATruAAIncDIzNGRkNmNiYTY2NWU0OGE4OTg5YmFiZDBkZGNhODAzZHAyMTUwODY@devoted-cougar-15086.upstash.io:6379?ssl_cert_reqs=none'
+# Celery Configuration with Local Redis
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 

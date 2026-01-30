@@ -40,11 +40,58 @@ def voice_bot(request):
 @csrf_exempt
 def connect_whatsapp(request):
     if request.method == 'POST':
-        token = request.POST.get('token')
-        phone_id = request.POST.get('phone_id')
-        request.session['token'] = token
-        request.session['phone_id'] = phone_id
-        return redirect('send_whatsapp_message')  # go to chat screen
+        token = request.POST.get('token', '').strip()
+        phone_id = request.POST.get('phone_id', '').strip()
+        
+        if not token or not phone_id:
+            messages.error(request, "Both Access Token and Phone Number ID are required.")
+            return render(request, 'connect_whatsapp.html')
+        
+        # Validate with Facebook Graph API
+        import requests as http_requests
+        headers = {'Authorization': f"Bearer {token}"}
+        url = f"https://graph.facebook.com/v21.0/{phone_id}"
+        
+        try:
+            response = http_requests.get(url, headers=headers)
+            response.raise_for_status()
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                display_phone_no = str(response_data.get('display_phone_number', ''))
+                
+                org_id = request.session.get('organization_id')
+                admin_id = request.session.get('admin_id')
+                
+                if org_id:
+                    from .models import Organization
+                    Organization.objects.filter(id=org_id).update(
+                        whatsapp_phone_id=phone_id,
+                        whatsapp_token=token,
+                        display_phone_no=display_phone_no
+                    )
+                    messages.success(request, "WhatsApp connected successfully!")
+                    return redirect('dashboard')
+                elif admin_id:
+                    from .models import Admin
+                    Admin.objects.filter(id=admin_id).update(
+                        whatsapp_phone_id=phone_id,
+                        whatsapp_token=token,
+                        display_phone_no=display_phone_no
+                    )
+                    messages.success(request, "WhatsApp connected successfully!")
+                    return redirect('dashboard')
+                else:
+                    messages.error(request, "Please log in first.")
+                    return redirect('login')
+                    
+        except http_requests.exceptions.RequestException as e:
+            messages.error(request, f"WhatsApp connection failed: Invalid credentials or network error.")
+            return render(request, 'connect_whatsapp.html')
+        
+        messages.error(request, "Connection failed. Please try again.")
+        return render(request, 'connect_whatsapp.html')
+        
     return render(request, 'connect_whatsapp.html')
 
 

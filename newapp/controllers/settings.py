@@ -67,6 +67,7 @@ class Settingcontroller :
             'chatgpt_connected': chatgpt_connected,
             'calendly_connected': calendly_connected,
             'admin': admin,
+            'org': org if org_id else None,
             'chatgpt_mode': chatgpt_mode,
         })
     
@@ -513,7 +514,7 @@ class Settingcontroller :
     
     @staticmethod
     def followup_settings(request):
-        from ..models import FollowUpMessage, Admin
+        from ..models import FollowUpMessage, Admin, Tag
         
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
@@ -530,9 +531,18 @@ class Settingcontroller :
         
         followups = FollowUpMessage.objects.filter(admin=admin).order_by('step')
         
+        # Get tags for the dropdown - filter by org or admin
+        if org_id:
+            tags = Tag.objects.filter(organization_id=org_id)
+        elif admin_id:
+            tags = Tag.objects.filter(admin_id=admin_id)
+        else:
+            tags = Tag.objects.none()
+        
         return render(request, 'set/followup_settings.html', {
             'admin': admin,
-            'followups': followups
+            'followups': followups,
+            'tags': tags
         })
     
     @staticmethod

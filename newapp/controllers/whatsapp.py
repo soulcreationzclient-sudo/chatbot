@@ -486,6 +486,13 @@ If you have any relevant tools/functions available that can process or validate 
                                 who='human'
                             ) 
 
+                            # ==================== BOT TOGGLE CHECK ====================
+                            # If bot is disabled for this user, skip AI response
+                            if not getattr(existing_user, 'bot_enabled', True):
+                                print(f"🚫 Bot disabled for {phone} - skipping auto-reply")
+                                continue
+                            # ==================== END BOT TOGGLE CHECK ====================
+
                             # ==================== KEYWORD MACRO TAGGING ====================
                             # Check if user input matches any tag keywords (Manual Rule Mode)
                             try:
@@ -921,12 +928,34 @@ If the user's question relates to this document, answer based on your analysis a
                                 
                                 if org_check:
                                     followup_enabled = getattr(org_check, 'followup_enabled', True)
-                                    delay_minutes = getattr(org_check, 'followup_delay_minutes', 10)
                                 elif admin_check:
                                     followup_enabled = getattr(admin_check, 'followup_enabled', True)
-                                    delay_minutes = getattr(admin_check, 'followup_delay_minutes', 10)
                                 
                                 if followup_enabled:
+                                    # Get delay from FollowUpMessage step 1 (UI settings)
+                                    from newapp.models import FollowUpMessage
+                                    
+                                    # Resolve admin for FollowUpMessage lookup
+                                    # If org mode (admin_check is None), fallback to first Admin
+                                    followup_admin = admin_check
+                                    if not followup_admin and org_check:
+                                        followup_admin = Admin.objects.first()
+                                    
+                                    step1_config = FollowUpMessage.objects.filter(
+                                        admin=followup_admin,
+                                        step=1,
+                                        is_active=True
+                                    ).first()
+                                    
+                                    if step1_config:
+                                        delay_minutes = step1_config.delay_minutes
+                                    else:
+                                        # Fall back to org/admin field if no FollowUpMessage configured
+                                        if org_check:
+                                            delay_minutes = getattr(org_check, 'followup_delay_minutes', 10)
+                                        elif admin_check:
+                                            delay_minutes = getattr(admin_check, 'followup_delay_minutes', 10)
+                                    
                                     delay_seconds = delay_minutes * 60
                                     send_followup_message.apply_async(
                                         args=[existing_user.id],
