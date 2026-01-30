@@ -932,36 +932,62 @@ If the user's question relates to this document, answer based on your analysis a
                                     followup_enabled = getattr(admin_check, 'followup_enabled', True)
                                 
                                 if followup_enabled:
-                                    # Get delay from FollowUpMessage step 1 (UI settings)
-                                    from newapp.models import FollowUpMessage
+                                    # PREVENT DUPLICATE FOLLOW-UPS:
+                                    # Check if user already has a pending follow-up (followup_count > 0 means one was already scheduled)
+                                    # Reset followup_count when user sends a message, so new follow-up can be scheduled
                                     
-                                    # Resolve admin for FollowUpMessage lookup
-                                    # If org mode (admin_check is None), fallback to first Admin
-                                    followup_admin = admin_check
-                                    if not followup_admin and org_check:
-                                        followup_admin = Admin.objects.first()
+                                    # Reset followup count since user just messaged (they're active)
+                                    if existing_user.followup_count > 0:
+                                        existing_user.followup_count = 0
+                                        existing_user.save(update_fields=['followup_count'])
+                                        print(f"🔄 Reset followup_count for {existing_user.phone_no} (user is active)")
                                     
-                                    step1_config = FollowUpMessage.objects.filter(
-                                        admin=followup_admin,
-                                        step=1,
-                                        is_active=True
-                                    ).first()
+                                    # Check if a follow-up was already scheduled in this conversation window
+                                    # Use a timestamp check: only schedule if last bot message was > 30 seconds ago
+                                    from django.utils import timezone
+                                    from datetime import timedelta
                                     
-                                    if step1_config:
-                                        delay_minutes = step1_config.delay_minutes
+                                    recent_bot_msg = Message.objects.filter(
+                                        user_id=existing_user,
+                                        who='bot',
+                                        created_at__gte=timezone.now() - timedelta(seconds=30)
+                                    ).count()
+                                    
+                                    # If there are multiple bot messages in last 30 sec, skip scheduling
+                                    # (prevents duplicate follow-ups from rapid message exchanges)
+                                    if recent_bot_msg > 1:
+                                        print(f"⏭️ Skipping follow-up - multiple bot messages in last 30s for {existing_user.phone_no}")
                                     else:
-                                        # Fall back to org/admin field if no FollowUpMessage configured
-                                        if org_check:
-                                            delay_minutes = getattr(org_check, 'followup_delay_minutes', 10)
-                                        elif admin_check:
-                                            delay_minutes = getattr(admin_check, 'followup_delay_minutes', 10)
-                                    
-                                    delay_seconds = delay_minutes * 60
-                                    send_followup_message.apply_async(
-                                        args=[existing_user.id],
-                                        countdown=delay_seconds
-                                    )
-                                    print(f"✅ Follow-up scheduled for user {existing_user.phone_no} in {delay_seconds}s ({delay_minutes} min)")
+                                        # Get delay from FollowUpMessage step 1 (UI settings)
+                                        from newapp.models import FollowUpMessage
+                                        
+                                        # Resolve admin for FollowUpMessage lookup
+                                        # If org mode (admin_check is None), fallback to first Admin
+                                        followup_admin = admin_check
+                                        if not followup_admin and org_check:
+                                            followup_admin = Admin.objects.first()
+                                        
+                                        step1_config = FollowUpMessage.objects.filter(
+                                            admin=followup_admin,
+                                            step=1,
+                                            is_active=True
+                                        ).first()
+                                        
+                                        if step1_config:
+                                            delay_minutes = step1_config.delay_minutes
+                                        else:
+                                            # Fall back to org/admin field if no FollowUpMessage configured
+                                            if org_check:
+                                                delay_minutes = getattr(org_check, 'followup_delay_minutes', 10)
+                                            elif admin_check:
+                                                delay_minutes = getattr(admin_check, 'followup_delay_minutes', 10)
+                                        
+                                        delay_seconds = delay_minutes * 60
+                                        send_followup_message.apply_async(
+                                            args=[existing_user.id],
+                                            countdown=delay_seconds
+                                        )
+                                        print(f"✅ Follow-up scheduled for user {existing_user.phone_no} in {delay_seconds}s ({delay_minutes} min)")
                                 else:
                                     print(f"⏭️ Follow-ups disabled - skipping for {existing_user.phone_no}")
                             except Exception as fu_err:
