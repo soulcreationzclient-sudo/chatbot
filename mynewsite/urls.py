@@ -116,6 +116,8 @@ urlpatterns = [
     
     
     # whatsapp
+    path('webhook/', whatsappcontroller.get_message, name='webhook'),
+    path('webhook', whatsappcontroller.get_message, name='webhook_no_slash'),
     path('get_message/', whatsappcontroller.get_message, name='get_message'),
     path('get_message', whatsappcontroller.get_message, name='get_message_no_slash'),  # For Meta webhook
     path('send_whatsapp_message/', whatsappcontroller.send_whatsapp_message,name='send_whatsapp_message'),
