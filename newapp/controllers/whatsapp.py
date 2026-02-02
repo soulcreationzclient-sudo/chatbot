@@ -305,6 +305,7 @@ class whatsappcontroller:
                                     phone_no=phone,
                                     created_at=datetime.now(),
                                     admin_id=admin_check,
+                                    is_in_inbox=True,  # Ensure user appears in inbox
                                 )
                                 # Set organization if found
                                 if org_check:
@@ -313,6 +314,8 @@ class whatsappcontroller:
                                 # Existing user - ensure organization is set if missing
                                 if org_check and not existing_user.organization:
                                     existing_user.organization = org_check
+                                # Ensure user is visible in inbox when they message
+                                existing_user.is_in_inbox = True
                                     
                             if wa_name:
                                 existing_user.name = wa_name
