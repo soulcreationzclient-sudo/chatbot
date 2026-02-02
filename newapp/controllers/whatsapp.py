@@ -20,7 +20,7 @@ import logging
 import requests
 from newapp.views import send_whatsapp_reply
 from newapp.models import Tag, UserTag
-from newapp.tasks import send_followup_message
+from newapp.tasks import send_followup_message, schedule_followup
 from newapp.models import AIAgentConfig
 from django.utils import timezone
 from datetime import timedelta
@@ -983,10 +983,8 @@ If the user's question relates to this document, answer based on your analysis a
                                                 delay_minutes = getattr(admin_check, 'followup_delay_minutes', 10)
                                         
                                         delay_seconds = delay_minutes * 60
-                                        send_followup_message.apply_async(
-                                            args=[existing_user.id],
-                                            countdown=delay_seconds
-                                        )
+                                        # Use new persistent scheduling (schedule_followup creates a ScheduledFollowUp record)
+                                        schedule_followup.delay(existing_user.id, step=1)
                                         print(f"✅ Follow-up scheduled for user {existing_user.phone_no} in {delay_seconds}s ({delay_minutes} min)")
                                 else:
                                     print(f"⏭️ Follow-ups disabled - skipping for {existing_user.phone_no}")

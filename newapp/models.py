@@ -239,6 +239,9 @@ class User(models.Model):
     source = models.CharField(max_length=50, default='Whatsapp')
     # Per-user bot toggle: when False, bot won't auto-reply and follow-ups are paused
     bot_enabled = models.BooleanField(default=True)
+    # Soft-delete for inbox: When False, contact is archived from inbox but still visible in All Contacts
+    is_in_inbox = models.BooleanField(default=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'users'
@@ -443,3 +446,147 @@ class CustomFieldValue(models.Model):
     class Meta:
         db_table = 'custom_field_values'
         unique_together = ('custom_field', 'user')
+
+
+# ==================== BROADCAST SYSTEM MODELS ====================
+
+class WhatsAppTemplate(models.Model):
+    """
+    Synced templates from Meta WhatsApp Business API.
+    Only APPROVED templates can be used for broadcasting.
+    """
+    STATUS_CHOICES = [
+        ('APPROVED', 'Approved'),
+        ('PENDING', 'Pending'),
+        ('REJECTED', 'Rejected'),
+    ]
+    CATEGORY_CHOICES = [
+        ('MARKETING', 'Marketing'),
+        ('UTILITY', 'Utility'),
+        ('AUTHENTICATION', 'Authentication'),
+    ]
+    
+    id = models.AutoField(primary_key=True)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, null=True, blank=True)
+    template_id = models.CharField(max_length=100, help_text="Meta's template ID")
+    name = models.CharField(max_length=100)
+    language = models.CharField(max_length=10, default='en_US')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='MARKETING')
+    components = models.JSONField(default=list, help_text="Template components (header, body, buttons)")
+    synced_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.status})"
+
+    class Meta:
+        db_table = 'whatsapp_templates'
+        unique_together = ('admin', 'organization', 'template_id')
+
+
+class BroadcastJob(models.Model):
+    """
+    A broadcast campaign to send a template message to multiple contacts.
+    Uses rate-limiting to comply with Meta's throughput limits.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('paused', 'Paused'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    
+    id = models.AutoField(primary_key=True)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, null=True, blank=True)
+    template = models.ForeignKey(WhatsAppTemplate, on_delete=models.PROTECT)
+    tag = models.ForeignKey(Tag, on_delete=models.SET_NULL, null=True, blank=True, help_text="Send to users with this tag")
+    name = models.CharField(max_length=200, blank=True, help_text="Optional campaign name")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    total_recipients = models.IntegerField(default=0)
+    sent_count = models.IntegerField(default=0)
+    failed_count = models.IntegerField(default=0)
+    template_variables = models.JSONField(default=dict, blank=True, help_text="Variables for template placeholders")
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Broadcast {self.id}: {self.template.name} ({self.status})"
+
+    class Meta:
+        db_table = 'broadcast_jobs'
+        ordering = ['-created_at']
+
+
+class BroadcastMessage(models.Model):
+    """
+    Track individual message status within a broadcast job.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('sent', 'Sent'),
+        ('delivered', 'Delivered'),
+        ('read', 'Read'),
+        ('failed', 'Failed'),
+    ]
+    
+    id = models.AutoField(primary_key=True)
+    broadcast_job = models.ForeignKey(BroadcastJob, on_delete=models.CASCADE, related_name='messages')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    meta_message_id = models.CharField(max_length=100, blank=True, help_text="Message ID from Meta API")
+    error_message = models.TextField(blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Msg to {self.user.phone_no}: {self.status}"
+
+    class Meta:
+        db_table = 'broadcast_messages'
+        indexes = [
+            models.Index(fields=['broadcast_job', 'status']),
+        ]
+
+
+# ==================== FOLLOW-UP SCHEDULING MODEL ====================
+
+class ScheduledFollowUp(models.Model):
+    """
+    Persistent follow-up scheduling - checked by periodic Celery Beat task.
+    Replaces in-memory countdown-based scheduling for reliability.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('sent', 'Sent'),
+        ('cancelled', 'Cancelled'),  # User replied before follow-up
+        ('failed', 'Failed'),
+    ]
+    
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='scheduled_followups')
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, null=True, blank=True)
+    step = models.IntegerField(default=1, help_text="Follow-up step (1-4)")
+    scheduled_for = models.DateTimeField(db_index=True, help_text="When to send this follow-up")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    message = models.TextField(help_text="The follow-up message content")
+    attempts = models.IntegerField(default=0, help_text="Number of send attempts")
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"FollowUp Step {self.step} for {self.user.phone_no}: {self.status}"
+
+    class Meta:
+        db_table = 'scheduled_followups'
+        ordering = ['scheduled_for']
+        indexes = [
+            models.Index(fields=['status', 'scheduled_for']),
+        ]

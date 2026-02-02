@@ -11,6 +11,7 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 class Inboxcontroller:
     def dashboard(request):
@@ -28,13 +29,18 @@ class Inboxcontroller:
             from ..models import Organization
             org = Organization.objects.filter(id=org_id).first()
             # Filter by organization_id only (Organization doesn't have admin_id)
+            # Also filter by is_in_inbox=True for inbox view (soft-delete support)
             users = User.objects.filter(
-                organization_id=org_id
+                organization_id=org_id,
+                is_in_inbox=True  # Only show non-archived contacts in inbox
             ).annotate(
                 last_msg_time=Max('message__created_at')
             ).order_by('-last_msg_time', 'id')
         elif admin_id:
-            users = User.objects.filter(admin_id=admin_id).annotate(
+            users = User.objects.filter(
+                admin_id=admin_id,
+                is_in_inbox=True  # Only show non-archived contacts in inbox
+            ).annotate(
                 last_msg_time=Max('message__created_at')
             ).order_by('-last_msg_time', 'id')
         else:
@@ -118,7 +124,7 @@ class Inboxcontroller:
 
     @csrf_exempt
     def delete_user(request, user_id):
-        """Delete a user from inbox (with all messages)"""
+        """Archive a user from inbox (soft-delete - preserves data)"""
         if request.method != 'POST':
             return JsonResponse({'error': 'POST required'}, status=405)
         
@@ -139,11 +145,42 @@ class Inboxcontroller:
         if admin_id and str(user.admin_id_id) != str(admin_id):
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
-        # Delete messages first, then user
-        Message.objects.filter(user_id=user_id).delete()
-        user.delete()
+        # SOFT DELETE: Archive from inbox instead of deleting
+        # Contact remains in All Contacts view and all data is preserved
+        user.is_in_inbox = False
+        user.archived_at = timezone.now()
+        user.save(update_fields=['is_in_inbox', 'archived_at'])
         
-        return JsonResponse({'success': True, 'msg': 'Contact deleted'})
+        return JsonResponse({'success': True, 'msg': 'Contact archived from inbox'})
+
+    @csrf_exempt
+    def restore_user(request, user_id):
+        """Restore an archived user back to the inbox"""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+        
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        if not org_id and not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return JsonResponse({'error': 'User not found'}, status=404)
+        
+        # Security check
+        if org_id and user.organization_id != org_id:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        if admin_id and str(user.admin_id_id) != str(admin_id):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        # Restore to inbox
+        user.is_in_inbox = True
+        user.archived_at = None
+        user.save(update_fields=['is_in_inbox', 'archived_at'])
+        
+        return JsonResponse({'success': True, 'msg': 'Contact restored to inbox'})
 
     @csrf_exempt
     def toggle_bot(request, user_id):

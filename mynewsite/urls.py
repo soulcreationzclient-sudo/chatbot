@@ -22,6 +22,7 @@ from newapp import calendly_integration_views
 
 # Multi-tenant admin imports
 from newapp.controllers import auth_views, superadmin_views, client_views
+from newapp.controllers import broadcast as broadcast_views
 
 
 
@@ -179,6 +180,17 @@ urlpatterns = [
     path('connect_calendly/', calendly_integration_views.connect_calendly, name='connect_calendly'),
     path('disconnect_calendly/', calendly_integration_views.disconnect_calendly, name='disconnect_calendly'),
     path('update_followup_settings/', calendly_integration_views.update_followup_settings, name='update_followup_settings'),
+    
+    # ==================== BROADCAST SYSTEM ====================
+    path('api/broadcast/templates/sync/', broadcast_views.BroadcastController.sync_templates, name='broadcast_sync_templates'),
+    path('api/broadcast/templates/', broadcast_views.BroadcastController.list_templates, name='broadcast_list_templates'),
+    path('api/broadcast/create/', broadcast_views.BroadcastController.create_broadcast, name='broadcast_create'),
+    path('api/broadcast/<int:job_id>/status/', broadcast_views.BroadcastController.get_broadcast_status, name='broadcast_status'),
+    path('api/broadcast/', broadcast_views.BroadcastController.list_broadcasts, name='broadcast_list'),
+    path('broadcast/', broadcast_views.BroadcastController.broadcast_dashboard, name='broadcast_dashboard'),
+    
+    # ==================== INBOX RESTORE (Soft-delete support) ====================
+    path('api/inbox/restore_user/<int:user_id>/', Inboxcontroller.restore_user, name='inbox_restore_user'),
     
 ]
 
