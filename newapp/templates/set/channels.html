@@ -320,14 +320,22 @@
       {% csrf_token %}
 
       <div class="field">
-        <label class="label" for="waId">WhatsApp Business Account ID (WABA)</label>
-        <input class="input" id="waId" name="phone_id" placeholder="e.g. 123456789012345" required />
+        <label class="label" for="waPhoneId">Phone Number ID</label>
+        <input class="input" id="waPhoneId" name="phone_id" placeholder="e.g. 811624148710340" required />
+        <small style="color: #64748b; font-size: 11px;">Find in Meta Developer Console → WhatsApp → API Setup</small>
       </div>
 
       <div class="field">
         <label class="label" for="waToken">Access Token</label>
         <input class="input" id="waToken" name="user_token" placeholder="EAAG..." required />
-        <div id="waError" class="error">Both fields are required.</div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="waWabaId">WhatsApp Business Account ID (Optional)</label>
+        <input class="input" id="waWabaId" name="waba_id" placeholder="e.g. 1349584693578178" />
+        <small style="color: #64748b; font-size: 11px;">Needed for template sync. Find in Meta Business Suite → Settings
+          → WhatsApp accounts</small>
+        <div id="waError" class="error">Phone Number ID and Access Token are required.</div>
       </div>
 
       <div class="actions">
@@ -346,7 +354,7 @@
     const closeBtn = document.getElementById("waClose");
     const form = document.getElementById("waForm");
     const errorEl = document.getElementById("waError");
-    const idEl = document.getElementById("waId");
+    const phoneIdEl = document.getElementById("waPhoneId");
     const tokenEl = document.getElementById("waToken");
 
     console.log("WhatsApp Modal Init:", {
@@ -362,7 +370,7 @@
         backdrop.classList.add("show");
         backdrop.setAttribute("aria-hidden", "false");
         console.log("Modal opened - backdrop classes:", backdrop.classList);
-        setTimeout(() => idEl && idEl.focus(), 100);
+        setTimeout(() => phoneIdEl && phoneIdEl.focus(), 100);
       } else {
         console.error("Backdrop element not found!");
       }
@@ -409,7 +417,7 @@
 
     form.addEventListener("submit", function (e) {
       errorEl.classList.remove("show");
-      if (!idEl.value.trim() || !tokenEl.value.trim()) {
+      if (!phoneIdEl.value.trim() || !tokenEl.value.trim()) {
         e.preventDefault();
         errorEl.classList.add("show");
         return;

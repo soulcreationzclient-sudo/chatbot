@@ -68,6 +68,7 @@ class whatsappcontroller:
     def connect(request):
         phone_id = request.POST.get('phone_id') or ''
         user_token = request.POST.get('user_token') or ''
+        waba_id = request.POST.get('waba_id') or ''  # Optional WABA ID for template sync
 
         headers = {
             'Authorization': f"Bearer {user_token}"
@@ -89,11 +90,14 @@ class whatsappcontroller:
                 if org_id:
                     # Organization-based auth
                     from newapp.models import Organization
-                    Organization.objects.filter(id=org_id).update(
-                        whatsapp_phone_id=phone_id,
-                        whatsapp_token=user_token,
-                        display_phone_no=display_phone_no
-                    )
+                    update_fields = {
+                        'whatsapp_phone_id': phone_id,
+                        'whatsapp_token': user_token,
+                        'display_phone_no': display_phone_no
+                    }
+                    if waba_id:
+                        update_fields['waba_id'] = waba_id
+                    Organization.objects.filter(id=org_id).update(**update_fields)
                     messages.success(request, "WhatsApp connected successfully!")
                     return redirect(request.META.get('HTTP_REFERER', '/'))
                 elif admin_id:
