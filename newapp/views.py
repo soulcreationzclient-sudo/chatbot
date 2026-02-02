@@ -1252,7 +1252,7 @@ def get_message_chatgpt(request):
         # Get or create user
         user_obj, _ = User.objects.get_or_create(
             phone_no=phone,
-            defaults={'name': 'user', 'created_at': timezone.now()}
+            defaults={'name': 'user', 'created_at': timezone.now(), 'is_in_inbox': True}
         )
 
         # ==================== IMAGE/PDF ANALYSIS ====================
@@ -1588,7 +1588,7 @@ def send_whatsapp_reply(message_text, to_phone, phone_id, token):
             logger.warning(f"Failed to send WhatsApp message: {response.text}")
         else:
             # Save bot reply in DB
-            user, created = User.objects.get_or_create(phone_no=to_phone, defaults={'name': 'bot', 'created_at': timezone.now()})
+            user, created = User.objects.get_or_create(phone_no=to_phone, defaults={'name': 'bot', 'created_at': timezone.now(), 'is_in_inbox': True})
             Message.objects.create(user=user, messages=message_text, created_at=timezone.now(), who='bot')
     except Exception as e:
         logger.error(f"Exception during sending WhatsApp message: {e}")
@@ -1658,7 +1658,8 @@ def import_contacts(request):
                     defaults={
                         'name': name, 
                         'admin_id': admin_instance,
-                        'organization': org_instance
+                        'organization': org_instance,
+                        'is_in_inbox': True
                     }
                 )
 
