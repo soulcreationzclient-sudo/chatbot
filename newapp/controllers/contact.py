@@ -173,10 +173,14 @@ class Contactcontroller:
         user = get_object_or_404(User, id=id)
 
         # SOFT DELETE: Archive from inbox instead of deleting
-        # This preserves all data (messages, tags, etc.)
+        # Contact remains in All Contacts view but data is RESET (tags/history cleared)
         user.is_in_inbox = False
         user.archived_at = timezone.now()
         user.save(update_fields=['is_in_inbox', 'archived_at'])
+
+        # CUSTOM DELETE LOGIC:
+        UserTag.objects.filter(user=user).delete()
+        Message.objects.filter(user=user).delete()
 
         # Redirect to user listing page
         return redirect('show_people')  # replace 'show_people' with your actual user listing url name

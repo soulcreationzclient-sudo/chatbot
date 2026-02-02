@@ -151,6 +151,14 @@ class Inboxcontroller:
         user.archived_at = timezone.now()
         user.save(update_fields=['is_in_inbox', 'archived_at'])
         
+        # CUSTOM DELETE LOGIC:
+        # User requested: Remove tags and delete history, but keep contact.
+        from ..models import UserTag, Message
+        # 1. Remove all tags
+        UserTag.objects.filter(user=user).delete()
+        # 2. Delete message history
+        Message.objects.filter(user=user).delete()
+        
         return JsonResponse({'success': True, 'msg': 'Contact archived from inbox'})
 
     @csrf_exempt
