@@ -18,6 +18,7 @@ import openai
 from newapp.models import ChatGPTPrompt
 import logging
 import requests
+import sys
 from newapp.views import send_whatsapp_reply
 from newapp.models import Tag, UserTag
 from newapp.tasks import send_followup_message, schedule_followup
@@ -261,6 +262,7 @@ class whatsappcontroller:
             try:
                 data = json.loads(request.body.decode("utf-8"))
                 print("Received webhook data:", data)
+                sys.stdout.flush()
 
                 entries = data.get('entry') or []
                 if not entries:
