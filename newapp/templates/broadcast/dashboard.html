@@ -1,0 +1,406 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Broadcast & Templates{% endblock %}
+
+{% block head_css %}
+<style>
+    :root {
+        --bg-page: #f8fafc;
+        --bg-card: #ffffff;
+        --border-soft: #e5e7eb;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --accent: #3b82f6;
+        --accent-soft: #eff6ff;
+        --success: #22c55e;
+        --success-soft: #dcfce7;
+        --warning: #f59e0b;
+        --warning-soft: #fef3c7;
+        --danger: #ef4444;
+        --danger-soft: #fef2f2;
+    }
+
+    .broadcast-wrap {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .page-title {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--text-main);
+    }
+
+    .breadcrumb {
+        font-size: 14px;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+    }
+
+    .breadcrumb a {
+        color: var(--accent);
+        text-decoration: none;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: var(--accent);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2563eb;
+    }
+
+    .btn-secondary {
+        background: var(--bg-card);
+        color: var(--text-main);
+        border: 1px solid var(--border-soft);
+    }
+
+    .btn-secondary:hover {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+    }
+
+    .section {
+        background: var(--bg-card);
+        border: 1px solid var(--border-soft);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .template-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .template-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        background: var(--accent-soft);
+        border-radius: 12px;
+        border: 1px solid transparent;
+    }
+
+    .template-item:hover {
+        border-color: var(--accent);
+    }
+
+    .template-name {
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .template-meta {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-approved {
+        background: var(--success-soft);
+        color: var(--success);
+    }
+
+    .status-pending {
+        background: var(--warning-soft);
+        color: var(--warning);
+    }
+
+    .status-rejected {
+        background: var(--danger-soft);
+        color: var(--danger);
+    }
+
+    .job-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .job-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        background: #f9fafb;
+        border-radius: 12px;
+        border: 1px solid var(--border-soft);
+    }
+
+    .job-name {
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .job-stats {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-muted);
+    }
+
+    .empty-state h3 {
+        font-size: 18px;
+        margin-bottom: 8px;
+        color: var(--text-main);
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 8px;
+    }
+
+    .form-select,
+    .form-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid var(--border-soft);
+        border-radius: 10px;
+        font-size: 14px;
+        background: var(--bg-card);
+    }
+
+    .form-select:focus,
+    .form-input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .alert {
+        padding: 12px 16px;
+        border-radius: 10px;
+        margin-bottom: 16px;
+        font-size: 14px;
+    }
+
+    .alert-success {
+        background: var(--success-soft);
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .alert-error {
+        background: var(--danger-soft);
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="broadcast-wrap">
+    <div class="breadcrumb">
+        <a href="{% url 'settings' %}">Settings</a> › Template Management
+    </div>
+
+    <div class="page-header">
+        <h1 class="page-title">Broadcast & Templates</h1>
+        <button class="btn btn-primary" onclick="syncTemplates()">
+            🔄 Sync Templates from Meta
+        </button>
+    </div>
+
+    <div id="alertContainer"></div>
+
+    <!-- Templates Section -->
+    <div class="section">
+        <div class="section-title">
+            <span>📋 Approved Templates</span>
+            <span style="font-size: 14px; font-weight: normal; color: var(--text-muted);">
+                {{ templates|length }} template(s)
+            </span>
+        </div>
+
+        {% if templates %}
+        <div class="template-list">
+            {% for tpl in templates %}
+            <div class="template-item">
+                <div>
+                    <div class="template-name">{{ tpl.name }}</div>
+                    <div class="template-meta">{{ tpl.category }} • {{ tpl.language }}</div>
+                </div>
+                <span class="status-badge status-{{ tpl.status|lower }}">{{ tpl.status }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No Templates Yet</h3>
+            <p>Click "Sync Templates from Meta" to fetch your approved WhatsApp templates.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Create Broadcast Section -->
+    <div class="section">
+        <div class="section-title">📤 Create Broadcast</div>
+
+        {% if templates %}
+        <form id="broadcastForm" onsubmit="createBroadcast(event)">
+            <div class="form-group">
+                <label class="form-label">Template</label>
+                <select class="form-select" name="template_id" required>
+                    <option value="">Select a template...</option>
+                    {% for tpl in templates %}
+                    <option value="{{ tpl.id }}">{{ tpl.name }} ({{ tpl.language }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Filter by Tag (Optional)</label>
+                <select class="form-select" name="tag_id">
+                    <option value="">All Contacts</option>
+                    {% for tag in tags %}
+                    <option value="{{ tag.id }}">{{ tag.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary">🚀 Start Broadcast</button>
+        </form>
+        {% else %}
+        <p style="color: var(--text-muted);">Sync templates first to create a broadcast.</p>
+        {% endif %}
+    </div>
+
+    <!-- Recent Broadcasts Section -->
+    <div class="section">
+        <div class="section-title">
+            <span>📊 Recent Broadcasts</span>
+        </div>
+
+        {% if jobs %}
+        <div class="job-list">
+            {% for job in jobs %}
+            <div class="job-item">
+                <div>
+                    <div class="job-name">{{ job.name }}</div>
+                    <div class="job-stats">
+                        ✅ {{ job.sent_count }}/{{ job.total_recipients }} sent •
+                        ❌ {{ job.failed_count }} failed •
+                        {{ job.created_at|date:"M d, H:i" }}
+                    </div>
+                </div>
+                <span class="status-badge status-{{ job.status|lower }}">{{ job.status }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No Broadcasts Yet</h3>
+            <p>Create your first broadcast using an approved template.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function showAlert(type, message) {
+        const container = document.getElementById('alertContainer');
+        container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        setTimeout(() => container.innerHTML = '', 5000);
+    }
+
+    function syncTemplates() {
+        fetch('{% url "broadcast_sync_templates" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', `✅ Synced ${data.synced_count} templates!`);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert('error', '❌ ' + (data.error || 'Failed to sync'));
+                }
+            })
+            .catch(err => showAlert('error', '❌ Network error'));
+    }
+
+    function createBroadcast(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = {
+            template_id: form.template_id.value,
+            tag_id: form.tag_id.value || null
+        };
+
+        fetch('{% url "broadcast_create" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', `✅ Broadcast started! Job ID: ${data.job_id}`);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert('error', '❌ ' + (data.error || 'Failed to create broadcast'));
+                }
+            })
+            .catch(err => showAlert('error', '❌ Network error'));
+    }
+</script>
+{% endblock %}

@@ -167,15 +167,16 @@ class Contactcontroller:
         return render(request, 'contact/edit_user.html', {'form': form, 'user': user, 'custom_fields': custom_fields})
 
     def delete_user(request, id):
+        """Soft-delete a user - archive instead of permanent deletion"""
         user = get_object_or_404(User, id=id)
 
-    # Delete related conversations first to avoid foreign key errors
-        user.message_set.all().delete()
+        # SOFT DELETE: Archive from inbox instead of deleting
+        # This preserves all data (messages, tags, etc.)
+        user.is_in_inbox = False
+        user.archived_at = timezone.now()
+        user.save(update_fields=['is_in_inbox', 'archived_at'])
 
-    # Delete the user
-        user.delete()
-
-    # Redirect to user listing page
+        # Redirect to user listing page
         return redirect('show_people')  # replace 'show_people' with your actual user listing url name
 
     @staticmethod
