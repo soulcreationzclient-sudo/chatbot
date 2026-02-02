@@ -137,7 +137,8 @@ def send_whatsapp_message(request):
                     new_user = User.objects.create(
                         name='bot',
                         phone_no=phone,
-                        created_at=timezone.now()
+                        created_at=timezone.now(),
+                        is_in_inbox=True
                     )
                     user_id = new_user.id
                     print(f"id:{user_id}")

@@ -111,7 +111,8 @@ class Contactcontroller:
                         organization=org,
                         name=name,
                         phone_no=phone_no,
-                        created_at=datetime.now()
+                        created_at=datetime.now(),
+                        is_in_inbox=True
                     )
                 elif admin_id:
                     admin = Admin.objects.filter(id=admin_id).first()
@@ -122,7 +123,8 @@ class Contactcontroller:
                         admin_id=admin,
                         name=name,
                         phone_no=phone_no,
-                        created_at=datetime.now()
+                        created_at=datetime.now(),
+                        is_in_inbox=True
                     )
                 else:
                     messages.error(request, 'Not authenticated')

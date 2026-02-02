@@ -153,7 +153,7 @@ class whatsappcontroller:
                 # persist bot message (uses timezone.now)
                 user = User.objects.filter(phone_no=phone).first()
                 if not user:
-                    user = User.objects.create(name='bot', phone_no=phone, created_at=datetime.now())
+                    user = User.objects.create(name='bot', phone_no=phone, created_at=datetime.now(), is_in_inbox=True)
                 Message.objects.create(user_id=user, messages=message, created_at=timezone.now(), who='bot')
                 return JsonResponse({"ok": True, "provider_response": data}, status=200)
             else:
