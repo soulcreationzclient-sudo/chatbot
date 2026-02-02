@@ -16,6 +16,7 @@ class Organization(models.Model):
     # WhatsApp Configuration
     whatsapp_phone_id = models.TextField(blank=True, default='')
     whatsapp_token = models.TextField(blank=True, default='')
+    waba_id = models.TextField(blank=True, default='', help_text='WhatsApp Business Account ID')
     display_phone_no = models.TextField(blank=True, default='')
     
     # OpenAI Configuration

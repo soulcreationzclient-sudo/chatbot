@@ -42,6 +42,7 @@ def connect_whatsapp(request):
     if request.method == 'POST':
         token = request.POST.get('token', '').strip()
         phone_id = request.POST.get('phone_id', '').strip()
+        waba_id = request.POST.get('waba_id', '').strip()  # Optional WABA ID for template sync
         
         if not token or not phone_id:
             messages.error(request, "Both Access Token and Phone Number ID are required.")
@@ -65,11 +66,14 @@ def connect_whatsapp(request):
                 
                 if org_id:
                     from .models import Organization
-                    Organization.objects.filter(id=org_id).update(
-                        whatsapp_phone_id=phone_id,
-                        whatsapp_token=token,
-                        display_phone_no=display_phone_no
-                    )
+                    update_fields = {
+                        'whatsapp_phone_id': phone_id,
+                        'whatsapp_token': token,
+                        'display_phone_no': display_phone_no
+                    }
+                    if waba_id:
+                        update_fields['waba_id'] = waba_id
+                    Organization.objects.filter(id=org_id).update(**update_fields)
                     messages.success(request, "WhatsApp connected successfully!")
                     return redirect('dashboard')
                 elif admin_id:

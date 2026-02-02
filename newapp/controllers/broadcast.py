@@ -39,9 +39,11 @@ class BroadcastController:
             if org:
                 whatsapp_phone_id = org.whatsapp_phone_id
                 whatsapp_token = org.whatsapp_token
+                waba_id = getattr(org, 'waba_id', '') or ''
             return {
                 'phone_id': whatsapp_phone_id,
                 'token': whatsapp_token,
+                'waba_id': waba_id,
                 'org_id': org_id,
                 'admin_id': None,
                 'org': org,
@@ -76,54 +78,27 @@ class BroadcastController:
             return JsonResponse({'error': 'WhatsApp not configured'}, status=403)
         
         try:
-            # Get the WABA ID from the phone number ID
-            # The phone number ID belongs to a WABA, we need to query the correct field
-            phone_url = f"https://graph.facebook.com/v17.0/{creds['phone_id']}?fields=id,display_phone_number,verified_name"
-            phone_response = requests.get(
-                phone_url,
-                headers={'Authorization': f"Bearer {creds['token']}"},
-                timeout=30
-            )
-            phone_data = phone_response.json()
+            # First check if WABA ID is already configured
+            waba_id = creds.get('waba_id', '')
             
-            if 'error' in phone_data:
-                return JsonResponse({
-                    'error': f"Meta API error: {phone_data.get('error', {}).get('message', 'Unknown error')}",
-                    'debug': phone_data
-                }, status=502)
-            
-            # Get the WABA ID by querying the phone number's owner business
-            # We need to get the WABA ID from the owner_business_info endpoint
-            waba_url = f"https://graph.facebook.com/v17.0/{creds['phone_id']}/owner_business"
-            waba_response = requests.get(
-                waba_url,
-                headers={'Authorization': f"Bearer {creds['token']}"},
-                timeout=30
-            )
-            waba_data = waba_response.json()
-            
-            # The WABA ID might need to be fetched differently
-            # Let's try querying the WhatsApp Business Account directly
-            # First, list all WABAs that this token has access to
-            waba_list_url = "https://graph.facebook.com/v17.0/me/whatsapp_business_accounts"
-            waba_list_response = requests.get(
-                waba_list_url,
-                headers={'Authorization': f"Bearer {creds['token']}"},
-                timeout=30
-            )
-            waba_list_data = waba_list_response.json()
-            
-            # Get the first WABA ID
-            waba_entries = waba_list_data.get('data', [])
-            if waba_entries:
-                waba_id = waba_entries[0].get('id')
-            else:
-                # If no WABA found via list, the token might not have the right permissions
-                # Return a helpful error
-                return JsonResponse({
-                    'error': 'Could not find WhatsApp Business Account. Please ensure your token has whatsapp_business_management permission.',
-                    'debug': {'waba_list': waba_list_data, 'phone_data': phone_data}
-                }, status=403)
+            if not waba_id:
+                # Try to fetch WABA ID from Meta API by querying associated business accounts
+                waba_list_url = "https://graph.facebook.com/v17.0/me/whatsapp_business_accounts"
+                waba_list_response = requests.get(
+                    waba_list_url,
+                    headers={'Authorization': f"Bearer {creds['token']}"},
+                    timeout=30
+                )
+                waba_list_data = waba_list_response.json()
+                
+                waba_entries = waba_list_data.get('data', [])
+                if waba_entries:
+                    waba_id = waba_entries[0].get('id')
+                else:
+                    return JsonResponse({
+                        'error': 'WABA ID not configured. Please add your WhatsApp Business Account ID in Settings > Integration.',
+                        'help': 'You can find your WABA ID in Meta Business Suite > Settings > WhatsApp accounts'
+                    }, status=400)
             
             # Fetch templates from Meta
             templates_url = f"https://graph.facebook.com/v17.0/{waba_id}/message_templates"
