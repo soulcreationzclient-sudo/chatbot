@@ -11,7 +11,7 @@ from pinecone_plugins.assistant.models.chat import Message as Pinemessage
 from newapp.models import Message
 from django.views.decorators.csrf import csrf_exempt
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urlencode
 from django.utils import timezone
 import openai
