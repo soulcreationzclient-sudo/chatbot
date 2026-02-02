@@ -953,8 +953,6 @@ If the user's question relates to this document, answer based on your analysis a
                                     
                                     # Check if a follow-up was already scheduled in this conversation window
                                     # Use a timestamp check: only schedule if last bot message was > 30 seconds ago
-                                    from django.utils import timezone
-                                    from datetime import timedelta
                                     
                                     recent_bot_msg = Message.objects.filter(
                                         user_id=existing_user,
