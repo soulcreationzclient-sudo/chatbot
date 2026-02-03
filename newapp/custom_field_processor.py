@@ -356,12 +356,12 @@ def get_user_custom_fields(user, admin, organization=None):
             fields = CustomField.objects.filter(
                 organization=organization,
                 is_active=True
-            ).exclude(customfieldvalue__user=user)
+            ).exclude(values__user=user)
         else:
             fields = CustomField.objects.filter(
                 admin=admin,
                 is_active=True
-            ).exclude(customfieldvalue__user=user)
+            ).exclude(values__user=user)
 
         # Get all field values for this user
         field_values = CustomFieldValue.objects.filter(
