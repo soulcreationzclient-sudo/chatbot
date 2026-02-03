@@ -427,26 +427,54 @@ class FollowUpMessage(models.Model):
 
 
 class CustomField(models.Model):
+    FIELD_TYPE_CHOICES = [
+        ('text', 'Text'),
+        ('textarea', 'Long Text'),
+        ('number', 'Number'),
+        ('email', 'Email'),
+        ('phone', 'Phone'),
+        ('date', 'Date'),
+        ('datetime', 'DateTime'),
+        ('boolean', 'Yes/No'),
+        ('select', 'Dropdown'),
+    ]
+    
     id = models.AutoField(primary_key=True)
-    admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)
-    field_type = models.CharField(max_length=20, default='text') # text, number, date
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True, related_name='custom_fields')
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, null=True, blank=True, related_name='custom_fields')
+    name = models.CharField(max_length=100, help_text="Field name (e.g., name, email, address)")
+    field_type = models.CharField(max_length=20, choices=FIELD_TYPE_CHOICES, default='text', help_text="Data type for this field")
+    description = models.TextField(blank=True, help_text="Description for the AI explaining when to capture this field")
+    is_required = models.BooleanField(default=False, help_text="Whether this field is required")
+    is_active = models.BooleanField(default=True, help_text="Whether this field is active")
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        if self.organization:
+            return f"{self.name} ({self.organization.name})"
+        return f"{self.name} ({self.admin.assistant_name if self.admin else 'No Admin'})"
 
     class Meta:
         db_table = 'custom_fields'
-        unique_together = ('admin', 'name')
+        unique_together = [('admin', 'name'), ('organization', 'name')]
 
 class CustomFieldValue(models.Model):
     id = models.AutoField(primary_key=True)
-    custom_field = models.ForeignKey(CustomField, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    custom_field = models.ForeignKey(CustomField, on_delete=models.CASCADE, related_name='values')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='custom_field_values')
     value = models.TextField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.custom_field.name}: {self.value} ({self.user.phone_no})"
 
     class Meta:
         db_table = 'custom_field_values'
         unique_together = ('custom_field', 'user')
+        indexes = [
+            models.Index(fields=['user', 'custom_field']),
+        ]
 
 
 # ==================== BROADCAST SYSTEM MODELS ====================

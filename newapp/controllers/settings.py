@@ -853,3 +853,234 @@ class Settingcontroller :
         
         tag.delete()
         return JsonResponse({'success': True})
+    
+    # ===================== CUSTOM FIELD MANAGEMENT =====================
+    
+    @staticmethod
+    def custom_fields_view(request):
+        from ..models import CustomField, Organization
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        custom_fields = []
+        admin = None
+        org = None
+        
+        if org_id:
+            # Organization user - filter custom fields by organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                custom_fields = CustomField.objects.filter(organization=org).order_by('-created_at')
+        elif admin_id:
+            # Admin user - filter custom fields by admin
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                custom_fields = CustomField.objects.filter(admin=admin).order_by('-created_at')
+        else:
+            return redirect('/login/')
+        
+        return render(request, 'set/custom_fields.html', {
+            'admin': admin,
+            'custom_fields': custom_fields
+        })
+    
+    @staticmethod
+    def custom_field_create(request):
+        from django.http import JsonResponse
+        from ..models import CustomField, Organization
+        import json
+        
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        if not admin_id and not org_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        try:
+            data = json.loads(request.body)
+            name = data.get('name', '').strip()
+            field_type = data.get('field_type', 'text').strip()
+            description = data.get('description', '').strip()
+            is_required = data.get('is_required', False)
+            
+            if not name:
+                return JsonResponse({'error': 'Field name is required'}, status=400)
+            
+            # Validate field_type
+            valid_types = [choice[0] for choice in CustomField.FIELD_TYPE_CHOICES]
+            if field_type not in valid_types:
+                return JsonResponse({'error': f'Invalid field type. Must be one of: {", ".join(valid_types)}'}, status=400)
+            
+            if org_id:
+                # Organization user - create custom field for organization
+                org = Organization.objects.filter(id=org_id).first()
+                if not org:
+                    return JsonResponse({'error': 'Organization not found'}, status=404)
+                
+                # Check for duplicate within organization
+                if CustomField.objects.filter(organization=org, name__iexact=name).exists():
+                    return JsonResponse({'error': 'Custom field already exists'}, status=400)
+                
+                custom_field = CustomField.objects.create(
+                    organization=org,
+                    name=name,
+                    field_type=field_type,
+                    description=description,
+                    is_required=is_required
+                )
+            else:
+                # Admin user - create custom field for admin
+                admin = Admin.objects.filter(id=admin_id).first()
+                if not admin:
+                    return JsonResponse({'error': 'Admin not found'}, status=404)
+                
+                # Check for duplicate within admin
+                if CustomField.objects.filter(admin=admin, name__iexact=name).exists():
+                    return JsonResponse({'error': 'Custom field already exists'}, status=400)
+                
+                custom_field = CustomField.objects.create(
+                    admin=admin,
+                    name=name,
+                    field_type=field_type,
+                    description=description,
+                    is_required=is_required
+                )
+            
+            return JsonResponse({'success': True, 'id': custom_field.id, 'name': custom_field.name})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    @staticmethod
+    def custom_field_update(request, field_id):
+        from django.http import JsonResponse
+        from ..models import CustomField, Organization
+        import json
+        
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        if not admin_id and not org_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        # Find custom field based on user type
+        custom_field = None
+        if org_id:
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                custom_field = CustomField.objects.filter(id=field_id, organization=org).first()
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                custom_field = CustomField.objects.filter(id=field_id, admin=admin).first()
+        
+        if not custom_field:
+            return JsonResponse({'error': 'Custom field not found'}, status=404)
+        
+        try:
+            data= json.loads(request.body)
+            name = data.get('name', '').strip()
+            field_type = data.get('field_type', '').strip()
+            description = data.get('description', '').strip()
+            is_required = data.get('is_required', custom_field.is_required)
+            is_active = data.get('is_active', custom_field.is_active)
+            
+            # Validate field_type if provided
+            if field_type:
+                valid_types = [choice[0] for choice in CustomField.FIELD_TYPE_CHOICES]
+                if field_type not in valid_types:
+                    return JsonResponse({'error': f'Invalid field type. Must be one of: {", ".join(valid_types)}'}, status=400)
+                custom_field.field_type = field_type
+            
+            if name:
+                # Check for duplicate name if changing
+                if name.lower() != custom_field.name.lower():
+                    if org_id:
+                        org = Organization.objects.filter(id=org_id).first()
+                        if org and CustomField.objects.filter(organization=org, name__iexact=name).exclude(id=field_id).exists():
+                            return JsonResponse({'error': 'Custom field with this name already exists'}, status=400)
+                    elif admin_id:
+                        admin = Admin.objects.filter(id=admin_id).first()
+                        if admin and CustomField.objects.filter(admin=admin, name__iexact=name).exclude(id=field_id).exists():
+                            return JsonResponse({'error': 'Custom field with this name already exists'}, status=400)
+                custom_field.name = name
+            
+            custom_field.description = description
+            custom_field.is_required = is_required
+            custom_field.is_active = is_active
+            custom_field.save()
+            
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    @staticmethod
+    def custom_field_delete(request, field_id):
+        from django.http import JsonResponse
+        from ..models import CustomField, Organization
+        
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        if not admin_id and not org_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        # Find custom field based on user type
+        custom_field = None
+        if org_id:
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                custom_field = CustomField.objects.filter(id=field_id, organization=org).first()
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                custom_field = CustomField.objects.filter(id=field_id, admin=admin).first()
+        
+        if not custom_field:
+            return JsonResponse({'error': 'Custom field not found'}, status=404)
+        
+        custom_field.delete()
+        return JsonResponse({'success': True})
+    
+    @staticmethod
+    def custom_field_list(request):
+        from django.http import JsonResponse
+        from ..models import CustomField, Organization
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        if not admin_id and not org_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        try:
+            custom_fields = []
+            if org_id:
+                org = Organization.objects.filter(id=org_id).first()
+                if org:
+                    custom_fields = CustomField.objects.filter(organization=org, is_active=True)
+            elif admin_id:
+                admin = Admin.objects.filter(id=admin_id).first()
+                if admin:
+                    custom_fields = CustomField.objects.filter(admin=admin, is_active=True)
+            
+            fields_data = [{
+                'id': cf.id,
+                'name': cf.name,
+                'field_type': cf.field_type,
+                'description': cf.description,
+                'is_required': cf.is_required
+            } for cf in custom_fields]
+            
+            return JsonResponse({'success': True, 'custom_fields': fields_data})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)

@@ -1,6 +1,7 @@
 import requests
 import json
 from .models import ExternalAPI
+from django.utils import timezone
 
 # Global variable to track current user phone during request processing
 # This gets set in whatsapp.py before calling execute_tool
@@ -28,6 +29,7 @@ def apply_user_tag(tag_name, admin, phone=None):
         str: Success or error message
     """
     from .models import Tag, UserTag, User
+    from django.utils import timezone
     
     user_phone = phone or _current_user_phone
     if not user_phone:
@@ -76,6 +78,7 @@ def remove_user_tag(tag_name, admin, phone=None):
         str: Success or error message
     """
     from .models import Tag, UserTag, User
+    from django.utils import timezone
     
     user_phone = phone or _current_user_phone
     if not user_phone:
@@ -111,6 +114,127 @@ def remove_user_tag(tag_name, admin, phone=None):
         return f"Info: User did not have tag '{tag_name}'"
 
 
+
+
+def apply_custom_field_value(field_name, field_value, admin, phone=None):
+    """
+    Set a custom field value for a user by phone number or current context.
+
+    Args:
+        field_name (str): Name of the custom field to set
+        field_value (str): Value to set for the custom field
+        admin (Admin): Admin instance
+        phone (str): Phone number (optional, uses current context if not provided)
+
+    Returns:
+        str: Success or error message
+    """
+    from .models import CustomField, CustomFieldValue, User
+
+    user_phone = phone or _current_user_phone
+    if not user_phone:
+        return "Error: No user phone number available"
+
+    # Find the custom field - check organization first, then admin
+    custom_field = None
+    if _current_org:
+        custom_field = CustomField.objects.filter(
+            organization=_current_org,
+            name__iexact=field_name,
+            is_active=True
+        ).first()
+    if not custom_field and admin:
+        custom_field = CustomField.objects.filter(
+            admin=admin,
+            name__iexact=field_name,
+            is_active=True
+        ).first()
+    if not custom_field:
+        return f"Error: Custom field '{field_name}' not found"
+
+    # Find the user - check by organization first, then admin
+    user = None
+    if _current_org:
+        user = User.objects.filter(
+            phone_no__endswith=user_phone[-10:],
+            organization=_current_org
+        ).first()
+    if not user and admin:
+        user = User.objects.filter(
+            phone_no__endswith=user_phone[-10:],
+            admin_id=admin
+        ).first()
+    if not user:
+        # Try without org/admin filter as fallback
+        user = User.objects.filter(phone_no__endswith=user_phone[-10:]).first()
+    if not user:
+        return f"Error: User with phone {user_phone} not found"
+
+    # Create or update the custom field value
+    field_value_obj, created = CustomFieldValue.objects.update_or_create(
+        custom_field=custom_field,
+        user=user,
+        defaults={
+            'value': field_value.strip(),
+            'updated_at': timezone.now()
+        }
+    )
+
+    action = "Set" if created else "Updated"
+    print(f"[CustomField] {action} '{field_name}' to '{field_value}' for user {user_phone}")
+    return f"Success: {action} custom field '{field_name}' to '{field_value}'"
+
+
+def get_user_custom_fields_for_ai(admin, phone=None):
+    """
+    Get all custom field values for a user, formatted for AI context.
+
+    Args:
+        admin (Admin): Admin instance
+        phone (str): Phone number (optional, uses current context if not provided)
+
+    Returns:
+        str: Formatted string of custom field values for AI context
+    """
+    from .models import CustomField, CustomFieldValue, User
+
+    user_phone = phone or _current_user_phone
+    if not user_phone:
+        return ""
+
+    # Find the user
+    user = None
+    if _current_org:
+        user = User.objects.filter(
+            phone_no__endswith=user_phone[-10:],
+            organization=_current_org
+        ).first()
+    if not user and admin:
+        user = User.objects.filter(
+            phone_no__endswith=user_phone[-10:],
+            admin_id=admin
+        ).first()
+    if not user:
+        user = User.objects.filter(phone_no__endswith=user_phone[-10:]).first()
+    if not user:
+        return ""
+
+    # Get all custom field values for this user
+    field_values = CustomFieldValue.objects.filter(
+        user=user,
+        custom_field__is_active=True
+    ).select_related('custom_field')
+
+    if not field_values:
+        return "No custom fields captured yet."
+
+    # Format for AI context
+    lines = ["User's Captured Custom Fields:"]
+    for fv in field_values:
+        lines.append(f"- {fv.custom_field.name}: {fv.value}")
+
+    return "\n".join(lines)
+
 def execute_tool(tool_name, arguments, admin):
     """
     Execute a defined ExternalAPI tool or built-in function.
@@ -128,6 +252,11 @@ def execute_tool(tool_name, arguments, admin):
         if tool_name == "apply_tag":
             tag_name = arguments.get("tag_name", "")
             return apply_user_tag(tag_name, admin)
+        
+        if tool_name == "apply_custom_field":
+            field_name = arguments.get("field_name", "")
+            field_value = arguments.get("field_value", "")
+            return apply_custom_field_value(field_name, field_value, admin)
         
         # Find the tool config from ExternalAPI
         tool_config = ExternalAPI.objects.filter(admin=admin, name=tool_name).first()

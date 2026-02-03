@@ -269,7 +269,156 @@
       {% endif %}
     </div>
 
-    <div class="p-3 border-top" style="background:#fff;">
+      <!-- Custom Fields Sidebar -->
+  <section class="custom-fields-panel" id="customFieldsPanel" style="display:none;">
+    <div class="custom-fields-head">
+      <span>📋 Custom Fields</span>
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="closeCustomFieldsPanel()" title="Close">
+        ✕
+      </button>
+    </div>
+    <div class="custom-fields-body" id="customFieldsBody">
+      <p class="text-muted text-center">Loading...</p>
+    </div>
+    <div class="custom-fields-footer">
+      <button type="button" class="btn btn-sm btn-primary w-100" onclick="showAddCustomFieldModal()">
+        + Add Custom Field
+      </button>
+    </div>
+  </section>
+
+  <style>
+    .custom-fields-panel {
+      width: 280px;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    
+    .custom-fields-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .custom-fields-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    
+    .custom-fields-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      background: #fff;
+    }
+    
+    .custom-field-item {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+    }
+    
+    .custom-field-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .custom-field-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    
+    .custom-field-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-main);
+      word-break: break-word;
+    }
+    
+    .custom-field-value.editable {
+      cursor: pointer;
+      padding: 4px 8px;
+      margin: -4px -8px;
+      border-radius: 4px;
+      transition: background 0.15s ease;
+    }
+    
+    .custom-field-value.editable:hover {
+      background: #e5e7eb;
+    }
+    
+    .custom-field-value.editing {
+      background: #fff;
+      border: 1px solid var(--blue);
+      outline: none;
+      padding: 4px 8px;
+      margin: -4px -8px;
+      border-radius: 4px;
+    }
+    
+    .custom-field-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    
+    .custom-field-actions button {
+      font-size: 11px;
+      padding: 2px 8px;
+    }
+    
+    .custom-field-empty {
+      text-align: center;
+      padding: 30px 20px;
+      color: var(--text-muted);
+    }
+    
+    .custom-field-empty-icon {
+      font-size: 32px;
+      margin-bottom: 10px;
+      opacity: 0.5;
+    }
+  </style>
+
+  <!-- Add Custom Field Modal -->
+  <div class="modal fade" id="addCustomFieldModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">📋 Add Custom Field</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Field Name</label>
+            <select class="form-select" id="customFieldSelect" required>
+              <option value="">Select a field...</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Value</label>
+            <input type="text" class="form-control" id="customFieldValue" placeholder="Enter value">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveCustomField()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<div class="p-3 border-top" style="background:#fff;">
       <form id="chatForm" onsubmit="return sendMessage(event);">
         <div class="input-group">
           <input type="file" id="mediaInput" style="display:none;" onchange="handleFileUpload(this)">
@@ -775,6 +924,255 @@
       if (c.indexOf(name) === 0) return c.substring(name.length, c.length);
     }
     return '';
+  }
+
+  // ============================================
+  // CUSTOM FIELDS FUNCTIONALITY
+  // ============================================
+
+  let customFieldsModal = null;
+  let currentEditingField = null;
+
+  async function openCustomFieldsPanel() {
+    const currentUserId = "{{ selected_user.id|default:'' }}";
+    if (!currentUserId) {
+      alert('Please select a conversation first');
+      return;
+    }
+
+    const panel = document.getElementById('customFieldsPanel');
+    panel.style.display = 'flex';
+
+    await loadUserCustomFields(currentUserId);
+  }
+
+  function closeCustomFieldsPanel() {
+    const panel = document.getElementById('customFieldsPanel');
+    panel.style.display = 'none';
+  }
+
+  async function loadUserCustomFields(userId) {
+    const body = document.getElementById('customFieldsBody');
+    body.innerHTML = '<p class="text-muted text-center">Loading...</p>';
+
+    try {
+      const res = await fetch(`/api/inbox/custom_fields/?user_id=${userId}`);
+      const data = await res.json();
+
+      if (!data.success) {
+        body.innerHTML = `<p class="text-danger text-center">${data.error || 'Failed to load'}</p>`;
+        return;
+      }
+
+      const fields = data.custom_fields;
+
+      if (fields.length === 0) {
+        body.innerHTML = `
+          <div class="custom-field-empty">
+            <div class="custom-field-empty-icon">📋</div>
+            <p>No custom fields captured yet.</p>
+            <p class="small">Fields captured via AI prompts will appear here.</p>
+          </div>
+        `;
+        return;
+      }
+
+      body.innerHTML = fields.map(f => `
+        <div class="custom-field-item" data-field-name="${f.field_name}">
+          <div class="custom-field-label">${f.field_name}</div>
+          <div class="custom-field-value editable"
+               onclick="editCustomField('${f.field_name}', '${escapeHtml(f.value || '')}')"
+               id="cf-value-${f.field_name}">
+            ${escapeHtml(f.value || '-')}
+          </div>
+          <div class="custom-field-actions">
+            <button class="btn btn-sm btn-outline-primary" onclick="editCustomField('${f.field_name}', '${escapeHtml(f.value || '')}')">Edit</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomField('${f.field_name}')">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    } catch (e) {
+      body.innerHTML = '<p class="text-danger text-center">Failed to load custom fields</p>';
+      console.error(e);
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML.replace(/"/g, '&quot;');
+  }
+
+  async function editCustomField(fieldName, currentValue) {
+    currentEditingField = fieldName;
+
+    // Initialize modal if not exists
+    if (!customFieldsModal) {
+      customFieldsModal = new bootstrap.Modal(document.getElementById('addCustomFieldModal'));
+    }
+
+    // Load available custom fields
+    await loadCustomFieldOptions();
+
+    // Set values
+    document.getElementById('customFieldSelect').value = fieldName;
+    document.getElementById('customFieldSelect').disabled = true; // Can't change field type when editing
+    document.getElementById('customFieldValue').value = currentValue;
+
+    // Show modal
+    customFieldsModal.show();
+  }
+
+  async function loadCustomFieldOptions() {
+    const select = document.getElementById('customFieldSelect');
+    select.innerHTML = '<option value="">Select a field...</option>';
+
+    try {
+      const res = await fetch('/api/custom-field/list/');
+      const data = await res.json();
+
+      if (data.custom_fields) {
+        data.custom_fields.forEach(f => {
+          const option = document.createElement('option');
+          option.value = f.name;
+          option.textContent = `${f.name} (${f.field_type})`;
+          select.appendChild(option);
+        });
+      }
+    } catch (e) {
+      console.error('Failed to load custom field options:', e);
+    }
+  }
+
+  async function showAddCustomFieldModal() {
+    currentEditingField = null;
+
+    // Initialize modal if not exists
+    if (!customFieldsModal) {
+      customFieldsModal = new bootstrap.Modal(document.getElementById('addCustomFieldModal'));
+    }
+
+    // Load available custom fields
+    await loadCustomFieldOptions();
+
+    // Reset values
+    document.getElementById('customFieldSelect').value = '';
+    document.getElementById('customFieldSelect').disabled = false;
+    document.getElementById('customFieldValue').value = '';
+
+    // Show modal
+    customFieldsModal.show();
+  }
+
+  async function saveCustomField() {
+    const currentUserId = "{{ selected_user.id|default:'' }}";
+    if (!currentUserId) return;
+
+    const fieldName = document.getElementById('customFieldSelect').value;
+    const fieldValue = document.getElementById('customFieldValue').value.trim();
+
+    if (!fieldName) {
+      alert('Please select a field');
+      return;
+    }
+
+    if (!fieldValue) {
+      alert('Please enter a value');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/inbox/custom_field/update/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+          user_id: currentUserId,
+          field_name: fieldName,
+          value: fieldValue
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Close modal
+        if (customFieldsModal) customFieldsModal.hide();
+
+        // Reload custom fields
+        await loadUserCustomFields(currentUserId);
+
+        // Show success feedback
+        showNotification(`Custom field "${fieldName}" saved`);
+      } else {
+        alert('Error: ' + (data.error || 'Failed to save'));
+      }
+    } catch (e) {
+      alert('Network error');
+      console.error(e);
+    }
+  }
+
+  async function deleteCustomField(fieldName) {
+    if (!confirm(`Delete custom field "${fieldName}"?`)) return;
+
+    const currentUserId = "{{ selected_user.id|default:'' }}";
+    if (!currentUserId) return;
+
+    try {
+      const res = await fetch('/api/inbox/custom_field/delete/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+          user_id: currentUserId,
+          field_name: fieldName
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Reload custom fields
+        await loadUserCustomFields(currentUserId);
+        showNotification(`Custom field "${fieldName}" deleted`);
+      } else {
+        alert('Error: ' + (data.error || 'Failed to delete'));
+      }
+    } catch (e) {
+      alert('Network error');
+      console.error(e);
+    }
+  }
+
+  function showNotification(message) {
+    // Simple notification - could be enhanced with a toast component
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-success position-fixed';
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+    notification.innerHTML = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.remove();
+    }, 3000);
+  }
+
+  // Add toggle button to thread head
+  const toggleCustomFieldsBtn = `
+    <button type="button" class="btn btn-sm btn-outline-primary" onclick="openCustomFieldsPanel()" title="Custom Fields">
+      📋 Fields
+    </button>
+  `;
+
+  // Add button after bot toggle button
+  const botToggleBtn = document.getElementById('botToggleBtn');
+  if (botToggleBtn) {
+    botToggleBtn.insertAdjacentHTML('afterend', toggleCustomFieldsBtn);
   }
 </script>
 {% endblock %}

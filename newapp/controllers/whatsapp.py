@@ -713,6 +713,29 @@ If the user's question relates to this document, answer based on your analysis a
                                             tag_info += "\nWhen you believe a tag matches the user's intent or status, call apply_tag(tag_name='TagName').\n"
                                             system_prompt += tag_info
                                             
+                                            # Add apply_custom_field as a built-in tool
+                                            openai_tools.append({
+                                                "type": "function",
+                                                "function": {
+                                                    "name": "apply_custom_field",
+                                                    "description": "Save or update a custom field value for the current user. Use this to capture user details like name, email, address, phone, etc.",
+                                                    "parameters": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "field_name": {
+                                                                "type": "string",
+                                                                "description": "The name of the custom field to update (e.g., name, email, address)"
+                                                            },
+                                                            "field_value": {
+                                                                "type": "string",
+                                                                "description": "The value to save for this custom field"
+                                                            }
+                                                        },
+                                                        "required": ["field_name", "field_value"]
+                                                    }
+                                                }
+                                            })
+
                                             # Add apply_tag as a built-in tool
                                             openai_tools.append({
                                                 "type": "function",
@@ -732,8 +755,39 @@ If the user's question relates to this document, answer based on your analysis a
                                                 }
                                             })
                                             print(f"[Tags] Injected {admin_tags.count()} tags + apply_tag tool")
-                                        # --- END TAG INTEGRATION ---
+                                                                                # --- CUSTOM FIELD INTEGRATION ---
+                                        from newapp.models import CustomField
+                                        from newapp.custom_field_processor import format_custom_fields_for_ai_context, get_user_custom_fields
                                         
+                                        # Get custom fields for this org/admin
+                                        if org_check:
+                                            admin_custom_fields = CustomField.objects.filter(organization=org_check, is_active=True)
+                                        else:
+                                            admin_custom_fields = CustomField.objects.filter(admin=admin_check, is_active=True)
+                                        
+                                        if admin_custom_fields.exists():
+                                            # Get user's existing custom field values
+                                            user_custom_fields = get_user_custom_fields(existing_user, admin_check, org_check)
+                                            
+                                            # Inject available custom fields into system prompt
+                                            cf_info = "\n\n## USER CUSTOM FIELDS\nYou can capture the following information from users:\n"
+                                            for cf in admin_custom_fields:
+                                                cf_info += f"- **{cf.name}** ({cf.field_type}): {cf.description or 'Capture this information'}"
+                                                if cf.is_required:
+                                                    cf_info += " (Required)"
+                                                cf_info += "\n"
+                                            cf_info += "\nTo capture a custom field value, output: {{custom_field:field_name:value}}"
+                                            cf_info += "\nExample: {{custom_field:name:John Doe}}"
+                                            
+                                            # Add user's existing values if any
+                                            if user_custom_fields:
+                                                cf_info += "\n## EXISTING USER DATA"
+                                                for field_name, value in user_custom_fields.items():
+                                                    cf_info += f"- {field_name}: {value}\n"
+                                            
+                                            system_prompt += cf_info
+                                            
+                                            print(f"[CustomFields] Injected {admin_custom_fields.count()} custom fields for user {existing_user.phone_no}")# --- END CUSTOM FIELD INTEGRATION ---
                                         # Prepare API Call Params
                                         api_params = {
                                             "model": "gpt-4-turbo", # Need tool support
@@ -881,10 +935,27 @@ If the user's question relates to this document, answer based on your analysis a
                                 with open('debug_log.txt', 'a') as f:
                                     f.write(f"[Debug] Actions executed: {len(action_result.get('actions_executed', []))}\n")
 
-                                # 2. Process Image Tags
-                                from newapp.image_tag_processor import process_response_with_images
-                                
-                                img_result = process_response_with_images(
+                                # 2.5 Process Custom Field Tags (after image processing)
+                                    from newapp.custom_field_processor import process_response_with_custom_fields
+                                    
+                                    cf_result = process_response_with_custom_fields(
+                                        final_reply_text,
+                                        admin_check,
+                                        existing_user,
+                                        organization=org_check
+                                    )
+                                    
+                                    # Update final_reply_text with custom field tags replaced
+                                    final_reply_text = cf_result.get('final_text', final_reply_text)
+                                    
+                                    if cf_result.get('fields_processed', 0) > 0:
+                                        print(f"[CustomFields] Processed {cf_result['fields_processed']} field(s) for user {existing_user.phone_no}")
+                                    if cf_result.get('fields_failed', 0) > 0:
+                                        print(f"[CustomFields] Failed to process {cf_result['fields_failed']} field(s)")
+
+                                # 3. Process Image Tags
+                                from newapp.image_tag_processor import process_image_tags
+                                img_result = process_image_tags(
                                     final_reply_text,
                                     admin_check,
                                     existing_user.phone_no,

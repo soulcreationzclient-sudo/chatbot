@@ -241,3 +241,196 @@ class Inboxcontroller:
         } for a in assets]
         
         return JsonResponse({'assets': asset_list})
+
+
+    @staticmethod
+    def get_user_custom_fields(request):
+        """Get all custom field values for a specific user"""
+        user_id = request.GET.get('user_id')
+        
+        if not user_id:
+            return JsonResponse({'error': 'Missing user_id'}, status=400)
+        
+        from ..models import CustomFieldValue
+        from .custom_field_processor import format_custom_fields_for_inbox
+        
+        try:
+            # Get user and verify ownership
+            user = User.objects.filter(id=user_id).first()
+            if not user:
+                return JsonResponse({'error': 'User not found'}, status=404)
+            
+            org_id = request.session.get('organization_id')
+            admin_id = request.session.get('admin_id')
+            
+            # Security check
+            if org_id and user.organization_id != org_id:
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+            if admin_id and str(user.admin_id_id) != str(admin_id):
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+            
+            # Get custom field values formatted for inbox
+            fields = format_custom_fields_for_inbox(user, None, None)
+            
+            return JsonResponse({
+                'success': True,
+                'user_id': user_id,
+                'custom_fields': fields
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    @staticmethod
+    def update_user_custom_field(request):
+        """Update a custom field value for a user"""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+        
+        import json
+        try:
+            data = json.loads(request.body)
+            user_id = data.get('user_id')
+            field_name = data.get('field_name')
+            field_value = data.get('value')
+        except:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        
+        if not user_id or not field_name:
+            return JsonResponse({'error': 'Missing user_id or field_name'}, status=400)
+        
+        from ..models import CustomField, CustomFieldValue
+        
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        if not org_id and not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        # Get user and verify ownership
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return JsonResponse({'error': 'User not found'}, status=404)
+        
+        # Security check
+        if org_id and user.organization_id != org_id:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        if admin_id and str(user.admin_id_id) != str(admin_id):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        # Find the custom field
+        custom_field = None
+        if org_id:
+            custom_field = CustomField.objects.filter(
+                organization_id=org_id,
+                name=field_name,
+                is_active=True
+            ).first()
+        if not custom_field and admin_id:
+            custom_field = CustomField.objects.filter(
+                admin_id=admin_id,
+                name=field_name,
+                is_active=True
+            ).first()
+        
+        if not custom_field:
+            return JsonResponse({'error': f"Custom field '{field_name}' not found"}, status=404)
+        
+        # Update or create the field value
+        try:
+            field_value_obj, created = CustomFieldValue.objects.update_or_create(
+                custom_field=custom_field,
+                user=user,
+                defaults={
+                    'value': field_value,
+                    'updated_at': timezone.now()
+                }
+            )
+            
+            action = "Created" if created else "Updated"
+            return JsonResponse({
+                'success': True,
+                'message': f"{action} {field_name}: {field_value}",
+                'custom_field': {
+                    'id': custom_field.id,
+                    'name': custom_field.name,
+                    'field_type': custom_field.field_type,
+                    'description': custom_field.description or '',
+                    'value': field_value
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    @staticmethod
+    def delete_user_custom_field(request):
+        """Delete a custom field value for a user"""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+        
+        import json
+        try:
+            data = json.loads(request.body)
+            user_id = data.get('user_id')
+            field_name = data.get('field_name')
+        except:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        
+        if not user_id or not field_name:
+            return JsonResponse({'error': 'Missing user_id or field_name'}, status=400)
+        
+        from ..models import CustomField, CustomFieldValue
+        
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        if not org_id and not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        # Get user and verify ownership
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return JsonResponse({'error': 'User not found'}, status=404)
+        
+        # Security check
+        if org_id and user.organization_id != org_id:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        if admin_id and str(user.admin_id_id) != str(admin_id):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        # Find the custom field
+        custom_field = None
+        if org_id:
+            custom_field = CustomField.objects.filter(
+                organization_id=org_id,
+                name=field_name,
+                is_active=True
+            ).first()
+        if not custom_field and admin_id:
+            custom_field = CustomField.objects.filter(
+                admin_id=admin_id,
+                name=field_name,
+                is_active=True
+            ).first()
+        
+        if not custom_field:
+            return JsonResponse({'error': f"Custom field '{field_name}' not found"}, status=404)
+        
+        # Delete the field value
+        try:
+            deleted, _ = CustomFieldValue.objects.filter(
+                custom_field=custom_field,
+                user=user
+            ).delete()
+            
+            if deleted:
+                return JsonResponse({
+                    'success': True,
+                    'message': f"Deleted {field_name}"
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': f"No value found for {field_name}"
+                })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)

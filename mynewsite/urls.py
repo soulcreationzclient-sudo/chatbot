@@ -110,6 +110,13 @@ urlpatterns = [
     path('api/tag/create/', Settingcontroller.tag_create, name='settings_tag_create'),
     path('api/tag/<int:tag_id>/update/', Settingcontroller.tag_update, name='settings_tag_update'),
     path('api/tag/<int:tag_id>/delete/', Settingcontroller.tag_delete, name='settings_tag_delete'),
+
+    # Custom Field Management
+    path('setting/custom_fields', Settingcontroller.custom_fields_view, name='custom_fields_view'),
+    path('api/custom-field/create/', Settingcontroller.custom_field_create, name='custom_field_create'),
+    path('api/custom-field/<int:field_id>/update/', Settingcontroller.custom_field_update, name='custom_field_update'),
+    path('api/custom-field/<int:field_id>/delete/', Settingcontroller.custom_field_delete, name='custom_field_delete'),
+    path('api/custom-field/list/', Settingcontroller.custom_field_list, name='custom_field_list'),
     path('whatsapp_connect',whatsappcontroller.connect,name='whatsapp_connect'),
     #path('admin/connect_google_calendar/', Integrationcontroller.connect_google_calendar, name='connect_google_calendar'),
     #path('admin/disconnect_google_calendar/', Integrationcontroller.disconnect_google_calendar, name='disconnect_google_calendar'),
@@ -194,6 +201,10 @@ urlpatterns = [
     
     # ==================== INBOX RESTORE (Soft-delete support) ====================
     path('api/inbox/restore_user/<int:user_id>/', Inboxcontroller.restore_user, name='inbox_restore_user'),
+    # Inbox Custom Fields API
+    path('api/inbox/custom_fields/', Inboxcontroller.get_user_custom_fields, name='inbox_get_custom_fields'),
+    path('api/inbox/custom_field/update/', Inboxcontroller.update_user_custom_field, name='inbox_update_custom_field'),
+    path('api/inbox/custom_field/delete/', Inboxcontroller.delete_user_custom_field, name='inbox_delete_custom_field'),
     
 ]
 
