@@ -308,9 +308,8 @@ def process_response_with_custom_fields(response_text, admin, user, organization
             result['fields_processed'] += 1
             # Format the value for display
             display_value = format_custom_field_for_display(custom_field, cleaned_value)
-            # Replace the tag with a description
-            replacement = f"[{custom_field.name}: {display_value}]"
-            remaining_text = remaining_text.replace(full_tag, replacement).strip()
+            # Remove the tag completely from the message (value already saved)
+            remaining_text = remaining_text.replace(full_tag, '').strip()
             processed_fields.append({
                 'field_name': field_name,
                 'value': cleaned_value,
