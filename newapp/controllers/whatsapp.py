@@ -935,23 +935,23 @@ If the user's question relates to this document, answer based on your analysis a
                                 with open('debug_log.txt', 'a') as f:
                                     f.write(f"[Debug] Actions executed: {len(action_result.get('actions_executed', []))}\n")
 
-                                # 2.5 Process Custom Field Tags (after image processing)
-                                    from newapp.custom_field_processor import process_response_with_custom_fields
-                                    
-                                    cf_result = process_response_with_custom_fields(
-                                        final_reply_text,
-                                        admin_check,
-                                        existing_user,
-                                        organization=org_check
-                                    )
-                                    
-                                    # Update final_reply_text with custom field tags replaced
-                                    final_reply_text = cf_result.get('final_text', final_reply_text)
-                                    
-                                    if cf_result.get('fields_processed', 0) > 0:
-                                        print(f"[CustomFields] Processed {cf_result['fields_processed']} field(s) for user {existing_user.phone_no}")
-                                    if cf_result.get('fields_failed', 0) > 0:
-                                        print(f"[CustomFields] Failed to process {cf_result['fields_failed']} field(s)")
+                                # 2.5 Process Custom Field Tags (after action processing)
+                                from newapp.custom_field_processor import process_response_with_custom_fields
+                                
+                                cf_result = process_response_with_custom_fields(
+                                    final_reply_text,
+                                    admin_check,
+                                    existing_user,
+                                    organization=org_check
+                                )
+                                
+                                # Update final_reply_text with custom field tags replaced
+                                final_reply_text = cf_result.get('final_text', final_reply_text)
+                                
+                                if cf_result.get('fields_processed', 0) > 0:
+                                    print(f"[CustomFields] Processed {cf_result['fields_processed']} field(s) for user {existing_user.phone_no}")
+                                if cf_result.get('fields_failed', 0) > 0:
+                                    print(f"[CustomFields] Failed to process {cf_result['fields_failed']} field(s)")
 
                                 # 3. Process Image Tags
                                 from newapp.image_tag_processor import process_image_tags
