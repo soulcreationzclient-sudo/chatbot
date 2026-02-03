@@ -252,8 +252,8 @@ class Inboxcontroller:
         if not user_id:
             return JsonResponse({'error': 'Missing user_id'}, status=400)
         
-        from ..models import CustomFieldValue
-        from .custom_field_processor import format_custom_fields_for_inbox
+        from ..models import CustomFieldValue, Admin, Organization
+        from newapp.custom_field_processor import format_custom_fields_for_inbox
         
         try:
             # Get user and verify ownership
@@ -270,8 +270,16 @@ class Inboxcontroller:
             if admin_id and str(user.admin_id_id) != str(admin_id):
                 return JsonResponse({'error': 'Permission denied'}, status=403)
             
+            # Get admin/org objects for the processor
+            admin = None
+            org = None
+            if org_id:
+                org = Organization.objects.filter(id=org_id).first()
+            if admin_id:
+                admin = Admin.objects.filter(id=admin_id).first()
+            
             # Get custom field values formatted for inbox
-            fields = format_custom_fields_for_inbox(user, None, None)
+            fields = format_custom_fields_for_inbox(user, admin, org)
             
             return JsonResponse({
                 'success': True,
@@ -279,6 +287,8 @@ class Inboxcontroller:
                 'custom_fields': fields
             })
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return JsonResponse({'error': str(e)}, status=500)
 
     @staticmethod
