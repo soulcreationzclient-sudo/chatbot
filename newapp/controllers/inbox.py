@@ -244,6 +244,7 @@ class Inboxcontroller:
 
 
     @staticmethod
+    @csrf_exempt
     def get_user_custom_fields(request):
         """Get all custom field values for a specific user"""
         user_id = request.GET.get('user_id')
@@ -281,6 +282,7 @@ class Inboxcontroller:
             return JsonResponse({'error': str(e)}, status=500)
 
     @staticmethod
+    @csrf_exempt
     def update_user_custom_field(request):
         """Update a custom field value for a user"""
         if request.method != 'POST':
@@ -362,6 +364,7 @@ class Inboxcontroller:
             return JsonResponse({'error': str(e)}, status=500)
 
     @staticmethod
+    @csrf_exempt
     def delete_user_custom_field(request):
         """Delete a custom field value for a user"""
         if request.method != 'POST':

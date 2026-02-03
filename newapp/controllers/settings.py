@@ -1,5 +1,6 @@
 from django.http import HttpResponse
 from django.shortcuts import render,redirect
+from django.views.decorators.csrf import csrf_exempt
 from ..models import Admin
 
 class Settingcontroller :
@@ -353,6 +354,7 @@ class Settingcontroller :
         return render(request, 'set/image_assets.html', {'assets': assets})
     
     @staticmethod
+    @csrf_exempt
     def image_asset_create(request):
         from django.http import JsonResponse
         from ..models import ImageAsset, Organization
