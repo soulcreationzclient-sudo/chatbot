@@ -236,3 +236,33 @@ Logs are automatically rotated:
 - Individual logs: 10MB max, 5 backups
 - Combined log: 50MB max, 10 backups
 
+### Practical Debugging Commands
+
+```bash
+# Find messages from a specific time (use Unix timestamp prefix)
+grep "timestamp=177" ~/speedbot/logs/webhook.log
+
+# Find all messages from a specific phone number
+grep "from=919327606510" ~/speedbot/logs/webhook.log
+
+# Check for duplicate messages that were skipped
+grep "Skipping duplicate" ~/speedbot/logs/webhook.log
+
+# View message delivery status
+grep "status=" ~/speedbot/logs/webhook.log
+
+# Find errors
+grep "ERROR\|❌" ~/speedbot/logs/combined.log
+
+# Track a specific message by ID
+grep "wamid.HBgM" ~/speedbot/logs/webhook.log
+```
+
+### Sample Log Output
+```
+2026-02-03 09:39:23 | 🔍 DEBUG    | [RAW_WEBHOOK] Received data: {"object": "whatsapp_business_account"...
+2026-02-03 09:39:23 | 📝 INFO     | [INCOMING] 📨 type=text | from=919327606510 | source=phone_id=811624148710340 | content=hello buddy...
+2026-02-03 09:39:23 | 📝 INFO     | 📨 [INCOMING] msg_id=wamid.HBgM... | from=919327606510 | type=text | timestamp=1770091761 | creds_source=organization
+```
+
+
