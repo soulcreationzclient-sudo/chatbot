@@ -4,8 +4,10 @@ from django.db import transaction
 from newapp.models import User, Message, Admin, FollowUpMessage, ScheduledFollowUp
 import requests
 import logging
+from newapp.logging_config import get_logger, log_followup_event
 
-logger = logging.getLogger(__name__)
+# Use structured logger
+logger = get_logger('tasks')
 
 # Default follow-up message templates (used if no custom messages configured)
 DEFAULT_FOLLOWUP_MESSAGES = {

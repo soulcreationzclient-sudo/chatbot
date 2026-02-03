@@ -25,6 +25,10 @@ from newapp.tasks import send_followup_message, schedule_followup
 from newapp.models import AIAgentConfig
 from django.utils import timezone
 from datetime import timedelta
+from newapp.logging_config import get_logger, log_message_received, log_message_sent, log_error
+
+# Initialize structured logger for webhook
+webhook_logger = get_logger('webhook')
 
 
 def get_credentials(admin_check, org_check):
@@ -261,11 +265,13 @@ class whatsappcontroller:
         if request.method == 'POST':
             try:
                 data = json.loads(request.body.decode("utf-8"))
+                webhook_logger.debug(f"[RAW_WEBHOOK] Received data: {json.dumps(data)[:500]}")
                 print("Received webhook data:", data)
                 sys.stdout.flush()
 
                 entries = data.get('entry') or []
                 if not entries:
+                    webhook_logger.debug("[RAW_WEBHOOK] No entries in webhook data - acknowledging silently")
                     return HttpResponse("OK", status=200)  # acknowledge silently
 
                 for entry in entries:
@@ -293,6 +299,17 @@ class whatsappcontroller:
                             msg_text = None # Reset for each message iteration
                             msg_type = m.get('type')
                             phone = m.get('from')
+                            msg_id = m.get('id', 'unknown')
+                            timestamp = m.get('timestamp', 'unknown')
+                            
+                            # LOG INCOMING MESSAGE
+                            log_message_received(
+                                phone=phone,
+                                msg_type=msg_type,
+                                content=(m.get('text') or {}).get('body', f'[{msg_type}]'),
+                                source=f"phone_id={phone_number_id}"
+                            )
+                            webhook_logger.info(f"📨 [INCOMING] msg_id={msg_id} | from={phone} | type={msg_type} | timestamp={timestamp} | creds_source={creds['source']}")
                             
                             # Get user info from contacts
                             contacts = value.get('contacts', [])
