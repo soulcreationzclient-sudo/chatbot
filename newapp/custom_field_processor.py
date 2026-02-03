@@ -197,7 +197,7 @@ def save_custom_field_value(field, user, value, admin, organization=None):
             )
 
             action = "Created" if created else "Updated"
-            print(f"[CustomField] {action} custom field '{field.name}' for user {user.phone}: {value}")
+            print(f"[CustomField] {action} custom field '{field.name}' for user {user.phone_no}: {value}")
 
             return (True, f"{action} {field.name}: {value}", field_value)
 
