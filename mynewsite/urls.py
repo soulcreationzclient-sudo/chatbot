@@ -79,6 +79,7 @@ urlpatterns = [
     path('contact/delete/<int:id>/', Contactcontroller.delete_user, name='delete_user'),
     path('api/user/tag/add/', Contactcontroller.add_user_tag, name='add_user_tag'),
     path('api/user/tag/remove/', Contactcontroller.remove_user_tag, name='remove_user_tag'),
+    path('api/contact/search/', Contactcontroller.contact_search_api, name='contact_search_api'),
     
     # setting
     path('settings/',Settingcontroller.dashboard , name='settings'),

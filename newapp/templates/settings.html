@@ -1,0 +1,219 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Settings{% endblock %}
+
+{% block head_css %}
+<style>
+    :root {
+        --bg-page: #f8fafc;
+        --bg-card: #ffffff;
+        --border: #e5e7eb;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --primary: #2563eb;
+        --radius: 14px;
+    }
+
+    .settings-container {
+        padding: 28px 32px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .page-title {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 24px;
+    }
+
+    .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 24px;
+        margin-bottom: 20px;
+    }
+
+    .card-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .card-title svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .setting-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .setting-row:last-child {
+        border-bottom: none;
+    }
+
+    .setting-info h4 {
+        margin: 0 0 4px 0;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .setting-info p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .status-badge.connected {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-badge.disconnected {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-badge .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+
+    .btn {
+        background: #fff;
+        border: 1px solid var(--border);
+        color: var(--text-main);
+        border-radius: 8px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+        background: #f1f5f9;
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+    }
+
+    .btn-primary:hover {
+        background: #1d4ed8;
+    }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <h1 class="page-title">Settings</h1>
+
+    <div class="grid-2">
+        <!-- Channels Card -->
+        <div class="card">
+            <div class="card-title">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                </svg>
+                WhatsApp
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h4>WhatsApp Connection</h4>
+                    <p>Connect your WhatsApp Business account</p>
+                </div>
+                <span class="status-badge {% if whatsapp_connected %}connected{% else %}disconnected{% endif %}">
+                    <span class="dot"></span>
+                    {% if whatsapp_connected %}Connected{% else %}Not Connected{% endif %}
+                </span>
+            </div>
+            <div class="setting-row" style="justify-content: flex-end;">
+                <a href="{% url 'whatsapp_connect' %}" class="btn {% if whatsapp_connected %}btn-primary{% endif %}">
+                    {% if whatsapp_connected %}Manage Connection{% else %}Connect WhatsApp{% endif %}
+                </a>
+            </div>
+        </div>
+
+        <!-- Integration Card -->
+        <div class="card">
+            <div class="card-title">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                </svg>
+                Integrations
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h4>OpenAI (ChatGPT)</h4>
+                    <p>AI-powered responses for your chatbot</p>
+                </div>
+                <span class="status-badge {% if chatgpt_connected %}connected{% else %}disconnected{% endif %}">
+                    <span class="dot"></span>
+                    {% if chatgpt_connected %}Connected{% else %}Not Connected{% endif %}
+                </span>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h4>Calendly</h4>
+                    <p>Appointment booking integration</p>
+                </div>
+                <span class="status-badge {% if calendly_connected %}connected{% else %}disconnected{% endif %}">
+                    <span class="dot"></span>
+                    {% if calendly_connected %}Connected{% else %}Not Connected{% endif %}
+                </span>
+            </div>
+            <div class="setting-row" style="justify-content: flex-end;">
+                <a href="{% url 'integration_view' %}" class="btn btn-primary">Manage Integrations</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Links Card -->
+    <div class="card">
+        <div class="card-title">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+            Quick Links
+        </div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="{% url 'add_user' %}" class="btn">Add Contact</a>
+            <a href="{% url 'contact_dashboard' %}" class="btn">All Contacts</a>
+            <a href="{% url 'inbox_dashboard' %}" class="btn">Inbox</a>
+            <a href="{% url 'broadcast_dashboard' %}" class="btn">Broadcast</a>
+            <a href="{% url 'ai_agent_upload' %}" class="btn">AI Agent</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
