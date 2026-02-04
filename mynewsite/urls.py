@@ -205,6 +205,9 @@ urlpatterns = [
     path('api/inbox/custom_fields/', Inboxcontroller.get_user_custom_fields, name='inbox_get_custom_fields'),
     path('api/inbox/custom_field/update/', Inboxcontroller.update_user_custom_field, name='inbox_update_custom_field'),
     path('api/inbox/custom_field/delete/', Inboxcontroller.delete_user_custom_field, name='inbox_delete_custom_field'),
+    # Inbox User Logs API
+    path('api/inbox/user_logs/', Inboxcontroller.get_user_logs, name='inbox_get_user_logs'),
+    path('api/inbox/user_log/create/', Inboxcontroller.create_user_log, name='inbox_create_user_log'),
     
 ]
 

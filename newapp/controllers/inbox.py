@@ -447,3 +447,133 @@ class Inboxcontroller:
                 })
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
+
+    @staticmethod
+    @csrf_exempt
+    def get_user_logs(request):
+        """Get recent logs for a specific user (for inbox right panel)"""
+        user_id = request.GET.get('user_id')
+        days = request.GET.get('days', '1')  # Default: last 24 hours
+        log_type = request.GET.get('log_type')  # Optional filter by log type
+        limit = request.GET.get('limit', '50')  # Default limit: 50 logs
+
+        if not user_id:
+            return JsonResponse({'error': 'Missing user_id'}, status=400)
+
+        from ..models import UserLog
+        from datetime import datetime, timedelta
+
+        try:
+            # Get user and verify ownership
+            user = User.objects.filter(id=user_id).first()
+            if not user:
+                return JsonResponse({'error': 'User not found'}, status=404)
+
+            org_id = request.session.get('organization_id')
+            admin_id = request.session.get('admin_id')
+
+            # Security check
+            if org_id and user.organization_id != org_id:
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+            if admin_id and str(user.admin_id_id) != str(admin_id):
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+
+            # Build query with filters
+            from django.utils import timezone
+            now = timezone.now()
+            days_ago = now - timedelta(days=int(days))
+
+            logs_query = UserLog.objects.filter(
+                user=user,
+                created_at__gte=days_ago
+            )
+
+            # Optional log_type filter
+            if log_type:
+                logs_query = logs_query.filter(log_type=log_type)
+
+            # Order by newest first and apply limit
+            logs = logs_query.order_by('-created_at')[:int(limit)]
+
+            # Format logs for response
+            logs_data = []
+            for log in logs:
+                logs_data.append({
+                    'id': log.id,
+                    'log_type': log.log_type,
+                    'level': log.level,
+                    'message': log.message,
+                    'metadata': log.metadata or {},
+                    'created_at': log.created_at.isoformat()
+                })
+
+            return JsonResponse({
+                'success': True,
+                'user_id': user_id,
+                'count': len(logs_data),
+                'logs': logs_data
+            })
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'error': str(e)}, status=500)
+
+    @staticmethod
+    @csrf_exempt
+    def create_user_log(request):
+        """Create a new log entry for a user (used by other parts of the app)"""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+
+        import json
+        try:
+            data = json.loads(request.body)
+            user_id = data.get('user_id')
+            log_type = data.get('log_type', 'system')
+            level = data.get('level', 'info')
+            message = data.get('message')
+            metadata = data.get('metadata', {})
+        except:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        if not user_id or not message:
+            return JsonResponse({'error': 'Missing user_id or message'}, status=400)
+
+        from ..models import UserLog
+
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+
+        if not org_id and not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+        # Get user and verify ownership
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return JsonResponse({'error': 'User not found'}, status=404)
+
+        # Security check
+        if org_id and user.organization_id != org_id:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        if admin_id and str(user.admin_id_id) != str(admin_id):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+
+        try:
+            log = UserLog.objects.create(
+                user=user,
+                admin_id=admin_id,
+                organization_id=org_id,
+                log_type=log_type,
+                level=level,
+                message=message,
+                metadata=metadata
+            )
+
+            return JsonResponse({
+                'success': True,
+                'log_id': log.id,
+                'message': 'Log created successfully'
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+

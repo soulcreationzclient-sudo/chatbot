@@ -477,6 +477,51 @@ class CustomFieldValue(models.Model):
         ]
 
 
+
+
+class UserLog(models.Model):
+    """
+    Track user-related logs for the inbox right panel.
+    Includes message send failures, API errors, custom field updates, window closed events, etc.
+    """
+    LOG_TYPE_CHOICES = [
+        ('message_failed', 'Message Failed'),
+        ('api_error', 'API Error'),
+        ('custom_field_update', 'Custom Field Update'),
+        ('window_closed', 'Window Closed'),
+        ('bot_toggle', 'Bot Toggle'),
+        ('tag_update', 'Tag Update'),
+        ('system', 'System'),
+    ]
+
+    LOG_LEVEL_CHOICES = [
+        ('error', 'Error'),
+        ('warning', 'Warning'),
+        ('info', 'Info'),
+        ('success', 'Success'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='logs')
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True, related_name='user_logs')
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, null=True, blank=True, related_name='user_logs')
+    log_type = models.CharField(max_length=50, choices=LOG_TYPE_CHOICES, default='info')
+    level = models.CharField(max_length=20, choices=LOG_LEVEL_CHOICES, default='info')
+    message = models.TextField(help_text="The log message/details")
+    metadata = models.JSONField(default=dict, blank=True, help_text="Additional JSON metadata")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return f"{self.user.phone_no} - {self.log_type}: {self.message[:50]}"
+
+    class Meta:
+        db_table = 'user_logs'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['log_type', 'created_at']),
+        ]
+
 # ==================== BROADCAST SYSTEM MODELS ====================
 
 class WhatsAppTemplate(models.Model):

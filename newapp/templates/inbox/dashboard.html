@@ -195,6 +195,18 @@
   }
 
   /* RESPONSIVE */
+  @media (max-width: 1200px) {
+    .right-panel {
+      width: 260px;
+    }
+  }
+
+  @media (max-width: 992px) {
+    .right-panel {
+      display: none;
+    }
+  }
+
   @media (max-width: 768px) {
     .list {
       width: 100%;
@@ -204,6 +216,298 @@
     .inbox-container {
       flex-direction: column;
     }
+  }
+
+  /* RIGHT PANEL - Always Visible */
+  .right-panel {
+    width: 300px;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .right-panel-head {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    background: #fff;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .right-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .right-panel-section {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .right-panel-section:last-child {
+    border-bottom: none;
+  }
+
+  /* TAGS SECTION */
+  .tags-section {
+    padding: 16px;
+  }
+
+  .tags-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .tags-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-main);
+  }
+
+  .tags-add-btn {
+    color: var(--blue);
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: none;
+  }
+
+  .tags-add-btn:hover {
+    text-decoration: underline;
+  }
+
+  .tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+
+  .tag-pill:hover {
+    opacity: 0.8;
+  }
+
+  .tag-pill .tag-remove {
+    margin-left: 4px;
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .tag-empty {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* CUSTOM FIELDS SECTION */
+  .custom-fields-section {
+    padding: 16px;
+  }
+
+  .custom-fields-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .custom-fields-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-main);
+  }
+
+  .custom-field-item {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .custom-field-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .custom-field-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .custom-field-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-main);
+    word-break: break-word;
+  }
+
+  .custom-field-value.editable {
+    cursor: pointer;
+    padding: 4px 8px;
+    margin: -4px -8px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+  }
+
+  .custom-field-value.editable:hover {
+    background: #e5e7eb;
+  }
+
+  .custom-field-empty {
+    text-align: center;
+    padding: 20px 10px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ACCORDION / ERROR LOGS SECTION */
+  .accordion-section {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    background: #fff;
+    transition: background 0.15s ease;
+  }
+
+  .accordion-header:hover {
+    background: #f9fafb;
+  }
+
+  .accordion-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-main);
+  }
+
+  .accordion-icon {
+    font-size: 12px;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+  }
+
+  .accordion-icon.expanded {
+    transform: rotate(90deg);
+  }
+
+  .accordion-content {
+    display: none;
+    padding: 0 16px 16px;
+    background: #f9fafb;
+  }
+
+  .accordion-content.show {
+    display: block;
+  }
+
+  /* ERROR LOGS STYLING */
+  .error-logs-container {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .log-entry {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid #e5e7eb;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+    font-size: 12px;
+  }
+
+  .log-entry:last-child {
+    border-bottom: none;
+  }
+
+  .log-time {
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .log-level {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    width: 50px;
+    text-align: center;
+  }
+
+  .log-level.error {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+
+  .log-level.warning {
+    background: #fef3c7;
+    color: #d97706;
+  }
+
+  .log-level.info {
+    background: #e0e7ff;
+    color: #4f46e5;
+  }
+
+  .log-level.success {
+    background: #dcfce7;
+    color: #16a34a;
+  }
+
+  .log-message {
+    color: var(--text-main);
+    word-break: break-word;
+  }
+
+  .logs-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .logs-loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+  }
+
+  .logs-error {
+    text-align: center;
+    padding: 20px;
+    color: #dc2626;
+    font-size: 13px;
+  }
+
+  .copy-logs-btn {
+    margin-top: 10px;
+    width: 100%;
   }
 </style>
 {% endblock %}
@@ -269,32 +573,69 @@
       {% endif %}
     </div>
 
-      <!-- Custom Fields Sidebar -->
-  <section class="custom-fields-panel" id="customFieldsPanel" style="display:none;">
-    <div class="custom-fields-head">
-      <span>📋 Custom Fields</span>
-      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="closeCustomFieldsPanel()" title="Close">
-        ✕
-      </button>
+      <!-- Right Panel - Custom Fields, Tags, and Error Logs -->
+  <section class="right-panel" id="rightPanel">
+    <!-- Tags Section -->
+    <div class="right-panel-section tags-section">
+      <div class="tags-header">
+        <span class="tags-title">Tags</span>
+        <a href="javascript:void(0)" class="tags-add-btn" onclick="addTag()">+ Add New</a>
+      </div>
+      <div class="tags-container" id="tagsContainer">
+        <span class="tag-empty">No tags</span>
+      </div>
     </div>
-    <div class="custom-fields-body" id="customFieldsBody">
-      <p class="text-muted text-center">Loading...</p>
-    </div>
-    <div class="custom-fields-footer">
-      <button type="button" class="btn btn-sm btn-primary w-100" onclick="showAddCustomFieldModal()">
+
+    <!-- Custom Fields Section -->
+    <div class="right-panel-section custom-fields-section">
+      <div class="custom-fields-header">
+        <span class="custom-fields-title">📋 Custom Fields</span>
+      </div>
+      <div id="customFieldsBody">
+        <p class="custom-field-empty">Loading...</p>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary w-100 mt-3" onclick="showAddCustomFieldModal()">
         + Add Custom Field
       </button>
     </div>
-  </section>
 
-  <style>
-    .custom-fields-panel {
-      width: 280px;
-      background: var(--bg-panel);
-      border-left: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
+    <!-- Error Logs Accordion Section -->
+    <div class="accordion-section">
+      <div class="accordion-header" onclick="toggleAccordion('errorLogsAccordion')">
+        <span class="accordion-title">Error Logs</span>
+        <span class="accordion-icon" id="errorLogsAccordionIcon">›</span>
+      </div>
+      <div class="accordion-content" id="errorLogsAccordion">
+        <div id="errorLogsContainer">
+          <div class="logs-loading">Loading...</div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary copy-logs-btn" onclick="copyErrorLogs()">
+          📋 Copy Logs
+        </button>
+      </div>
+    </div>
+
+    <!-- More Accordion Sections (placeholder for future) -->
+    <div class="accordion-section">
+      <div class="accordion-header" onclick="toggleAccordion('mediaFilesAccordion')">
+        <span class="accordion-title">Media and Files</span>
+        <span class="accordion-icon" id="mediaFilesAccordionIcon">›</span>
+      </div>
+      <div class="accordion-content" id="mediaFilesAccordion">
+        <div class="logs-empty">No files</div>
+      </div>
+    </div>
+
+    <div class="accordion-section">
+      <div class="accordion-header" onclick="toggleAccordion('executedFlowsAccordion')">
+        <span class="accordion-title">Executed Flows/Steps</span>
+        <span class="accordion-icon" id="executedFlowsAccordionIcon">›</span>
+      </div>
+      <div class="accordion-content" id="executedFlowsAccordion">
+        <div class="logs-empty">No flows executed</div>
+      </div>
+    </div>
+  </section>      flex-shrink: 0;
     }
     
     .custom-fields-head {
@@ -1174,5 +1515,465 @@
   if (botToggleBtn) {
     botToggleBtn.insertAdjacentHTML('afterend', toggleCustomFieldsBtn);
   }
+
+
+// ============================================
+// RIGHT PANEL - AUTO LOAD & ERROR LOGS
+// ============================================
+
+let rightPanelInitialized = false;
+
+/**
+ * Initialize right panel - load custom fields and error logs for selected user
+ */
+async function initRightPanel() {
+    const currentUserId = getCurrentUserId();
+    
+    if (!currentUserId) {
+        // No user selected - show placeholder content
+        showRightPanelPlaceholder();
+        return;
+    }
+    
+    // Load both custom fields and error logs in parallel
+    await Promise.all([
+        loadUserCustomFields(currentUserId),
+        loadUserErrorLogs(currentUserId),
+        loadUserTags(currentUserId)
+    ]);
+    
+    rightPanelInitialized = true;
+}
+
+/**
+ * Get current selected user ID from various sources
+ */
+function getCurrentUserId() {
+    // Try from template variable first
+    const templateUserId = "{{ selected_user.id|default:'' }}";
+    if (templateUserId && templateUserId !== '') {
+        return templateUserId;
+    }
+    
+    // Try from currentUserId variable
+    if (typeof currentUserId !== 'undefined' && currentUserId) {
+        return currentUserId;
+    }
+    
+    // Try from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('user_id');
+    if (userId) {
+        return userId;
+    }
+    
+    return null;
+}
+
+/**
+ * Show placeholder content when no user is selected
+ */
+function showRightPanelPlaceholder() {
+    const customFieldsBody = document.getElementById('customFieldsBody');
+    const errorLogsContainer = document.getElementById('errorLogsContainer');
+    const tagsContainer = document.getElementById('tagsContainer');
+    
+if (customFieldsBody) {
+        customFieldsBody.innerHTML = '<p class="custom-field-empty">Select a conversation to view custom fields</p>';
+    }
+    
+    if (errorLogsContainer) {
+        errorLogsContainer.innerHTML = '<div class="logs-empty">Select a conversation to view error logs</div>';
+    }
+    
+    if (tagsContainer) {
+        tagsContainer.innerHTML = '<span class="tag-empty">No tags</span>';
+    }
+}
+
+/**
+ * Load error logs for a specific user
+ */
+async function loadUserErrorLogs(userId) {
+    const container = document.getElementById('errorLogsContainer');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="logs-loading">Loading...</div>';
+    
+    try {
+        const res = await fetch(`/api/inbox/user_logs/?user_id=${userId}`);
+        const data = await res.json();
+        
+        if (!data.success) {
+            container.innerHTML = `<div class="logs-error">${data.error || 'Failed to load error logs'}</div>`;
+            return;
+        }
+        
+        const logs = data.logs || [];
+        
+        if (logs.length === 0) {
+            container.innerHTML = '<div class="logs-empty">No error logs for this user</div>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="error-logs-container">
+                ${logs.map(log => createLogEntryHTML(log)).join('')}
+            </div>
+        `;
+    } catch (e) {
+        container.innerHTML = '<div class="logs-error">Failed to load error logs</div>';
+        console.error('Error loading user logs:', e);
+    }
+}
+
+/**
+ * Create HTML for a single log entry
+ */
+function createLogEntryHTML(log) {
+    const time = formatLogTime(log.timestamp);
+    const levelClass = `log-level ${log.level || 'info'}`;
+    const levelLabel = (log.level || 'info').toUpperCase();
+    
+    return `
+        <div class="log-entry">
+            <span class="log-time">${time}</span>
+            <span class="${levelClass}">${levelLabel}</span>
+            <span class="log-message">${escapeHtml(log.message || '')}</span>
+        </div>
+    `;
+}
+
+/**
+ * Format log timestamp for display
+ */
+function formatLogTime(timestamp) {
+    if (!timestamp) return '--:--';
+    
+    try {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+        });
+    } catch (e) {
+        return '--:--';
+    }
+}
+
+/**
+ * Toggle accordion section
+ */
+function toggleAccordion(accordionId) {
+    const content = document.getElementById(accordionId);
+    const icon = document.getElementById(accordionId + 'Icon');
+    
+    if (!content || !icon) return;
+    
+    content.classList.toggle('show');
+    icon.classList.toggle('expanded');
+}
+
+/**
+ * Copy error logs to clipboard
+ */
+async function copyErrorLogs() {
+    const container = document.getElementById('errorLogsContainer');
+    if (!container) return;
+    
+    const logs = container.querySelectorAll('.log-entry');
+    if (logs.length === 0) {
+        alert('No logs to copy');
+        return;
+    }
+    
+    let text = 'Error Logs\n';
+    text += '==========\n\n';
+    
+    logs.forEach(log => {
+        const time = log.querySelector('.log-time')?.textContent || '';
+        const level = log.querySelector('.log-level')?.textContent || '';
+        const message = log.querySelector('.log-message')?.textContent || '';
+        text += `[${time}] [${level}] ${message}\n`;
+    });
+    
+    try {
+        await navigator.clipboard.writeText(text);
+        alert('Logs copied to clipboard!');
+    } catch (e) {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('Logs copied to clipboard!');
+    }
+}
+
+/**
+ * Load tags for a specific user
+ */
+async function loadUserTags(userId) {
+    const container = document.getElementById('tagsContainer');
+    if (!container) return;
+    
+    container.innerHTML = '<span class="tag-empty">Loading...</span>';
+    
+    try {
+        const res = await fetch(`/api/inbox/user_tags/?user_id=${userId}`);
+        const data = await res.json();
+        
+        if (!data.success) {
+            container.innerHTML = '<span class="tag-empty">Failed to load tags</span>';
+            return;
+        }
+        
+        const tags = data.tags || [];
+        
+        if (tags.length === 0) {
+            container.innerHTML = '<span class="tag-empty">No tags</span>';
+            return;
+        }
+        
+        container.innerHTML = tags.map(tag => `
+            <span class="tag-pill" style="background-color: ${tag.color || '#e5e7eb'}; color: ${getContrastColor(tag.color || '#e5e7eb')}" 
+                  onclick="removeTag('${tag.id}')" title="Click to remove">
+                ${escapeHtml(tag.name)}
+                <span class="tag-remove">×</span>
+            </span>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<span class="tag-empty">Failed to load tags</span>';
+        console.error('Error loading tags:', e);
+    }
+}
+
+/**
+ * Get contrasting text color for tag background
+ */
+function getContrastColor(hexColor) {
+    if (!hexColor || !hexColor.startsWith('#')) return '#000000';
+    
+    const r = parseInt(hexColor.slice(1, 3), 16);
+    const g = parseInt(hexColor.slice(3, 5), 16);
+    const b = parseInt(hexColor.slice(5, 7), 16);
+    
+    // Calculate luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    return luminance > 0.5 ? '#000000' : '#ffffff';
+}
+
+/**
+ * Add new tag to user
+ */
+async function addTag() {
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) {
+        alert('Please select a conversation first');
+        return;
+    }
+    
+    const tagName = prompt('Enter tag name:');
+    if (!tagName || !tagName.trim()) return;
+    
+    try {
+        const res = await fetch('/api/inbox/user_tag/add/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                user_id: currentUserId,
+                tag_name: tagName.trim()
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            await loadUserTags(currentUserId);
+            showNotification(`Tag "${tagName}" added`);
+        } else {
+            alert('Error: ' + (data.error || 'Failed to add tag'));
+        }
+    } catch (e) {
+        alert('Network error');
+        console.error(e);
+    }
+}
+
+/**
+ * Remove tag from user
+ */
+async function removeTag(tagId) {
+    if (!confirm('Remove this tag?')) return;
+    
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) return;
+    
+    try {
+        const res = await fetch('/api/inbox/user_tag/remove/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                user_id: currentUserId,
+                tag_id: tagId
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            await loadUserTags(currentUserId);
+            showNotification('Tag removed');
+        } else {
+            alert('Error: ' + (data.error || 'Failed to remove tag'));
+        }
+    } catch (e) {
+        alert('Network error');
+        console.error(e);
+    }
+}
+
+/**
+ * Refresh right panel data when user changes
+ */
+async function refreshRightPanel() {
+    console.log('Refreshing right panel for current user...');
+    await initRightPanel();
+}
+
+/**
+ * Show notification toast
+ */
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-success position-fixed';
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+    notification.innerHTML = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// ============================================
+// ENHANCE EXISTING DOMContentLoaded
+// ============================================
+
+// Store the original DOMContentLoaded handlers
+const originalDOMContentLoadedHandlers = [];
+
+// Wrap existing DOMContentLoaded
+const newDOMContentLoaded = function() {
+    // Call original handlers first
+    originalDOMContentLoadedHandlers.forEach(handler => {
+        if (typeof handler === 'function') {
+            try {
+                handler();
+            } catch (e) {
+                console.error('Error in DOMContentLoaded handler:', e);
+            }
+        }
+    });
+    
+    // Initialize right panel
+    initRightPanel();
+    
+    // Set up user list click handlers to refresh right panel
+    setupUserListClickHandlers();
+};
+
+/**
+ * Set up click handlers for user list items to refresh right panel
+ */
+function setupUserListClickHandlers() {
+    const userListContainer = document.getElementById('userListContainer');
+    if (!userListContainer) return;
+    
+    // Use event delegation for dynamically loaded user items
+    userListContainer.addEventListener('click', function(e) {
+        const userItem = e.target.closest('.item');
+        if (userItem) {
+            // Refresh right panel when user item is clicked
+            refreshRightPanel();
+        }
+    });
+}
+
+// ============================================
+// PATCH EXISTING FUNCTIONS
+// ============================================
+
+// Store original functions
+const originalLoadUserCustomFields = window.loadUserCustomFields;
+
+// Override loadUserCustomFields to update the right panel
+window.loadUserCustomFields = async function(userId) {
+    const body = document.getElementById('customFieldsBody');
+    if (!body) {
+        // Fallback to original if right panel element doesn't exist
+        if (originalLoadUserCustomFields) {
+            return originalLoadUserCustomFields(userId);
+        }
+        return;
+    }
+    
+    body.innerHTML = '<p class="custom-field-empty">Loading...</p>';
+    
+    try {
+        const res = await fetch(`/api/inbox/custom_fields/?user_id=${userId}`);
+        const data = await res.json();
+        
+        if (!data.success) {
+            body.innerHTML = `<p class="custom-field-empty" style="color: #dc2626;">${data.error || 'Failed to load'}</p>`;
+            return;
+        }
+        
+        const fields = data.custom_fields;
+        
+        if (fields.length === 0) {
+            body.innerHTML = `
+                <div class="custom-field-empty">
+                    <p>No custom fields captured yet.</p>
+                    <p class="small">Fields captured via AI prompts will appear here.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        body.innerHTML = fields.map(f => `
+            <div class="custom-field-item" data-field-name="${f.field_name}">
+                <div class="custom-field-label">${f.field_name}</div>
+                <div class="custom-field-value editable"
+                     onclick="editCustomField('${f.field_name}', '${escapeHtml(f.value || '')}')"
+                     id="cf-value-${f.field_name}">
+                    ${escapeHtml(f.value || '-')}
+                </div>
+                <div class="custom-field-actions">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editCustomField('${f.field_name}', '${escapeHtml(f.value || '')}')">Edit</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomField('${f.field_name}')">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        body.innerHTML = '<p class="custom-field-empty" style="color: #dc2626;">Failed to load custom fields</p>';
+        console.error(e);
+    }
+};
+
+// Replace the DOMContentLoaded listener with our enhanced version
+document.addEventListener('DOMContentLoaded', newDOMContentLoaded);
+
+
 </script>
 {% endblock %}
