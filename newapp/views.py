@@ -961,6 +961,30 @@ def send_inbox_message(request):
         if not user_obj:
             return JsonResponse({"error": "User not found."}, status=404)
         
+        # Check 24-hour window - get user's last inbound message
+        from datetime import timedelta
+        last_user_msg = Message.objects.filter(
+            user_id=user_obj, 
+            who='user'  # 'user' = inbound from customer
+        ).order_by('-created_at').first()
+        
+        if last_user_msg:
+            time_since_last_msg = timezone.now() - last_user_msg.created_at
+            if time_since_last_msg > timedelta(hours=24):
+                hours_ago = int(time_since_last_msg.total_seconds() / 3600)
+                return JsonResponse({
+                    "error": f"24-hour conversation window has expired. User last messaged {hours_ago} hours ago. They must message first to reopen the window.",
+                    "window_expired": True,
+                    "hours_since_last_message": hours_ago
+                }, status=403)
+        else:
+            # No inbound messages from user ever - window never opened
+            return JsonResponse({
+                "error": "This user has never messaged you. They must initiate conversation first.",
+                "window_expired": True,
+                "hours_since_last_message": None
+            }, status=403)
+        
         # Send message to WhatsApp
         if whatsapp_phone_id and whatsapp_token:
             whatsapp_api_url = f"https://graph.facebook.com/v17.0/{whatsapp_phone_id}/messages"

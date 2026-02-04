@@ -62,10 +62,31 @@ class Inboxcontroller:
             all_tags = Tag.objects.none()
         selected_user = None
         messages = []
+        
+        # 24-hour window check variables
+        window_expired = False
+        hours_since_last_message = None
 
         if selected_user_id:
             selected_user = User.objects.filter(id=selected_user_id).first()
             messages = Message.objects.filter(user_id=selected_user_id).order_by('created_at', 'id')
+            
+            # Check 24-hour window for selected user
+            if selected_user:
+                from datetime import timedelta
+                last_user_msg = Message.objects.filter(
+                    user_id=selected_user, 
+                    who='user'  # 'user' = inbound from customer
+                ).order_by('-created_at').first()
+                
+                if last_user_msg:
+                    time_since_last_msg = timezone.now() - last_user_msg.created_at
+                    hours_since_last_message = int(time_since_last_msg.total_seconds() / 3600)
+                    if time_since_last_msg > timedelta(hours=24):
+                        window_expired = True
+                else:
+                    # No inbound messages from user ever - window never opened
+                    window_expired = True
 
         
         if request.GET.get('ajax'):
@@ -79,6 +100,8 @@ class Inboxcontroller:
             'selected_user': selected_user,
             'messages': messages,
             'all_tags': all_tags,
+            'window_expired': window_expired,
+            'hours_since_last_message': hours_since_last_message,
         })
 
     def get_new_messages(request):

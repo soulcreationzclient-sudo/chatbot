@@ -522,7 +522,7 @@
         <select id="tagFilter" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
           <option value="">All Tags</option>
           {% for t in all_tags %}
-          <option value="{{ t.id }}" {% if request.GET.tag_id == t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}
+          <option value="{{ t.id }}" {% if request.GET.tag_id==t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}
           </option>
           {% endfor %}
         </select>
@@ -539,7 +539,8 @@
   <section class="thread">
     <div class="thread-head">
       {% if selected_user %}
-      <div class="avatar" style="width:36px;height:36px">{{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
+      <div class="avatar" style="width:36px;height:36px">{{
+        selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
       <div style="flex:1">
         <div style="font-weight:700">{{ selected_user.name|default:"User" }}</div>
         <div class="text-muted" style="font-size:12px">{{ selected_user.phone_no }}</div>
@@ -575,6 +576,17 @@
 
     <!-- Chat Input Form -->
     <div class="p-3 border-top" style="background:#fff;">
+      {% if window_expired %}
+      <!-- 24-hour window expired warning -->
+      <div class="alert alert-warning mb-0 d-flex align-items-center" style="border-radius:8px;">
+        <span class="me-2" style="font-size:20px;">⏰</span>
+        <div>
+          <strong>24-hour window expired</strong><br>
+          <small>User must message first to reopen the conversation window.{% if hours_since_last_message %} Last
+            message was {{ hours_since_last_message }} hours ago.{% endif %}</small>
+        </div>
+      </div>
+      {% else %}
       <form id="chatForm" onsubmit="return sendMessage(event);">
         <div class="input-group">
           <input type="file" id="mediaInput" style="display:none;" onchange="handleFileUpload(this)">
@@ -591,7 +603,9 @@
           <button type="submit" class="btn btn-primary">Send</button>
         </div>
       </form>
+      {% endif %}
     </div>
+
   </section>
 
   <!-- Right Panel - Custom Fields, Tags, and Error Logs -->
@@ -1133,7 +1147,7 @@
   // Polling Logic
   let lastMessageId = 0;
   {% if messages %}
-  lastMessageId = {{ messages.last.id |default:0 }};
+  lastMessageId = {{ messages.last.id |default: 0 }};
   {% endif %}
   const currentUserId = "{{ selected_user.id|default:'' }}";
 
