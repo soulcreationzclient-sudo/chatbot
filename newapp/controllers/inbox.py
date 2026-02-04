@@ -242,6 +242,46 @@ class Inboxcontroller:
         
         return JsonResponse({'assets': asset_list})
 
+    @staticmethod
+    @csrf_exempt
+    def get_user_tags(request):
+        """Get all tags for a specific user"""
+        user_id = request.GET.get('user_id')
+        
+        if not user_id:
+            return JsonResponse({'error': 'Missing user_id'}, status=400)
+        
+        from ..models import UserTag
+        
+        try:
+            # Get user and verify ownership
+            user = User.objects.filter(id=user_id).first()
+            if not user:
+                return JsonResponse({'error': 'User not found'}, status=404)
+            
+            org_id = request.session.get('organization_id')
+            admin_id = request.session.get('admin_id')
+            
+            # Security check
+            if org_id and user.organization_id != org_id:
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+            if admin_id and str(user.admin_id_id) != str(admin_id):
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+            
+            # Get user's tags
+            user_tags = UserTag.objects.filter(user=user).select_related('tag')
+            tags = [{'id': ut.tag.id, 'name': ut.tag.name} for ut in user_tags]
+            
+            return JsonResponse({
+                'success': True,
+                'user_id': user_id,
+                'tags': tags
+            })
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'error': str(e)}, status=500)
+
 
     @staticmethod
     @csrf_exempt

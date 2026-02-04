@@ -208,6 +208,8 @@ urlpatterns = [
     # Inbox User Logs API
     path('api/inbox/user_logs/', Inboxcontroller.get_user_logs, name='inbox_get_user_logs'),
     path('api/inbox/user_log/create/', Inboxcontroller.create_user_log, name='inbox_create_user_log'),
+    # Inbox User Tags API
+    path('api/inbox/user_tags/', Inboxcontroller.get_user_tags, name='inbox_get_user_tags'),
     
 ]
 
