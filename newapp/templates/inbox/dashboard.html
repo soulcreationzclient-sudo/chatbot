@@ -1133,7 +1133,7 @@
   // Polling Logic
   let lastMessageId = 0;
   {% if messages %}
-  lastMessageId = {{ messages.last.id |default: 0 }};
+  lastMessageId = {{ messages.last.id |default:0 }};
   {% endif %}
   const currentUserId = "{{ selected_user.id|default:'' }}";
 
