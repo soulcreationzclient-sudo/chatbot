@@ -76,7 +76,7 @@ class Inboxcontroller:
                 from datetime import timedelta
                 last_user_msg = Message.objects.filter(
                     user_id=selected_user, 
-                    who='user'  # 'user' = inbound from customer
+                    who='human'  # 'human' = inbound from customer
                 ).order_by('-created_at').first()
                 
                 if last_user_msg:

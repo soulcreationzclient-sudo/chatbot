@@ -965,7 +965,7 @@ def send_inbox_message(request):
         from datetime import timedelta
         last_user_msg = Message.objects.filter(
             user_id=user_obj, 
-            who='user'  # 'user' = inbound from customer
+            who='human'  # 'human' = inbound from customer
         ).order_by('-created_at').first()
         
         if last_user_msg:
