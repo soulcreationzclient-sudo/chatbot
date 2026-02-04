@@ -539,8 +539,7 @@
   <section class="thread">
     <div class="thread-head">
       {% if selected_user %}
-      <div class="avatar" style="width:36px;height:36px">{{
-        selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
+      <div class="avatar" style="width:36px;height:36px">{{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
       <div style="flex:1">
         <div style="font-weight:700">{{ selected_user.name|default:"User" }}</div>
         <div class="text-muted" style="font-size:12px">{{ selected_user.phone_no }}</div>
@@ -1413,10 +1412,7 @@
 
   // Add toggle button to thread head
   const toggleCustomFieldsBtn = `
-    <button type="button" class="btn btn-sm btn-outline-primary" onclick="openCustomFieldsPanel()" title="Custom Fields">
-      📋 Fields
-    </button>
-  `;
+    `;
 
   // Add button after bot toggle button
   const botToggleBtn = document.getElementById('botToggleBtn');
