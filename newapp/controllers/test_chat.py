@@ -22,6 +22,7 @@ def test_chat(request):
 def test_chat_send(request):
     """
     Handle chat messages for testing from the dashboard.
+    This is a lightweight test mode - doesn't save to database.
     """
     try:
         data = json.loads(request.body)
@@ -38,25 +39,13 @@ def test_chat_send(request):
         system_prompt = ""
         if prompt_id:
             try:
-                prompt = ChatGPTPrompt.objects.get(id=prompt_id, is_active=True)
-                system_prompt = prompt.system_prompt or ""
+                prompt = ChatGPTPrompt.objects.get(id=prompt_id)
+                system_prompt = prompt.prompt_text or ""
             except ChatGPTPrompt.DoesNotExist:
                 pass
 
-        # Create a test session ID
-        session_id = str(uuid.uuid4())
-
-        # Save user message
-        user_msg = WebChatMessage.objects.create(
-            session_id=session_id,
-            content=user_message,
-            sender='user',
-            content_type='text'
-        )
-
         # Get AI response using existing chatgpt_respond function
         try:
-            # Try to use the existing chatgpt_respond function
             ai_response = chatgpt_respond(
                 user_message=user_message,
                 admin_id=request.session.get('admin_id'),
@@ -68,24 +57,19 @@ def test_chat_send(request):
             # Fallback response if AI fails
             ai_response = f"Test Mode: You said '{user_message}'. (AI response unavailable: {str(e)})"
 
-        # Save bot message
-        bot_msg = WebChatMessage.objects.create(
-            session_id=session_id,
-            content=ai_response,
-            sender='bot',
-            content_type='text',
-            ai_response=ai_response
-        )
-
+        # Return response without saving to database (test mode)
+        from datetime import datetime
+        now = datetime.now().isoformat()
+        
         return JsonResponse({
             'status': 'success',
             'user_message': {
                 'content': user_message,
-                'created_at': user_msg.created_at.isoformat()
+                'created_at': now
             },
             'bot_message': {
                 'content': ai_response,
-                'created_at': bot_msg.created_at.isoformat()
+                'created_at': now
             }
         })
 
