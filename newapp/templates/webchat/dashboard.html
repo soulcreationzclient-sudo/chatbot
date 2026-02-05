@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -38,7 +39,7 @@
             font-weight: bold;
             margin-bottom: 40px;
             padding-bottom: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .nav-item {
@@ -52,8 +53,9 @@
             gap: 10px;
         }
 
-        .nav-item:hover, .nav-item.active {
-            background: rgba(255,255,255,0.1);
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .nav-item.active {
@@ -140,7 +142,7 @@
             background: white;
             padding: 25px;
             border-radius: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
         .stat-card h3 {
@@ -165,7 +167,7 @@
             background: white;
             padding: 25px;
             border-radius: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
         .recent-sessions h2 {
@@ -225,7 +227,7 @@
             background: white;
             margin: 20px;
             border-radius: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
             overflow: hidden;
         }
 
@@ -241,25 +243,7 @@
             color: #333;
         }
 
-        .language-toggle {
-            display: flex;
-            gap: 5px;
-        }
-
-        .lang-btn {
-            padding: 8px 16px;
-            border: none;
-            background: #f0f0f0;
-            cursor: pointer;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-
-        .lang-btn.active {
-            background: #007bff;
-            color: white;
-        }
+        /* Language toggle styles moved to prompt-sidebar section - hidden */
 
         .chat-messages {
             flex: 1;
@@ -357,55 +341,19 @@
             background: #0056b3;
         }
 
-        /* Prompt Selector Sidebar */
+        /* Prompt Selector Sidebar - Hidden, using settings prompt */
         .prompt-sidebar {
-            width: 300px;
-            background: white;
-            border-left: 1px solid #eee;
-            padding: 20px;
-            overflow-y: auto;
+            display: none;
         }
 
-        .prompt-sidebar h3 {
-            color: #333;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .prompt-item {
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-
-        .prompt-item:hover {
-            background: #e9ecef;
-        }
-
-        .prompt-item.selected {
-            border-color: #007bff;
-            background: #e7f1ff;
-        }
-
-        .prompt-item h4 {
-            color: #333;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-
-        .prompt-item p {
-            color: #666;
-            font-size: 12px;
+        /* Language toggle - Hidden, using settings language */
+        .language-toggle {
+            display: none;
         }
 
         .typing-indicator {
             display: flex;
-            gap:5px;
+            gap: 5px;
             padding: 15px 20px;
             background: #f0f0f0;
             border-radius: 20px;
@@ -430,8 +378,17 @@
         }
 
         @keyframes typing {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
         }
 
         /* Empty State */
@@ -458,7 +415,8 @@
                 padding: 10px;
             }
 
-            .logo span, .nav-item span {
+            .logo span,
+            .nav-item span {
                 display: none;
             }
 
@@ -473,6 +431,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Sidebar -->
@@ -540,23 +499,24 @@
                     <div class="recent-sessions">
                         <h2>Recent Sessions</h2>
                         {% if recent_sessions %}
-                            {% for session in recent_sessions %}
-                            <div class="session-item">
-                                <div class="session-info">
-                                    <h4>{{ session.visitor_name|default:"Anonymous User" }}</h4>
-                                    <p>Started: {{ session.started_at|timesince }} ago | {{ session.message_count }} messages</p>
-                                </div>
-                                <span class="session-status {{ session.status }}">
-                                    {{ session.get_status_display }}
-                                </span>
+                        {% for session in recent_sessions %}
+                        <div class="session-item">
+                            <div class="session-info">
+                                <h4>{{ session.visitor_name|default:"Anonymous User" }}</h4>
+                                <p>Started: {{ session.started_at|timesince }} ago | {{ session.message_count }}
+                                    messages</p>
                             </div>
-                            {% endfor %}
+                            <span class="session-status {{ session.status }}">
+                                {{ session.get_status_display }}
+                            </span>
+                        </div>
+                        {% endfor %}
                         {% else %}
-                            <div class="empty-state">
-                                <div class="icon">💬</div>
-                                <h3>No sessions yet</h3>
-                                <p>Start a chat from the Test Chat tab to see sessions here.</p>
-                            </div>
+                        <div class="empty-state">
+                            <div class="icon">💬</div>
+                            <h3>No sessions yet</h3>
+                            <p>Start a chat from the Test Chat tab to see sessions here.</p>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -567,22 +527,20 @@
                     <div class="chat-container">
                         <div class="chat-header">
                             <h2>💬 Test Your Prompt</h2>
-                            <div class="language-toggle">
-                                <button class="lang-btn active" onclick="setLanguage('en')">English</button>
-                                <button class="lang-btn" onclick="setLanguage('ar')">العربية</button>
-                            </div>
                         </div>
 
                         <div class="chat-messages" id="chat-messages">
                             <div class="empty-state">
                                 <div class="icon">👋</div>
                                 <h3>Welcome to WebChat Test!</h3>
-                                <p>Select a prompt from the sidebar and start chatting to test your AI responses.</p>
+                                <p>Using the prompt configured in Settings. Start chatting to test your AI responses.
+                                </p>
                             </div>
                         </div>
 
                         <div class="chat-input-area">
-                            <input type="text" class="chat-input" id="chat-input" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
+                            <input type="text" class="chat-input" id="chat-input"
+                                placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
                             <div class="chat-actions">
                                 <button class="chat-btn" title="Attach file">📎</button>
                                 <button class="chat-btn" title="Voice input">🎤</button>
@@ -591,19 +549,7 @@
                         </div>
                     </div>
 
-                    <div class="prompt-sidebar">
-                        <h3>📝 Select Prompt</h3>
-                        <div class="prompt-item selected" onclick="selectPrompt(null, this)">
-                            <h4>🤖 Default Bot</h4>
-                            <p>Use the default chatbot configuration</p>
-                        </div>
-                        {% for prompt in prompts %}
-                        <div class="prompt-item" onclick="selectPrompt({{ prompt.id }}, this)">
-                            <h4>{{ prompt.name }}</h4>
-                            <p>{{ prompt.system_prompt|truncatechars:80 }}</p>
-                        </div>
-                        {% endfor %}
-                    </div>
+                    <!-- Prompt sidebar removed - using Settings prompt automatically -->
                 </div>
             </div>
         </div>
@@ -691,21 +637,21 @@
                     prompt_id: selectedPromptId
                 })
             })
-            .then(response => response.json())
-            .then(data => {
-                removeTypingIndicator();
+                .then(response => response.json())
+                .then(data => {
+                    removeTypingIndicator();
 
-                if (data.status === 'success') {
-                    // Add bot response
-                    addMessage('bot', data.bot_message.content);
-                } else {
-                    addMessage('system', 'Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                removeTypingIndicator();
-                addMessage('system', 'Error: Failed to send message. Please try again.');
-            });
+                    if (data.status === 'success') {
+                        // Add bot response
+                        addMessage('bot', data.bot_message.content);
+                    } else {
+                        addMessage('system', 'Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    removeTypingIndicator();
+                    addMessage('system', 'Error: Failed to send message. Please try again.');
+                });
         }
 
         function addMessage(sender, content) {
@@ -758,4 +704,5 @@
         }
     </script>
 </body>
+
 </html>
