@@ -32,19 +32,9 @@ def test_chat_send(request):
                 'message': 'Please enter a message'
             })
 
-        # Get the prompt if selected
-        system_prompt = "You are a helpful assistant."
-        if prompt_id:
-            try:
-                prompt = ChatGPTPrompt.objects.get(id=prompt_id)
-                system_prompt = prompt.prompt_text or system_prompt
-            except ChatGPTPrompt.DoesNotExist:
-                pass
-        else:
-            # Get default prompt from database
-            prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
-            if prompt_obj:
-                system_prompt = prompt_obj.prompt_text or system_prompt
+        # Always use the prompt from Settings (ChatGPTPrompt)
+        prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
+        system_prompt = prompt_obj.prompt_text if prompt_obj else "You are a helpful assistant."
 
         # Get OpenAI API key from organization or admin
         openai_key = None
