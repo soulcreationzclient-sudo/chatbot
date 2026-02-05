@@ -1,10 +1,10 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
 from newapp.models import WebChatSession, WebChatMessage, WebChatWidget, ChatGPTPrompt
-from newapp.AI_GPT import chatgpt_respond
+from newapp.views import chatgpt_respond
 from newapp.controllers.inbox import Inboxcontroller
 import uuid
 from django.db.models import Count
