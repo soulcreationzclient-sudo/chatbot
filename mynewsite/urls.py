@@ -12,8 +12,6 @@ from newapp.controllers.settings import Settingcontroller
 from newapp.controllers.whatsapp import whatsappcontroller
 from newapp.controllers.integration import Integrationcontroller
 from newapp.views import whatsapp_templates
-from newapp.controllers.integration import Integrationcontroller
-integration_controller = Integrationcontroller()
 from django.conf import settings
 from django.conf.urls.static import static
 from newapp.views import delete_pdf
@@ -24,7 +22,30 @@ from newapp import calendly_integration_views
 from newapp.controllers import auth_views, superadmin_views, client_views
 from newapp.controllers import broadcast as broadcast_views
 
+# Controller instances
+integration_controller = Integrationcontroller()
 
+# Webchat imports
+from newapp.controllers.webchat import (
+    api_webchat_start,
+    api_webchat_message,
+    api_webchat_messages,
+    api_webchat_end,
+    api_webchat_feedback,
+    api_webchat_language
+)
+from newapp.controllers.webchat_admin import (
+    dashboard as webchat_dashboard,
+    session_detail as webchat_session_detail,
+    end_session_api,
+    delete_session_api,
+    analytics as webchat_analytics,
+    widgets as webchat_widgets,
+    create_widget,
+    update_widget,
+    delete_widget,
+    get_widget_embed_code,
+)
 
 urlpatterns = [
     # ==================== SUPER ADMIN PORTAL ====================
@@ -145,7 +166,7 @@ urlpatterns = [
     
     path('flows/', views.flows_view, name='flows'),
     path('admin/', admin.site.urls),
-   
+    
     path('connect_whatsapp/', views.connect_whatsapp, name='connect_whatsapp'),
     path('voice_bot/', views.voice_bot, name='voice_bot'),
     path('send_voice_bot/', views.send_voice_bot, name='send_voice_bot'),
@@ -210,6 +231,26 @@ urlpatterns = [
     path('api/inbox/user_log/create/', Inboxcontroller.create_user_log, name='inbox_create_user_log'),
     # Inbox User Tags API
     path('api/inbox/user_tags/', Inboxcontroller.get_user_tags, name='inbox_get_user_tags'),
+    
+    # ==================== WEBCHAT API ====================
+    path('api/webchat/start/', api_webchat_start, name='webchat_start'),
+    path('api/webchat/message/', api_webchat_message, name='webchat_message'),
+    path('api/webchat/messages/<str:session_id>/', api_webchat_messages, name='webchat_messages'),
+    path('api/webchat/end/', api_webchat_end, name='webchat_end'),
+    path('api/webchat/feedback/', api_webchat_feedback, name='webchat_feedback'),
+    path('api/webchat/language/', api_webchat_language, name='webchat_language'),
+    
+    # ==================== WEBCHAT ADMIN ====================
+    path('webchat/dashboard/', webchat_dashboard, name='webchat_dashboard'),
+    path('webchat/session/<str:session_id>/', webchat_session_detail, name='webchat_session_detail'),
+    path('api/webchat/session/end/', end_session_api, name='webchat_end_session'),
+    path('api/webchat/session/delete/', delete_session_api, name='webchat_delete_session'),
+    path('webchat/analytics/', webchat_analytics, name='webchat_analytics'),
+    path('webchat/widgets/', webchat_widgets, name='webchat_widgets'),
+    path('api/webchat/widget/create/', create_widget, name='webchat_create_widget'),
+    path('api/webchat/widget/<int:widget_id>/update/', update_widget, name='webchat_update_widget'),
+    path('api/webchat/widget/<int:widget_id>/delete/', delete_widget, name='webchat_delete_widget'),
+    path('api/webchat/widget/<int:widget_id>/embed/', get_widget_embed_code, name='webchat_embed_code'),
     
 ]
 
