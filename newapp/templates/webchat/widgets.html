@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebChat Widgets - Chatbot Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .page-subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 4px;
+            background: white;
+            padding: 8px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .nav-tab {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .nav-tab:hover {
+            background: #f0f0f0;
+        }
+
+        .nav-tab.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .nav-tab svg {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        /* Widgets Grid */
+        .widgets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 24px;
+        }
+
+        .widget-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+        }
+
+        .widget-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .widget-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .widget-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .widget-body {
+            padding: 20px 24px;
+        }
+
+        .widget-info {
+            margin-bottom: 16px;
+        }
+
+        .widget-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .widget-info-row:last-child {
+            border-bottom: none;
+        }
+
+        .widget-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .widget-value {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .theme-preview {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .color-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 2px solid #eee;
+        }
+
+        .widget-features {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .feature-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: #e9ecef;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #495057;
+        }
+
+        .feature-badge svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .widget-actions {
+            padding: 16px 24px;
+            background: #f8f9fa;
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            fill: #ddd;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: #dee2e6;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .color-input-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .color-input {
+            width: 50px;
+            height: 40px;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .color-text {
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">WebChat Widgets</h1>
+                <p class="page-subtitle">Configure chat widgets for your websites</p>
+            </div>
+            <button class="btn btn-primary" onclick="openCreateModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                </svg>
+                New Widget
+            </button>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <a href="/webchat/dashboard/" class="nav-tab">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                </svg>
+                Sessions
+            </a>
+            <a href="/webchat/analytics/" class="nav-tab">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                </svg>
+                Analytics
+            </a>
+            <a href="/webchat/widgets/" class="nav-tab active">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                </svg>
+                Widgets
+            </a>
+        </div>
+
+        <!-- Widgets Grid -->
+        {% if widgets %}
+        <div class="widgets-grid">
+            {% for widget in widgets %}
+            <div class="widget-card">
+                <div class="widget-header">
+                    <span class="widget-name">{{ widget.name }}</span>
+                    <span class="widget-status status-{% if widget.is_active %}active{% else %}inactive{% endif %}">
+                        {{ widget.get_is_active_display }}
+                    </span>
+                </div>
+                <div class="widget-body">
+                    <div class="widget-info">
+                        <div class="widget-info-row">
+                            <span class="widget-label">Display Mode</span>
+                            <span class="widget-value">{{ widget.get_display_mode_display }}</span>
+                        </div>
+                        <div class="widget-info-row">
+                            <span class="widget-label">Theme</span>
+                            <span class="widget-value">{{ widget.get_theme_display }}</span>
+                        </div>
+                        <div class="widget-info-row">
+                            <span class="widget-label">Website</span>
+                            <span class="widget-value">{{ widget.website_url|default:"All websites" }}</span>
+                        </div>
+                    </div>
+                    <div class="theme-preview">
+                        <div class="color-swatch" style="background: {{ widget.primary_color }}" title="Primary"></div>
+                        <div class="color-swatch" style="background: {{ widget.secondary_color }}" title="Secondary"></div>
+                        <div class="color-swatch" style="background: {{ widget.background_color }}" title="Background"></div>
+                        <div class="color-swatch" style="background: {{ widget.text_color }}" title="Text"></div>
+                    </div>
+                    <div class="widget-features">
+                        {% if widget.show_language_selector %}
+                        <span class="feature-badge">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                            </svg>
+                            Multilingual
+                        </span>
+                        {% endif %}
+                        {% if widget.file_uploads_enabled %}
+                        <span class="feature-badge">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+                            </svg>
+                            File Uploads
+                        </span>
+                        {% endif %}
+                        {% if widget.voice_input_enabled %}
+                        <span class="feature-badge">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
+                            </svg>
+                            Voice Input
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="widget-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="getEmbedCode({{ widget.id }})">Get Code</button>
+                    <button class="btn btn-primary btn-sm" onclick="openEditModal({{ widget.id }})">Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteWidget({{ widget.id }})">Delete</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24">
+                <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+            </svg>
+            <h3>No widgets yet</h3>
+            <p>Create your first chat widget to get started.</p>
+            <button class="btn btn-primary" style="margin-top: 16px;" onclick="openCreateModal()">Create Widget</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div class="modal-overlay" id="widgetModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Create Widget</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="widgetForm">
+                    <input type="hidden" id="widgetId" name="widget_id">
+                    <div class="form-group">
+                        <label class="form-label">Widget Name</label>
+                        <input type="text" class="form-input" id="widgetName" name="name" placeholder="My Website Chat" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Website URL (optional)</label>
+                        <input type="url" class="form-input" id="websiteUrl" name="website_url" placeholder="https://example.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Display Mode</label>
+                        <select class="form-select" id="displayMode" name="display_mode">
+                            <option value="button">Floating Button</option>
+                            <option value="embedded">Embedded Chat</option>
+                            <option value="popup">Popup Chat</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Theme</label>
+                        <select class="form-select" id="theme" name="theme">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                            <option value="custom">Custom Colors</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Primary Color</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-input" id="primaryColorPicker" value="#007bff">
+                            <input type="text" class="form-input color-text" id="primaryColor" name="primary_color" value="#007bff">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Welcome Message (English)</label>
+                        <input type="text" class="form-input" id="welcomeEn" name="welcome_en" placeholder="Welcome! How can we help you today?" value="Welcome! How can we help you today?">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Welcome Message (Arabic)</label>
+                        <input type="text" class="form-input" id="welcomeAr" name="welcome_ar" placeholder="مرحبا! كيف يمكننا مساعدتك اليوم؟" value="مرحبا! كيف يمكننا مساعدتك اليوم؟">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Features</label>
+                        <div style="display: flex; gap: 16px; margin-top: 8px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="showLangSelector" name="show_language_selector" checked>
+                                Language Selector
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="fileUploads" name="file_uploads_enabled" checked>
+                                File Uploads
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="voiceInput" name="voice_input_enabled" checked>
+                                Voice Input
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveWidget()">Save Widget</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Embed Code Modal -->
+    <div class="modal-overlay" id="embedModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Embed Code</h3>
+                <button class="modal-close" onclick="closeEmbedModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 16px; color: #666;">Copy and paste this code into your website's HTML, just before the closing <code>&lt;/body&gt;</code> tag:</p>
+                <textarea id="embedCode" style="width: 100%; height: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 12px; resize: vertical;" readonly></textarea>
+                <button class="btn btn-primary" style="margin-top: 12px;" onclick="copyEmbedCode()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                    </svg>
+                    Copy Code
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('widgetModal');
+        const embedModal = document.getElementById('embedModal');
+
+        function openCreateModal() {
+            document.getElementById('modalTitle').textContent = 'Create Widget';
+            document.getElementById('widgetForm').reset();
+            document.getElementById('widgetId').value = '';
+            modal.classList.add('active');
+        }
+
+        function openEditModal(widgetId) {
+            // TODO: Fetch widget data and populate form
+            document.getElementById('modalTitle').textContent = 'Edit Widget';
+            document.getElementById('widgetId').value = widgetId;
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+        }
+
+        function closeEmbedModal() {
+            embedModal.classList.remove('active');
+        }
+
+        async function saveWidget() {
+            const form = document.getElementById('widgetForm');
+            const formData = new FormData(form);
+            const widgetId = document.getElementById('widgetId').value;
+            
+            const url = widgetId 
+                ? `/api/webchat/widget/${widgetId}/update/`
+                : '/api/webchat/widget/create/';
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(Object.fromEntries(formData))
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Failed to save widget: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error saving widget: ' + error.message);
+            }
+        }
+
+        async function deleteWidget(widgetId) {
+            if (!confirm('Are you sure you want to delete this widget?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/webchat/widget/${widgetId}/delete/`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Failed to delete widget: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error deleting widget: ' + error.message);
+            }
+        }
+
+        async function getEmbedCode(widgetId) {
+            try {
+                const response = await fetch(`/api/webchat/widget/${widgetId}/embed/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('embedCode').value = data.embed_code;
+                    embedModal.classList.add('active');
+                } else {
+                    alert('Failed to get embed code: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error getting embed code: ' + error.message);
+            }
+        }
+
+        function copyEmbedCode() {
+            const textarea = document.getElementById('embedCode');
+            textarea.select();
+            document.execCommand('copy');
+            alert('Copied to clipboard!');
+        }
+
+        // Close modals on outside click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+        embedModal.addEventListener('click', (e) => {
+            if (e.target === embedModal) closeEmbedModal();
+        });
+    </script>
+</body>
+</html>
