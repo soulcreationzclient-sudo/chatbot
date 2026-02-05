@@ -16,7 +16,8 @@ from ..models import (
     WebChatMessage,
     WebChatWidget,
     WebChatAnalytics,
-    User
+    User,
+    ChatGPTPrompt
 )
 
 
@@ -97,18 +98,33 @@ class WebChatAdminController:
         elif admin_id:
             widgets_query = widgets_query.filter(admin_id=admin_id)
         widgets = widgets_query.order_by('-created_at')
-        
+
+        # Get ChatGPT prompts for the chat testing feature
+        prompts_query = ChatGPTPrompt.objects.filter(is_active=True)
+        if org_id:
+            prompts_query = prompts_query.filter(organization_id=org_id)
+        elif admin_id:
+            prompts_query = prompts_query.filter(Q(admin_id=admin_id) | Q(admin_id__isnull=True))
+        prompts = prompts_query.order_by('-created_at')[:20]
+
+        # Get recent sessions for display
+        recent_sessions = sessions.annotate(
+            message_count=Count('messages')
+        ).order_by('-started_at')[:10]
+
         return render(request, 'webchat/dashboard.html', {
             'sessions': sessions,
+            'recent_sessions': recent_sessions,
             'total_sessions': total_sessions,
             'active_sessions': active_sessions,
             'ended_sessions': ended_sessions,
             'total_messages': total_messages,
-            'avg_response_time': avg_response_time,
-            'avg_session_duration': avg_session_duration,
+            'avg_response_time': round(avg_response_time, 2) if avg_response_time else 0,
+            'avg_session_duration': round(avg_session_duration, 2) if avg_session_duration else 0,
             'positive_count': positive_count,
             'negative_count': negative_count,
             'widgets': widgets,
+            'prompts': prompts,
             'current_status': status_filter,
             'current_date_range': date_range,
         })

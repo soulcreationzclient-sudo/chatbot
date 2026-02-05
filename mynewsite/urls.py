@@ -47,6 +47,13 @@ from newapp.controllers.webchat_admin import (
     get_widget_embed_code,
 )
 
+# Test Chat imports
+from newapp.controllers.test_chat import (
+    test_chat,
+    test_chat_send,
+    test_chat_quick,
+)
+
 urlpatterns = [
     # ==================== SUPER ADMIN PORTAL ====================
     path('super-login/', RedirectView.as_view(url='/login/', permanent=False)), # CONVENIENCE REDIRECT
@@ -251,6 +258,11 @@ urlpatterns = [
     path('api/webchat/widget/<int:widget_id>/update/', update_widget, name='webchat_update_widget'),
     path('api/webchat/widget/<int:widget_id>/delete/', delete_widget, name='webchat_delete_widget'),
     path('api/webchat/widget/<int:widget_id>/embed/', get_widget_embed_code, name='webchat_embed_code'),
+    
+    # ==================== TEST CHAT (Prompt Testing) ====================
+    path('test/chat/', test_chat, name='test_chat'),
+    path('api/test/chat/send/', test_chat_send, name='test_chat_send'),
+    path('api/test/chat/quick/', test_chat_quick, name='test_chat_quick'),
     
 ]
 
