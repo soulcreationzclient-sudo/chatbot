@@ -3,11 +3,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
-from newapp.models import WebChatSession, WebChatMessage, WebChatWidget, ChatGPTPrompt
-from newapp.views import chatgpt_respond
-from newapp.controllers.inbox import Inboxcontroller
-import uuid
-from django.db.models import Count
+from newapp.models import ChatGPTPrompt, Admin, Organization
+from datetime import datetime
 
 
 def test_chat(request):
@@ -22,7 +19,7 @@ def test_chat(request):
 def test_chat_send(request):
     """
     Handle chat messages for testing from the dashboard.
-    This is a lightweight test mode - doesn't save to database.
+    Calls OpenAI directly for quick testing.
     """
     try:
         data = json.loads(request.body)
@@ -36,29 +33,58 @@ def test_chat_send(request):
             })
 
         # Get the prompt if selected
-        system_prompt = ""
+        system_prompt = "You are a helpful assistant."
         if prompt_id:
             try:
                 prompt = ChatGPTPrompt.objects.get(id=prompt_id)
-                system_prompt = prompt.prompt_text or ""
+                system_prompt = prompt.prompt_text or system_prompt
             except ChatGPTPrompt.DoesNotExist:
                 pass
+        else:
+            # Get default prompt from database
+            prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
+            if prompt_obj:
+                system_prompt = prompt_obj.prompt_text or system_prompt
 
-        # Get AI response using existing chatgpt_respond function
-        try:
-            ai_response = chatgpt_respond(
-                user_message=user_message,
-                admin_id=request.session.get('admin_id'),
-                custom_field_values=None,
-                organization_id=request.session.get('organization_id'),
-                system_prompt=system_prompt
-            )
-        except Exception as e:
-            # Fallback response if AI fails
-            ai_response = f"Test Mode: You said '{user_message}'. (AI response unavailable: {str(e)})"
+        # Get OpenAI API key from organization or admin
+        openai_key = None
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        if org_id:
+            try:
+                org = Organization.objects.get(id=org_id)
+                openai_key = org.openai_api_key
+            except Organization.DoesNotExist:
+                pass
+        
+        if not openai_key and admin_id:
+            try:
+                admin = Admin.objects.get(id=admin_id)
+                openai_key = admin.openai_api_key
+            except Admin.DoesNotExist:
+                pass
 
-        # Return response without saving to database (test mode)
-        from datetime import datetime
+        # Call OpenAI if we have a key
+        if openai_key:
+            try:
+                from openai import OpenAI
+                client = OpenAI(api_key=openai_key)
+                
+                response = client.chat.completions.create(
+                    model="gpt-4-turbo",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_message}
+                    ]
+                )
+                ai_response = response.choices[0].message.content
+            except Exception as e:
+                ai_response = f"AI Error: {str(e)}"
+        else:
+            ai_response = f"Test Mode: You said '{user_message}'. (No OpenAI API key configured)"
+
+        # Return response
         now = datetime.now().isoformat()
         
         return JsonResponse({
@@ -89,7 +115,6 @@ def test_chat_quick(request):
     try:
         data = json.loads(request.body)
         user_message = data.get('message', '').strip()
-        prompt_id = data.get('prompt_id', None)
 
         if not user_message:
             return JsonResponse({
@@ -97,27 +122,46 @@ def test_chat_quick(request):
                 'message': 'Please enter a message'
             })
 
-        # Get the prompt if selected
-        system_prompt = ""
-        if prompt_id:
+        # Get default prompt
+        prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
+        system_prompt = prompt_obj.prompt_text if prompt_obj else "You are a helpful assistant."
+
+        # Get OpenAI API key
+        openai_key = None
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        if org_id:
             try:
-                prompt = ChatGPTPrompt.objects.get(id=prompt_id, is_active=True)
-                system_prompt = prompt.system_prompt or ""
-            except ChatGPTPrompt.DoesNotExist:
+                org = Organization.objects.get(id=org_id)
+                openai_key = org.openai_api_key
+            except Organization.DoesNotExist:
+                pass
+        
+        if not openai_key and admin_id:
+            try:
+                admin = Admin.objects.get(id=admin_id)
+                openai_key = admin.openai_api_key
+            except Admin.DoesNotExist:
                 pass
 
-        # Try to get AI response
-        try:
-            ai_response = chatgpt_respond(
-                user_message=user_message,
-                admin_id=request.session.get('admin_id'),
-                custom_field_values=None,
-                organization_id=request.session.get('organization_id'),
-                system_prompt=system_prompt
-            )
-        except Exception as e:
-            # Fallback response
-            ai_response = f"Test Response: I received your message: '{user_message}'"
+        if openai_key:
+            try:
+                from openai import OpenAI
+                client = OpenAI(api_key=openai_key)
+                
+                response = client.chat.completions.create(
+                    model="gpt-4-turbo",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_message}
+                    ]
+                )
+                ai_response = response.choices[0].message.content
+            except Exception as e:
+                ai_response = f"AI Error: {str(e)}"
+        else:
+            ai_response = f"Echo: {user_message} (No API key)"
 
         return JsonResponse({
             'status': 'success',
