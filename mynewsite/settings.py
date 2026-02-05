@@ -94,7 +94,10 @@ ROOT_URLCONF = 'mynewsite.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'newapp' / 'templates'],
+        'DIRS': [
+            BASE_DIR / 'newapp' / 'templates',
+            BASE_DIR / 'templates',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
