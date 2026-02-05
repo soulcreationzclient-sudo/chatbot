@@ -100,7 +100,7 @@ class WebChatAdminController:
         widgets = widgets_query.order_by('-created_at')
 
         # Get ChatGPT prompts for the chat testing feature
-        prompts_query = ChatGPTPrompt.objects.filter(is_active=True)
+        prompts_query = ChatGPTPrompt.objects.all()
         if org_id:
             prompts_query = prompts_query.filter(organization_id=org_id)
         elif admin_id:
