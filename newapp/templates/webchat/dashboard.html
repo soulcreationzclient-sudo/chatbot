@@ -559,14 +559,6 @@
                 <span class="nav-icon">✨</span>
                 <span>Test Chat</span>
             </div>
-            <div class="nav-item">
-                <span class="nav-icon">📈</span>
-                <span>Analytics</span>
-            </div>
-            <div class="nav-item">
-                <span class="nav-icon">⚙️</span>
-                <span>Settings</span>
-            </div>
         </div>
 
         <!-- Main Content -->
@@ -693,8 +685,8 @@
             // Update Sidebar
             const navItems = document.querySelectorAll('.nav-item');
             navItems.forEach(item => item.classList.remove('active'));
-            if (tabName === 'dashboard') navItems[1].classList.add('active');
-            else if (tabName === 'test-chat') navItems[2].classList.add('active');
+            if (tabName === 'dashboard') navItems[0].classList.add('active');
+            else if (tabName === 'test-chat') navItems[1].classList.add('active');
         }
 
         function handleKeyPress(e) {
