@@ -105,7 +105,7 @@ class WebChatAdminController:
             prompts_query = prompts_query.filter(organization_id=org_id)
         elif admin_id:
             prompts_query = prompts_query.filter(Q(admin_id=admin_id) | Q(admin_id__isnull=True))
-        prompts = prompts_query.order_by('-created_at')[:20]
+        prompts = prompts_query.order_by('-updated_at')[:20]
 
         # Get recent sessions for display
         recent_sessions = sessions.annotate(
