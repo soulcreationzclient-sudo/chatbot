@@ -108,7 +108,7 @@ class WebChatAdminController:
         prompts = prompts_query.order_by('-updated_at')[:20]
 
         # Get recent sessions for display
-        recent_sessions = sessions.annotate(
+        recent_sessions = sessions_query.annotate(
             msg_count=Count('messages')
         ).order_by('-started_at')[:10]
 
