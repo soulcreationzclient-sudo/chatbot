@@ -109,7 +109,7 @@ class WebChatAdminController:
 
         # Get recent sessions for display
         recent_sessions = sessions.annotate(
-            message_count=Count('messages')
+            msg_count=Count('messages')
         ).order_by('-started_at')[:10]
 
         return render(request, 'webchat/dashboard.html', {
