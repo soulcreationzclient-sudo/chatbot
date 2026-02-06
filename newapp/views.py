@@ -516,12 +516,9 @@ def send_broadcast(request):
     if request.method != "POST":
         return HttpResponse("Invalid request method", status=405)
 
-    message_body = (request.POST.get('message') or '').strip()
     selected_tag_name = request.POST.get('selected_tag_name')
-    template_name = request.POST.get('template')
+    template_name = request.POST.get('template_name')  # Fixed: was 'template', form sends 'template_name'
 
-    if not message_body:
-        return HttpResponse("Message is required", status=400)
     if not selected_tag_name:
         return HttpResponse("Tag selection is required", status=400)
     if not template_name:
@@ -586,7 +583,7 @@ def send_broadcast(request):
         # Log each message sent in your DB
         Message.objects.create(
             user_id=user,
-            messages=message_body,
+            messages=f"[Broadcast Template: {template_name}]",
             who="bot"
         )
 
