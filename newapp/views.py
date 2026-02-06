@@ -584,7 +584,8 @@ def send_broadcast(request):
         Message.objects.create(
             user_id=user,
             messages=f"[Broadcast Template: {template_name}]",
-            who="bot"
+            who="bot",
+            created_at=datetime.now()
         )
 
     # return HttpResponse("Broadcast sent successfully.")
