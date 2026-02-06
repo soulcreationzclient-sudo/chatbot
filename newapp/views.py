@@ -574,7 +574,7 @@ def send_broadcast(request):
             "type": "template",
             "template": {
                 "name": template_name,
-                "language": {"code": "en_US"}
+                "language": {"code": "en"}
             }
         }
         r = requests.post(whatsapp_api_url, headers=headers, json=payload)
