@@ -1,31 +1,32 @@
-from django.http import HttpResponse
-from django.http import JsonResponse
-import requests
+from django.http import HttpResponse, JsonResponse
+import requests  # Single import
 from ..models import Admin
-from django.shortcuts import redirect
-from django.contrib import messages
-from newapp.models import User
 from django.shortcuts import redirect, render
-from pinecone import Pinecone
-from pinecone_plugins.assistant.models.chat import Message as Pinemessage
-from newapp.models import Message
+from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
-import json
+from django.utils import timezone
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
-from django.utils import timezone
-import openai
-from newapp.models import ChatGPTPrompt
+import json
 import logging
-import requests
 import sys
+
+from newapp.models import (
+    User, Message, Admin, Tag, UserTag, 
+    ChatGPTPrompt, AIAgentConfig, Organization
+)
 from newapp.views import send_whatsapp_reply
-from newapp.models import Tag, UserTag
 from newapp.tasks import send_followup_message, schedule_followup
-from newapp.models import AIAgentConfig
-from django.utils import timezone
-from datetime import timedelta
 from newapp.logging_config import get_logger, log_message_received, log_message_sent, log_error
+import os
+
+# Import third-party libraries
+from pinecone import Pinecone
+from pinecone_plugins.assistant.models.chat import Message as Pinemessage
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
 
 # Initialize structured logger for webhook
 webhook_logger = get_logger('webhook')
@@ -252,7 +253,8 @@ class whatsappcontroller:
 
     @csrf_exempt
     def get_message(request):
-        VERIFY_TOKEN = "speeed"
+        # SECURITY: Use environment variable for webhook verification
+VERIFY_TOKEN = os.environ.get('WHATSAPP_VERIFY_TOKEN', 'speeed')
 
         if request.method == 'GET':
             mode = request.GET.get('hub.mode')
@@ -266,7 +268,7 @@ class whatsappcontroller:
             try:
                 data = json.loads(request.body.decode("utf-8"))
                 webhook_logger.debug(f"[RAW_WEBHOOK] Received data: {json.dumps(data)[:500]}")
-                print("Received webhook data:", data)
+                webhook_logger.debug(f"Received webhook data: {data}")
                 sys.stdout.flush()
 
                 entries = data.get('entry') or []
@@ -343,7 +345,7 @@ class whatsappcontroller:
                             # This ensures follow-ups start from 1st again after user replies
                             existing_user.followup_count = 0
                             existing_user.save()
-                            print(f"🔄 Reset follow-up counter for {phone}")
+                            webhook_logger.info(f"Reset follow-up counter for {phone}")
 
                             
                             # ==================== IMAGE/DOCUMENT HANDLING ====================
@@ -369,14 +371,14 @@ class whatsappcontroller:
                                 )
                                 
                                 # Analyze the image
-                                print(f"[Vision] Analyzing image for {phone}...")
+                                webhook_logger.info(f"Analyzing image for {phone}")
                                 reply = analyze_media_message(
                                     media_id=media_id,
                                     media_type='image',
                                     user_question=caption,
                                     admin=admin_check
                                 )
-                                print(f"[Vision] Analysis complete: {reply[:100]}...")
+                                webhook_logger.debug(f"Vision analysis complete: {reply[:100]}...")
                                 
                                 # Store context for follow-up questions
                                 from newapp.image_pdf_service import store_document_context
@@ -402,7 +404,7 @@ class whatsappcontroller:
                                     "text": {"body": reply}
                                 }
                                 # requests.post(whatsapp_api_url, json=payload, headers=headers)
-                                # print(f"[Vision] Reply sent to {phone}")
+                                # webhook_logger.debug(f"Vision reply sent to {phone}")
                                 
                                 # DO NOT CONTINUE - Let it fall through to AI
                                 # continue
@@ -434,7 +436,7 @@ class whatsappcontroller:
                                 )
                                 
                                 # Analyze the document
-                                print(f"[Vision] Analyzing document '{filename}' for {phone}...")
+                                webhook_logger.info(f"Analyzing document {filename} for {phone}")
                                 reply = analyze_media_message(
                                     media_id=media_id,
                                     media_type='document',
@@ -442,7 +444,7 @@ class whatsappcontroller:
                                     admin=admin_check,
                                     mime_type=mime_type
                                 )
-                                print(f"[Vision] Analysis complete: {reply[:100]}...")
+                                webhook_logger.debug(f"Vision analysis complete: {reply[:100]}...")
                                 
                                 # Store context for follow-up questions
                                 from newapp.image_pdf_service import store_document_context
@@ -468,7 +470,7 @@ class whatsappcontroller:
                                     "text": {"body": reply}
                                 }
                                 # requests.post(whatsapp_api_url, json=payload, headers=headers)
-                                # print(f"[Vision] Reply sent to {phone}")
+                                # webhook_logger.debug(f"Vision reply sent to {phone}")
                                 
                                 # DO NOT CONTINUE - Let it fall through
                                 # continue 
@@ -500,9 +502,8 @@ If you have any relevant tools/functions available that can process or validate 
                             if last_msg and last_msg.messages == msg_text:
                                 time_diff = (timezone.now() - last_msg.created_at).total_seconds()
                                 if time_diff < 60:
-                                    print(f"Skipping duplicate message from {phone}: {msg_text}")
-                                    with open('debug_log.txt', 'a', encoding='utf-8') as f:
-                                        f.write(f"[Info] Duplicate message ignored: {msg_text}\n")
+                                    webhook_logger.info(f"Skipping duplicate message from {phone}")
+                webhook_logger.info(f"Duplicate message ignored: {msg_text[:50]}...")
                                     continue
 
                             Message.objects.create(
@@ -515,7 +516,7 @@ If you have any relevant tools/functions available that can process or validate 
                             # ==================== BOT TOGGLE CHECK ====================
                             # If bot is disabled for this user, skip AI response
                             if not getattr(existing_user, 'bot_enabled', True):
-                                print(f"🚫 Bot disabled for {phone} - skipping auto-reply")
+                                webhook_logger.info(f"Bot disabled for {phone} - skipping auto-reply")
                                 continue
                             # ==================== END BOT TOGGLE CHECK ====================
 
@@ -536,7 +537,7 @@ If you have any relevant tools/functions available that can process or validate 
                                         UserTag.objects.get_or_create(user=existing_user, tag=tag)
                                         print(f"🏷️ Auto-applied tag '{tag.name}' to {phone} (keyword: {tag.keyword})")
                             except Exception as kt_e:
-                                print(f"[Keyword Tag] Error: {kt_e}")
+                                webhook_logger.error(f"Keyword tagging error: {kt_e}")
                             # ==================== END KEYWORD MACRO TAGGING ====================
 
                             bot_response = None
@@ -571,31 +572,29 @@ If you have any relevant tools/functions available that can process or validate 
                                         bot_response += f"👉 Click here to book: {scheduling_url}\n\n"
                                         bot_response += "Choose a time that works best for you!"
                                         trigger = True
-                                        print(f"[Calendly] Booking link sent: {scheduling_url}")
+                                        webhook_logger.info(f"Calendly booking link sent: {scheduling_url}")
                                     else:
                                         # No Calendly configured - use ChatGPT response
-                                        print("[Calendly] No scheduling URL configured - falling back to ChatGPT")
+                                        webhook_logger.info("Calendly not configured - using ChatGPT")
                                 except Exception as cal_e:
-                                    print(f"[Calendly] Error: {cal_e}")
+                                    webhook_logger.error(f"Calendly error: {cal_e}")
                                     # Fall through to ChatGPT if Calendly fails
                                     
                             elif is_cancel_intent:
                                 # Simple cancel message - direct to email
                                 bot_response = "To cancel your appointment, please use the cancellation link in your Calendly confirmation email. 📧\n\nIf you can't find it, check your spam folder or contact us for assistance."
                                 trigger = True
-                                print("[Calendly] Cancel guidance sent")
+                                webhook_logger.info("Calendly cancel guidance sent")
                             # ==================== END CALENDLY INTEGRATION ====================
 
                             if not trigger:
                                 openai_key = creds['openai_key']
                                 pine_token = creds['pinecone_token']
 
-                                with open('debug_log.txt', 'a') as f:
-                                    f.write(f"\n[Debug] Processing message from {phone}\n")
+                webhook_logger.debug(f"Processing message from {phone}")
                                 
                                 if openai_key:
-                                    with open('debug_log.txt', 'a') as f:
-                                        f.write(f"[Debug] OpenAI Key found: {openai_key[:5]}...\n")
+                webhook_logger.debug(f"OpenAI key found: {openai_key[:5]}...")
                                     try:
                                         from openai import OpenAI
                                         client = OpenAI(api_key=openai_key)
@@ -617,7 +616,7 @@ Here is your previous analysis of that document:
 If the user's question relates to this document, answer based on your analysis above.
 
 """
-                                            print(f"[Context] Using document context for {phone}")
+                                            webhook_logger.info(f"Using document context for {phone}")
                                         
                                         if creds['chatgpt_mode'] == 'ai_agent':
                                             ai_agent = AIAgentConfig.objects.filter(admin=admin_check, is_active=True).last()
@@ -696,7 +695,7 @@ If the user's question relates to this document, answer based on your analysis a
                                                         }
                                                     }
                                                 })
-                                            print(f"[Tools] Registered {len(openai_tools)} External API tool(s)")
+                                            webhook_logger.info(f"Registered {len(openai_tools)} External API tool(s)")
                                         
                                         # --- TAG INTEGRATION ---
                                         from newapp.models import Tag
@@ -754,7 +753,7 @@ If the user's question relates to this document, answer based on your analysis a
                                                     }
                                                 }
                                             })
-                                            print(f"[Tags] Injected {admin_tags.count()} tags + apply_tag tool")
+                                            webhook_logger.info(f"Injected {admin_tags.count()} tags + apply_tag tool")
                                                                                 # --- CUSTOM FIELD INTEGRATION ---
                                         from newapp.models import CustomField
                                         from newapp.custom_field_processor import format_custom_fields_for_ai_context, get_user_custom_fields
@@ -863,9 +862,9 @@ If the user's question relates to this document, answer based on your analysis a
                                         pmsg = Pinemessage(content=msg_text)
                                         presp = assistant.chat(messages=[pmsg])
                                         bot_response = (presp or {}).get("message", {}).get("content")
-                                        print("[LLM] Pinecone used")
+                                        webhook_logger.info("Pinecone used for response")
                                     except Exception as pe:
-                                        print(f"[LLM] Pinecone error: {pe}")
+                                        webhook_logger.error(f"Pinecone error: {pe}")
                                         bot_response = "Sorry, I couldn’t generate a response just now."
                                 else:
                                     bot_response = "Sorry, my assistant is offline right now."
@@ -907,7 +906,7 @@ If the user's question relates to this document, answer based on your analysis a
                                             tag, _ = Tag.objects.get_or_create(name=tag_name)
                                             if not UserTag.objects.filter(user=existing_user, tag=tag).exists():
                                                 UserTag.objects.create(user=existing_user, tag=tag)
-                                                print(f"User {existing_user.id} tagged with {tag_name}.")
+                                                webhook_logger.info(f"User {existing_user.id} tagged with {tag_name}")
                             # --- Tagging logic ends here ---
 
 
@@ -949,9 +948,9 @@ If the user's question relates to this document, answer based on your analysis a
                                 final_reply_text = cf_result.get('final_text', final_reply_text)
                                 
                                 if cf_result.get('fields_processed', 0) > 0:
-                                    print(f"[CustomFields] Processed {cf_result['fields_processed']} field(s) for user {existing_user.phone_no}")
+                                    webhook_logger.info(f"Processed {cf_result.get("fields_processed", 0)} custom field(s) for user {existing_user.phone_no}")
                                 if cf_result.get('fields_failed', 0) > 0:
-                                    print(f"[CustomFields] Failed to process {cf_result['fields_failed']} field(s)")
+                                    webhook_logger.warning(f"Failed to process {cf_result.get("fields_failed", 0)} custom field(s)")
 
                                 # 3. Process Image Tags
                                 from newapp.image_tag_processor import process_image_tags
@@ -971,14 +970,14 @@ If the user's question relates to this document, answer based on your analysis a
                                     f.write(f"[Debug] Response processed. Images sent: {img_result.get('images_sent', 0)}, Text sent: {img_result.get('text_sent', False)}\n")
                                 
                                 if img_result.get('success'):
-                                    print(f"✅ Bot reply sent to {existing_user.phone_no} (images: {img_result.get('images_sent', 0)})")
+                                    webhook_logger.info(f"Bot reply sent to {existing_user.phone_no}")
                                 else:
-                                    print(f"⚠️ Partial success sending to {existing_user.phone_no}")
+                                    webhook_logger.warning(f"Partial success sending to {existing_user.phone_no}")
                                     
                             except Exception as e:
                                 with open('debug_log.txt', 'a') as f:
                                     f.write(f"[Error] Sending Exception: {str(e)}\n")
-                                print(f"Exception calling send_whatsapp_message: {e}")
+                                webhook_logger.error(f"Error in send_whatsapp_message: {e}")
                                 
                                 # Fallback to regular text sending if image processing fails
                                 try:
@@ -995,9 +994,9 @@ If the user's question relates to this document, answer based on your analysis a
                                     }
                                     r = requests.post(whatsapp_api_url, json=payload, headers=headers, timeout=15)
                                     if r.status_code == 200:
-                                        print(f"✅ Fallback text sent to {existing_user.phone_no}")
+                                        webhook_logger.info(f"Fallback text sent to {existing_user.phone_no}")
                                 except Exception as fallback_e:
-                                    print(f"Fallback also failed: {fallback_e}")
+                                    webhook_logger.error(f"Fallback failed: {fallback_e}")
                                     
                             if not Message.objects.filter(
                                 user_id=existing_user,
@@ -1013,7 +1012,7 @@ If the user's question relates to this document, answer based on your analysis a
                                     who="bot"
                                 )
                             else:
-                                print("Duplicate bot reply prevented for user:", existing_user)
+                                webhook_logger.debug(f"Duplicate bot reply prevented for user: {existing_user.phone_no}")
 
 
                             # ===== FOLLOW-UP MESSAGE SCHEDULING =====
@@ -1037,7 +1036,7 @@ If the user's question relates to this document, answer based on your analysis a
                                     if existing_user.followup_count > 0:
                                         existing_user.followup_count = 0
                                         existing_user.save(update_fields=['followup_count'])
-                                        print(f"🔄 Reset followup_count for {existing_user.phone_no} (user is active)")
+                                        webhook_logger.info(f"Reset followup_count for {existing_user.phone_no}")
                                     
                                     # Check if a follow-up was already scheduled in this conversation window
                                     # Use a timestamp check: only schedule if last bot message was > 30 seconds ago
@@ -1051,7 +1050,7 @@ If the user's question relates to this document, answer based on your analysis a
                                     # If there are multiple bot messages in last 30 sec, skip scheduling
                                     # (prevents duplicate follow-ups from rapid message exchanges)
                                     if recent_bot_msg > 1:
-                                        print(f"⏭️ Skipping follow-up - multiple bot messages in last 30s for {existing_user.phone_no}")
+                                        webhook_logger.info(f"Skipping follow-up for {existing_user.phone_no}")
                                     else:
                                         # Get delay from FollowUpMessage step 1 (UI settings)
                                         from newapp.models import FollowUpMessage
@@ -1080,24 +1079,25 @@ If the user's question relates to this document, answer based on your analysis a
                                         delay_seconds = delay_minutes * 60
                                         # Use new persistent scheduling (schedule_followup creates a ScheduledFollowUp record)
                                         schedule_followup.delay(existing_user.id, step=1)
-                                        print(f"✅ Follow-up scheduled for user {existing_user.phone_no} in {delay_seconds}s ({delay_minutes} min)")
+                                        webhook_logger.info(f"Follow-up scheduled for {existing_user.phone_no}")
                                 else:
-                                    print(f"⏭️ Follow-ups disabled - skipping for {existing_user.phone_no}")
+                                    webhook_logger.info(f"Follow-ups disabled for {existing_user.phone_no}")
                             except Exception as fu_err:
-                                print(f"❌ Error scheduling follow-up: {fu_err}")
+                                webhook_logger.error(f"Follow-up error: {fu_err}")
                             # ===== END FOLLOW-UP SCHEDULING =====
 
                 return HttpResponse("Message stored", status=200)
 
             except Exception as e:
-                print(f"Webhook Error: {str(e)}")
+                webhook_logger.error(f"Webhook error: {str(e)}")
                 return HttpResponse("OK", status=200)
 
         return HttpResponse("Method not allowed", status=405)
 
     # @csrf_exempt
     # def get_message(request):
-    #     VERIFY_TOKEN = "speeed"
+    #     # SECURITY: Use environment variable for webhook verification
+VERIFY_TOKEN = os.environ.get('WHATSAPP_VERIFY_TOKEN', 'speeed')
 
     #     # Webhook verification
     #     if request.method == 'GET':
@@ -1112,7 +1112,7 @@ If the user's question relates to this document, answer based on your analysis a
     #     if request.method == 'POST':
     #         try:
     #             data = json.loads(request.body.decode("utf-8"))
-    #             print("Received webhook data:", data)
+    #             webhook_logger.debug(f"Received webhook data: {data}")
     #             # # Extract followup template early
     #             # prompt_obj = ChatGPTPrompt.objects.first()
     #             # prompt_text = (prompt_obj.prompt_text or "").strip() if prompt_obj else ""
@@ -1184,7 +1184,7 @@ If the user's question relates to this document, answer based on your analysis a
     #                                 who='human'
     #                             )
     #                         except Exception as db_in_e:
-    #                             print(f"DB inbound error: {db_in_e}")
+    #                             webhook_logger.error(f"Database inbound error: {db_in_e}")
 
     #                         # Trigger calendar link
     #                         bot_response = None
@@ -1204,7 +1204,7 @@ If the user's question relates to this document, answer based on your analysis a
     #                                     bot_response = resp.get("url")
     #                                     trigger = True
     #                         except requests.RequestException as e:
-    #                             print(f"trigger error: {e}")
+    #                             webhook_logger.error(f"Trigger error: {e}")
 
     #                         # If no trigger, do LLM response
     #                         if not trigger:
@@ -1237,12 +1237,12 @@ If the user's question relates to this document, answer based on your analysis a
     #                                         timeout=15,
     #                                     )
     #                                 except Exception as oe:
-    #                                     print(f"[LLM] OpenAI error: {oe}")
+    #                                     webhook_logger.error(f"OpenAI error: {oe}")
     #                                     resp = None
 
     #                                 if resp and hasattr(resp, "choices") and len(resp.choices) > 0:
     #                                     bot_response = resp.choices[0].message.content.strip()
-    #                                     print("[LLM] ChatGPT used")
+    #                                     webhook_logger.info("ChatGPT used for response")
     #                                 else:
     #                                     bot_response = "Sorry, I couldn’t generate a response just now."
     #                             elif pine_token:
@@ -1254,9 +1254,9 @@ If the user's question relates to this document, answer based on your analysis a
     #                                     pmsg = Pinemessage(content=msg_text)
     #                                     presp = assistant.chat(messages=[pmsg])
     #                                     bot_response = (presp or {}).get("message", {}).get("content")
-    #                                     print("[LLM] Pinecone used")
+    #                                     webhook_logger.info("Pinecone used for response")
     #                                 except Exception as pe:
-    #                                     print(f"[LLM] Pinecone error: {pe}")
+    #                                     webhook_logger.error(f"Pinecone error: {pe}")
     #                                     bot_response = "Sorry, I couldn’t generate a response just now."
     #                             else:
     #                                 bot_response = "Sorry, my assistant is offline right now."
@@ -1339,7 +1339,7 @@ If the user's question relates to this document, answer based on your analysis a
     #                                             tag, _ = Tag.objects.get_or_create(name=tag_name)
     #                                             if not UserTag.objects.filter(user=existing_user, tag=tag).exists():
     #                                                 UserTag.objects.create(user=existing_user, tag=tag)
-    #                                                 print(f"User {existing_user.id} tagged with {tag_name}.")
+    #                                                 webhook_logger.info(f"User {existing_user.id} tagged with {tag_name}")
     #                                 try:
     #                                     r = requests.post(
     #                                         "https://13e1f2a862ca.ngrok-free.app/send_whatsapp_message/",
@@ -1351,9 +1351,9 @@ If the user's question relates to this document, answer based on your analysis a
     #                                         timeout=15
     #                                     )
     #                                     if r.status_code != 200:
-    #                                         print(f"send_whatsapp_message error: {r.status_code} - {r.text}")
+    #                                         webhook_logger.error(f"send_whatsapp_message error: {r.status_code} - {r.text}")
     #                                 except Exception as e:
-    #                                     print(f"Exception calling send_whatsapp_message: {e}")
+    #                                     webhook_logger.error(f"Error in send_whatsapp_message: {e}")
 
     #                                 Message.objects.create(
     #                                     # user=existing_user,
@@ -1374,9 +1374,9 @@ If the user's question relates to this document, answer based on your analysis a
     #                                 #                 timeout=15
     #                                 #             )
     #                                 #             if r.status_code != 200:
-    #                                 #                 print(f"send_whatsapp_message error: {r.status_code} - {r.text}")
+    #                                 #                 webhook_logger.error(f"send_whatsapp_message error: {r.status_code} - {r.text}")
     #                                 # except Exception as e:
-    #                                 #             print(f"Exception calling send_whatsapp_message: {e}")
+    #                                 #             webhook_logger.error(f"Error in send_whatsapp_message: {e}")
 
     #                                 # Message.objects.create(
     #                                 #             # user=existing_user,
@@ -1391,12 +1391,12 @@ If the user's question relates to this document, answer based on your analysis a
     #                                 #     send_followup_message.apply_async(args=[existing_user.id, followup_text], countdown=30)
                                      
     #                             except Exception as e:
-    #                                 print(f"Error processing bot response: {e}")
+    #                                 webhook_logger.error(f"Error processing bot response: {e}")
 
     #             return HttpResponse("Message stored", status=200)
 
     #         except Exception as e:
-    #             print(f"Webhook Error: {str(e)}")
+    #             webhook_logger.error(f"Webhook error: {str(e)}")
     #             return HttpResponse("OK", status=200)
 
     #     return HttpResponse("Method not allowed", status=405)

@@ -15,8 +15,10 @@ from django.utils import timezone
 import json
 import requests
 import logging
+import os
 
 logger = logging.getLogger(__name__)
+broadcast_logger = logging.getLogger('broadcast')
 
 from ..models import (
     Admin, Organization, User, Tag, UserTag,
@@ -73,7 +75,7 @@ class BroadcastController:
         Sync WhatsApp message templates from Meta API.
         Fetches all templates and stores them in WhatsAppTemplate model.
         """
-        logger.info("[sync_templates] Starting template sync")
+        broadcast_logger.info("Starting template sync")
         if request.method != 'POST':
             return JsonResponse({'error': 'POST required'}, status=405)
         
@@ -140,7 +142,7 @@ class BroadcastController:
                 )
                 synced_count += 1
             
-            logger.info(f"[sync_templates] Successfully synced {synced_count} templates")
+            broadcast_logger.info(f"Successfully synced {synced_count} templates")
             return JsonResponse({
                 'success': True,
                 'synced_count': synced_count,
@@ -198,7 +200,7 @@ class BroadcastController:
         
         creds = BroadcastController._get_credentials(request)
         if not creds or not creds['token']:
-            logger.warning("[create_broadcast] WhatsApp not configured")
+            broadcast_logger.warning("WhatsApp not configured")
             return JsonResponse({'error': 'WhatsApp not configured'}, status=403)
         
         try:
@@ -271,7 +273,7 @@ class BroadcastController:
             
             # Trigger the Celery task to process this broadcast
             from newapp.broadcast_tasks import process_broadcast_job
-            logger.info(f"[create_broadcast] Job {job.id} created with {recipient_count} recipients. Triggering Celery task.")
+            broadcast_logger.info(f"Broadcast job {job.id} created for {recipient_count} recipients")
             process_broadcast_job.delay(job.id)
             
             return JsonResponse({
@@ -282,10 +284,10 @@ class BroadcastController:
             })
             
         except json.JSONDecodeError:
-            logger.error("[create_broadcast] Invalid JSON in request")
+            broadcast_logger.error("Invalid JSON in broadcast request")
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
         except Exception as e:
-            logger.error(f"[create_broadcast] Error: {str(e)}")
+            broadcast_logger.error(f"Broadcast error: {str(e)}")
             return JsonResponse({'error': f'Error creating broadcast: {str(e)}'}, status=500)
 
     @csrf_exempt

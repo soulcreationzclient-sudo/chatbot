@@ -1,6 +1,7 @@
 import uuid
 import json
 import logging
+from django_ratelimit.decorators import ratelimit
 from django.utils import timezone
 from django.conf import settings
 from django.db import transaction
@@ -487,6 +488,7 @@ session=session,
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@ratelimit(key="ip", rate="50/h", block=True)
 def api_webchat_start(request):
     """
     API endpoint to start a new web chat session.
@@ -520,6 +522,7 @@ def api_webchat_start(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@ratelimit(key="ip", rate="100/h", block=True)
 def api_webchat_message(request):
     """
     API endpoint to send a message in a web chat session.
@@ -546,6 +549,7 @@ def api_webchat_message(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@ratelimit(key="ip", rate="100/h", block=True)
 def api_webchat_messages(request, session_id):
     """
     API endpoint to get messages for a web chat session.
@@ -561,6 +565,7 @@ def api_webchat_messages(request, session_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@ratelimit(key="ip", rate="30/h", block=True)
 def api_webchat_end(request):
     """
     API endpoint to end a web chat session.
@@ -592,6 +597,7 @@ def api_webchat_end(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@ratelimit(key="ip", rate="20/h", block=True)
 def api_webchat_feedback(request):
     """
     API endpoint to submit user feedback for a session.
@@ -626,6 +632,7 @@ def api_webchat_feedback(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@ratelimit(key="ip", rate="20/h", block=True)
 def api_webchat_language(request):
     """
     API endpoint to update language preference for a session.

@@ -11,6 +11,21 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+import socket
+
+# Get environment for production settings
+def get_env_bool(key, default=False):
+    """Get boolean from environment variable"""
+    val = os.environ.get(key, '').lower()
+    if val in ('true', '1', 'yes'):
+        return True
+    elif val in ('false', '0', 'no'):
+        return False
+    return default
+
+# Production detection
+IS_PRODUCTION = os.environ.get('DJANGO_ENV') == 'production
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -21,28 +36,43 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-gf7l^42ba)oc=rvv87_ocx@tq4o$c)2&$eg5&ake*5yzx)jf@j'
+# SECURITY: Use environment variable in production
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-gf7l^42ba)oc=rvv87_ocx@tq4o$c)2&$eg5&ake*5yzx)jf@j')
+# In production, ensure SECRET_KEY is set via environment variable
+if IS_PRODUCTION and 'django-insecure-' in SECRET_KEY:
+    raise ValueError("SECRET_KEY must be set via environment variable in production!")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# SECURITY: Debug mode should be False in production
+DEBUG = get_env_bool('DEBUG', True)  # Default True for dev, set DEBUG=False in production
 
-ALLOWED_HOSTS = [
-     'localhost',
-    '127.0.0.1',
-    'chatbotad.io',
-    'www.chatbotad.io',
-    '18.232.180.166',
-    '34.235.125.118',
-    '1d947b3a8e32.ngrok-free.app',
-    '.ngrok-free.app',
-    '.ngrok-free.dev',
-    'overslight-shirley-overhearty.ngrok-free.dev',
-    "https://07377353818c.ngrok-free.app"
-]
+# SECURITY: ALLOWED_HOSTS configuration
+# In production, only allow actual domain names
+if IS_PRODUCTION:
+    ALLOWED_HOSTS = ['chatbotad.io', 'www.chatbotad.io']
+else:
+    ALLOWED_HOSTS = [
+        'localhost',
+        '127.0.0.1',
+        'chatbotad.io',
+        'www.chatbotad.io',
+        '18.232.180.166',
+        '34.235.125.118',
+        # ngrok domains (temporary - remove after testing)
+        '.ngrok-free.app',
+        '.ngrok-free.dev',
+    ]
 
-# Allow CSRF over HTTP for development
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+# SECURITY: Cookie and Session Settings
+# In production, enable secure cookies
+CSRF_COOKIE_SECURE = get_env_bool('CSRF_COOKIE_SECURE', not IS_PRODUCTION)
+SESSION_COOKIE_SECURE = get_env_bool('SESSION_COOKIE_SECURE', not IS_PRODUCTION)
+
+# Proxy settings for nginx reverse proxy
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+# CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
     'https://chatbotad.io',
     'http://chatbotad.io',
@@ -50,14 +80,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://www.chatbotad.io',
     'http://18.232.180.166',
     'https://18.232.180.166',
-    'https://overslight-shirley-overhearty.ngrok-free.dev',
 ]
-
-# Proxy settings for nginx reverse proxy
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = True
-CSRF_COOKIE_SECURE = False  # Allow CSRF over HTTP
-SESSION_COOKIE_SECURE = False  # Allow sessions over HTTP
 
 
 # Application definition
@@ -183,5 +206,95 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
 
+
+# =============================================================================
+# LOGGING CONFIGURATION (Low overhead)
+# =============================================================================
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'chatbot.log',
+            'maxBytes': 5 * 1024 * 1024,  # 5MB max
+            'backupCount': 3,
+            'formatter': 'standard',
+        },
+        'console': {
+            'level': 'WARNING',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'newapp': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'webhook': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'handlers': ['file', 'console'],
+        'level': 'INFO',
+    },
+}
+
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# =============================================================================
+# RATE LIMITING (Optional - uncomment if needed)
+# =============================================================================
+# To enable rate limiting, install: pip install django-ratelimit
+# Then add @ratelimit decorator to views:
+# from django_ratelimit.decorators import ratelimit
+#
+# @ratelimit(key='ip', rate='100/h')
+# def my_view(request):
+#     ...
+# =============================================================================
+
 MEDIA_URL = '/media/'
+
+
+# =============================================================================
+# ERROR MONITORING (Optional - uncomment to enable)
+# =============================================================================
+# To enable error monitoring with Sentry:
+# 1. Install: pip install sentry-sdk
+# 2. Uncomment the configuration below
+# 3. Set your SENTRY_DSN environment variable
+#
+# SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+# if SENTRY_DSN:
+#     import sentry_sdk
+#     sentry_sdk.init(
+#         dsn=SENTRY_DSN,
+#         traces_sample_rate=0.1,  # Set to 1.0 to trace all requests (impacts performance)
+#         profiles_sample_rate=0.1,
+#         environment='production' if IS_PRODUCTION else 'development',
+#     )
+# =============================================================================
