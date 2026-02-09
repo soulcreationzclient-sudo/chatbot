@@ -254,7 +254,7 @@ class whatsappcontroller:
     @csrf_exempt
     def get_message(request):
         # SECURITY: Use environment variable for webhook verification
-VERIFY_TOKEN = os.environ.get('WHATSAPP_VERIFY_TOKEN', 'speeed')
+        VERIFY_TOKEN = os.environ.get('WHATSAPP_VERIFY_TOKEN', 'speeed')
 
         if request.method == 'GET':
             mode = request.GET.get('hub.mode')
@@ -503,7 +503,7 @@ If you have any relevant tools/functions available that can process or validate 
                                 time_diff = (timezone.now() - last_msg.created_at).total_seconds()
                                 if time_diff < 60:
                                     webhook_logger.info(f"Skipping duplicate message from {phone}")
-                webhook_logger.info(f"Duplicate message ignored: {msg_text[:50]}...")
+                                    webhook_logger.info(f"Duplicate message ignored: {msg_text[:50]}...")
                                     continue
 
                             Message.objects.create(
@@ -591,10 +591,10 @@ If you have any relevant tools/functions available that can process or validate 
                                 openai_key = creds['openai_key']
                                 pine_token = creds['pinecone_token']
 
-                webhook_logger.debug(f"Processing message from {phone}")
+                                webhook_logger.debug(f"Processing message from {phone}")
                                 
                                 if openai_key:
-                webhook_logger.debug(f"OpenAI key found: {openai_key[:5]}...")
+                                    webhook_logger.debug(f"OpenAI key found: {openai_key[:5]}...")
                                     try:
                                         from openai import OpenAI
                                         client = OpenAI(api_key=openai_key)
@@ -948,9 +948,9 @@ If the user's question relates to this document, answer based on your analysis a
                                 final_reply_text = cf_result.get('final_text', final_reply_text)
                                 
                                 if cf_result.get('fields_processed', 0) > 0:
-                                    webhook_logger.info(f"Processed {cf_result.get("fields_processed", 0)} custom field(s) for user {existing_user.phone_no}")
+                                    webhook_logger.info(f"Processed {cf_result.get('fields_processed', 0)} custom field(s) for user {existing_user.phone_no}")
                                 if cf_result.get('fields_failed', 0) > 0:
-                                    webhook_logger.warning(f"Failed to process {cf_result.get("fields_failed", 0)} custom field(s)")
+                                    webhook_logger.warning(f"Failed to process {cf_result.get('fields_failed', 0)} custom field(s)")
 
                                 # 3. Process Image Tags
                                 from newapp.image_tag_processor import process_image_tags
@@ -1097,7 +1097,7 @@ If the user's question relates to this document, answer based on your analysis a
     # @csrf_exempt
     # def get_message(request):
     #     # SECURITY: Use environment variable for webhook verification
-VERIFY_TOKEN = os.environ.get('WHATSAPP_VERIFY_TOKEN', 'speeed')
+    #     VERIFY_TOKEN = os.environ.get('WHATSAPP_VERIFY_TOKEN', 'speeed')
 
     #     # Webhook verification
     #     if request.method == 'GET':
