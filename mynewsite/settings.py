@@ -25,7 +25,7 @@ def get_env_bool(key, default=False):
     return default
 
 # Production detection
-IS_PRODUCTION = os.environ.get('DJANGO_ENV') == 'production
+IS_PRODUCTION = os.environ.get('DJANGO_ENV') == 'production'
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
