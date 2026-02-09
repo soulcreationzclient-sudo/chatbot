@@ -32,7 +32,7 @@ class Settingcontroller :
         calendly_connected = False
         admin = None 
         chatgpt_mode = "N/A"
-        chatgpt_mode = "N/A"
+        
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         
