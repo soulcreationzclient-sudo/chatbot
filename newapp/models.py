@@ -218,7 +218,33 @@ class Admin(models.Model):
         managed=True
         db_table='admins'
 
-class Meta:
+class User(models.Model):
+    """Contact/User model - represents a WhatsApp contact."""
+    id = models.AutoField(primary_key=True)
+    # Legacy field - kept for backward compatibility during migration
+    admin_id = models.ForeignKey(Admin, on_delete=models.DO_NOTHING, db_column='admin_id', null=True, blank=True)
+    # New organization field for multi-tenant support
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='contacts',
+        db_column='organization_id'
+    )
+    name = models.CharField(max_length=100)
+    phone_no = models.CharField(max_length=20)
+    created_at = models.DateTimeField()
+    is_escalation = models.BooleanField(default=False)
+    followup_count = models.IntegerField(default=0)  # Track follow-up attempts (max 3)
+    source = models.CharField(max_length=50, default='Whatsapp')
+    # Per-user bot toggle: when False, bot won't auto-reply and follow-ups are paused
+    bot_enabled = models.BooleanField(default=True)
+    # Soft-delete for inbox: When False, contact is archived from inbox but still visible in All Contacts
+    is_in_inbox = models.BooleanField(default=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
         db_table = 'users'
         indexes = [
             models.Index(fields=['organization_id']),
@@ -227,6 +253,8 @@ class Meta:
             models.Index(fields=['phone_no']),
             models.Index(fields=['created_at']),
         ]
+
+
 
 class Message(models.Model):
     WHO_CHOICES=[
@@ -280,19 +308,8 @@ class UserTag(models.Model):
         db_table = 'user_tags'  # New table for user-tag relationships
         unique_together = ('user', 'tag')  # prevent duplicate mappings
 
-# class Meta:
-        db_table = 'users'
-        indexes = [
-            models.Index(fields=['organization_id']),
-            models.Index(fields=['admin_id']),
-            models.Index(fields=['is_in_inbox']),
-            models.Index(fields=['phone_no']),
-            models.Index(fields=['created_at']),
-        ]
 
-#     def __str__(self):
-#         return f"{self.name} ({self.phone_no})"
-     
+
 class ChatGPTPrompt(models.Model):
     prompt_text = models.TextField()
     updated_at = models.DateTimeField(auto_now=True)
