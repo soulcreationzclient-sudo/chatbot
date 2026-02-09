@@ -8,13 +8,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
+            --primary: #4169e1;
+            /* Brighter blue for active states */
+            --primary-hover: #3154c6;
             --bg-body: #f1f5f9;
             --bg-card: #ffffff;
             --text-main: #1e293b;
             --text-secondary: #64748b;
             --border: #e2e8f0;
+            --sidebar-bg: #e8ebf5;
+            /* Add this new variable for sidebar */
         }
 
         * {
@@ -39,7 +42,8 @@
         /* Sidebar */
         .sidebar {
             width: 260px;
-            background: #0f172a;
+            background: var(--sidebar-bg);
+            /* Changed from #ffffff */
             color: white;
             display: flex;
             flex-direction: column;
@@ -55,6 +59,8 @@
             font-size: 20px;
             font-weight: 700;
             letter-spacing: -0.5px;
+            color: #1e293b;
+            /* Add this line */
         }
 
         .logo-icon {
@@ -75,7 +81,8 @@
             padding: 12px;
             margin-bottom: 4px;
             border-radius: 8px;
-            color: #94a3b8;
+            color: #64748b;
+            /* Changed from #94a3b8 */
             cursor: pointer;
             transition: all 0.2s;
             font-weight: 500;
@@ -83,12 +90,15 @@
         }
 
         .nav-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: white;
+            background: rgba(65, 105, 225, 0.1);
+            /* Changed from rgba(255, 255, 255, 0.05) */
+            color: #1e293b;
+            /* Changed from white */
         }
 
         .nav-item.active {
-            background: var(--primary);
+            background: #4169e1;
+            /* Use the brighter blue */
             color: white;
         }
 
