@@ -68,6 +68,11 @@ else:
 CSRF_COOKIE_SECURE = get_env_bool('CSRF_COOKIE_SECURE', not IS_PRODUCTION)
 SESSION_COOKIE_SECURE = get_env_bool('SESSION_COOKIE_SECURE', not IS_PRODUCTION)
 
+# Session expiry: 8 hours (28800 seconds)
+SESSION_COOKIE_AGE = 28800
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_SAVE_EVERY_REQUEST = True  # Reset timer on every request
+
 # Proxy settings for nginx reverse proxy
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True

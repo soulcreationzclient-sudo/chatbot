@@ -153,7 +153,7 @@ class Contactcontroller:
                         organization=org,
                         name=name,
                         phone_no=phone_no,
-                        created_at=datetime.now(),
+                        created_at=timezone.now(),
                         is_in_inbox=True
                     )
                 elif admin_id:
@@ -165,7 +165,7 @@ class Contactcontroller:
                         admin_id=admin,
                         name=name,
                         phone_no=phone_no,
-                        created_at=datetime.now(),
+                        created_at=timezone.now(),
                         is_in_inbox=True
                     )
                 else:

@@ -34,7 +34,7 @@ def voice_bot(request):
     return render(request, 'voice_bot.html')
 
 
-@csrf_exempt
+
 def connect_whatsapp(request):
     if request.method == 'POST':
         token = request.POST.get('token', '').strip()
@@ -96,7 +96,7 @@ def connect_whatsapp(request):
     return render(request, 'connect_whatsapp.html')
 
 
-@csrf_exempt
+
 def send_whatsapp_message(request):
     """
     BUG FIX: Added input validation and proper error handling on 2026-02-09
@@ -282,7 +282,7 @@ def send_whatsapp_message(request):
 
 
 
-@csrf_exempt
+
 def send_voice_bot(request):
     response_data = None
     success_message = None
@@ -538,7 +538,7 @@ ACCESS_TOKEN ='EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo800
 #     return HttpResponse(200)
 WHATSAPP_API_URL ="https://graph.facebook.com/v22.0/771795822685853/messages"
 ACCESS_TOKEN ='EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD'
-@csrf_exempt
+
 def send_broadcast(request):
     if request.method != "POST":
         return HttpResponse("Invalid request method", status=405)
@@ -612,7 +612,7 @@ def send_broadcast(request):
             user_id=user,
             messages=f"[Broadcast Template: {template_name}]",
             who="bot",
-            created_at=datetime.now()
+            created_at=timezone.now()
         )
 
     # return HttpResponse("Broadcast sent successfully.")
@@ -738,7 +738,7 @@ def settings_view(request):
 from django.shortcuts import render, redirect
 from .forms import TaggingForm
 from .models import Tag, User, UserTag
-@csrf_exempt
+
 def tag_view(request):
     # Get organization/admin from session
     org_id = request.session.get('organization_id')
@@ -889,7 +889,7 @@ from django.shortcuts import render
 #         'success_message': success_message,
 #         'error_message': error_message,
 #     })
-@csrf_exempt
+
 def create_event_api(request):
     success_message = None
     error_message = None
@@ -935,7 +935,7 @@ from django.contrib.auth.decorators import login_required  # use if needed
 from newapp.models import Admin  # or wherever you store the API keys
 import openai
 
-@csrf_exempt
+
 def send_inbox_message(request):
     """Send a message from the inbox to a user via WhatsApp (no AI)"""
     if request.method != "POST":
@@ -1046,7 +1046,7 @@ def send_inbox_message(request):
 
 
 
-@csrf_exempt
+
 def chatgpt_respond(request):
     """Handle chat from inbox UI - saves messages to DB and sends to WhatsApp"""
     if request.method == "POST":
@@ -1089,13 +1089,9 @@ def chatgpt_respond(request):
                     whatsapp_phone_id = admin.whatsapp_phone_id
                     whatsapp_token = admin.whatsapp_token
             
-            # Fallback to first admin if no key found
+            # No fallback - require proper authentication with credentials
             if not openai_key:
-                admin = Admin.objects.first()
-                if admin:
-                    openai_key = admin.openai_api_key
-                    whatsapp_phone_id = whatsapp_phone_id or admin.whatsapp_phone_id
-                    whatsapp_token = whatsapp_token or admin.whatsapp_token
+                return JsonResponse({"error": "OpenAI API key not configured. Please set it in Settings > Channels."}, status=400)
             
             # Get user object for saving messages
             user_obj = None
@@ -1248,7 +1244,7 @@ def chatgpt_respond(request):
 
 from django.shortcuts import render, redirect
 from .models import ChatGPTPrompt
-@csrf_exempt
+
 def chatgpt_prompt_page(request):
     # Get organization/admin from session
     org_id = request.session.get('organization_id')
@@ -1294,18 +1290,46 @@ def get_message_chatgpt(request):
         if not messages_list:
             return HttpResponse("No messages", status=400)
 
-        messages = messages_list[0]
-        phone = messages.get('from')  # WhatsApp number
-        message_type = messages.get('type')  # text, image, document, etc.
+        messages_data = messages_list[0]
+        phone = messages_data.get('from')  # WhatsApp number
+        message_type = messages_data.get('type')  # text, image, document, etc.
 
-        admin = Admin.objects.first()
-        if not admin or not admin.openai_api_key:
+        # Resolve admin/org from webhook metadata (same pattern as main webhook)
+        metadata = value.get("metadata") or {}
+        phone_number_id = metadata.get('phone_number_id')
+        
+        admin = None
+        org = None
+        openai_key = None
+        whatsapp_phone_id = phone_number_id
+        whatsapp_token = None
+        
+        if phone_number_id:
+            from .models import Organization
+            org = Organization.objects.filter(whatsapp_phone_id=phone_number_id).first()
+            admin = Admin.objects.filter(whatsapp_phone_id=phone_number_id).first()
+        
+        # Get credentials - prefer org, fallback to admin
+        if org:
+            openai_key = org.openai_api_key
+            whatsapp_token = org.whatsapp_token
+        elif admin:
+            openai_key = admin.openai_api_key
+            whatsapp_token = admin.whatsapp_token
+        
+        if not openai_key:
             return HttpResponse("ChatGPT API key not configured", status=400)
 
-        # Get or create user
+        # Get or create user - properly associate with admin/org
         user_obj, _ = User.objects.get_or_create(
             phone_no=phone,
-            defaults={'name': 'user', 'created_at': timezone.now(), 'is_in_inbox': True}
+            defaults={
+                'name': 'user',
+                'created_at': timezone.now(),
+                'is_in_inbox': True,
+                'admin_id': admin,
+                'organization': org,
+            }
         )
 
         # ==================== IMAGE/PDF ANALYSIS ====================
@@ -1313,7 +1337,7 @@ def get_message_chatgpt(request):
         if message_type == 'image':
             from .image_pdf_service import analyze_media_message
             
-            image_info = messages.get('image', {})
+            image_info = messages_data.get('image', {})
             media_id = image_info.get('id')
             caption = image_info.get('caption', 'What can you see in this image? Describe it in detail.')
             
@@ -1341,9 +1365,9 @@ def get_message_chatgpt(request):
                 who='bot'
             )
             
-            whatsapp_api_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
+            whatsapp_api_url = f"https://graph.facebook.com/v17.0/{whatsapp_phone_id}/messages"
             headers = {
-                "Authorization": f"Bearer {admin.whatsapp_token}",
+                "Authorization": f"Bearer {whatsapp_token}",
                 "Content-Type": "application/json"
             }
             payload = {
@@ -1360,7 +1384,7 @@ def get_message_chatgpt(request):
         elif message_type == 'document':
             from .image_pdf_service import analyze_media_message
             
-            doc_info = messages.get('document', {})
+            doc_info = messages_data.get('document', {})
             media_id = doc_info.get('id')
             mime_type = doc_info.get('mime_type', '')
             filename = doc_info.get('filename', 'document')
@@ -1391,9 +1415,9 @@ def get_message_chatgpt(request):
                 who='bot'
             )
             
-            whatsapp_api_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
+            whatsapp_api_url = f"https://graph.facebook.com/v17.0/{whatsapp_phone_id}/messages"
             headers = {
-                "Authorization": f"Bearer {admin.whatsapp_token}",
+                "Authorization": f"Bearer {whatsapp_token}",
                 "Content-Type": "application/json"
             }
             payload = {
@@ -1408,7 +1432,7 @@ def get_message_chatgpt(request):
         
         # ==================== TEXT MESSAGE HANDLING ====================
         # Handle regular text messages
-        user_text = messages.get('text', {}).get('body')
+        user_text = messages_data.get('text', {}).get('body')
         
         # Save incoming text message
         Message.objects.create(
@@ -1480,7 +1504,12 @@ def get_message_chatgpt(request):
         
         else:
             # No booking/cancel intent - use regular ChatGPT response
-            prompt_obj = ChatGPTPrompt.objects.first()
+            if org:
+                prompt_obj = ChatGPTPrompt.objects.filter(organization=org).order_by('-updated_at').first()
+            elif admin:
+                prompt_obj = ChatGPTPrompt.objects.filter(admin=admin).order_by('-updated_at').first()
+            else:
+                prompt_obj = None
             common_prompt = prompt_obj.prompt_text if prompt_obj else ""
             
             # Add Calendly context to the system prompt
@@ -1493,7 +1522,7 @@ You are also able to help users book and cancel appointments.
             chatgpt_input = f"{common_prompt}\n{calendly_context}\n\nUser: {user_text}" if common_prompt else f"{calendly_context}\n\nUser: {user_text}"
 
             # Call OpenAI API
-            openai.api_key = admin.openai_api_key
+            openai.api_key = openai_key
             response = openai.ChatCompletion.create(
                 model="gpt-4",
                 messages=[{"role": "user", "content": chatgpt_input}],
@@ -1510,9 +1539,9 @@ You are also able to help users book and cancel appointments.
         )
 
         # Send reply back via WhatsApp
-        whatsapp_api_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
+        whatsapp_api_url = f"https://graph.facebook.com/v17.0/{whatsapp_phone_id}/messages"
         headers = {
-            "Authorization": f"Bearer {admin.whatsapp_token}",
+            "Authorization": f"Bearer {whatsapp_token}",
             "Content-Type": "application/json"
         }
         payload = {
@@ -1534,7 +1563,7 @@ from django.http import HttpResponse
 from .models import Admin
 
 
-@csrf_exempt
+
 def connect_openai_key(request):
     if request.method == "POST":
         data = json.loads(request.body.decode("utf-8"))
@@ -1569,7 +1598,7 @@ def connect_openai_key(request):
             
     return JsonResponse({"msg": "Invalid request."}, status=405)
 
-@csrf_exempt
+
 def disconnect_openai_key(request):
     if request.method == "POST":
         org_id = request.session.get('organization_id')
@@ -1652,7 +1681,7 @@ from django.shortcuts import redirect
 from django.contrib import messages
 from .models import User, Tag, UserTag, Organization
 import traceback
-@csrf_exempt
+
 def import_contacts(request):
     try:
         if request.method == 'POST':
@@ -1803,7 +1832,7 @@ from .models import AIAgentConfig
 
 from django.views.decorators.csrf import csrf_exempt
 
-@csrf_exempt
+
 def delete_pdf(request, pk):
     if request.method == "POST":
         pdf = get_object_or_404(AIAgentConfig, pk=pk)

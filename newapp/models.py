@@ -270,7 +270,11 @@ class Message(models.Model):
 
     class Meta:
         managed = True
-        db_table = 'conversations' 
+        db_table = 'conversations'
+        indexes = [
+            models.Index(fields=['created_at']),
+            models.Index(fields=['user_id']),
+        ]
 
 
 # Create your models here.
@@ -292,8 +296,11 @@ class Tag(models.Model):
 
     class Meta:
         db_table = 'tags'
-        # Note: unique_together with nullable fields needs careful handling
-        # Django allows multiple NULL values in unique_together
+        indexes = [
+            models.Index(fields=['keyword']),
+            models.Index(fields=['organization_id']),
+            models.Index(fields=['admin_id']),
+        ]
 
 
 

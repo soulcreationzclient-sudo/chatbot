@@ -138,8 +138,13 @@ class whatsappcontroller:
         if not phone:
             return JsonResponse({"error": "Phone number missing"}, status=400)
 
+        # Check both Admin and Organization tables for WhatsApp token
         token = Admin.objects.filter(whatsapp_phone_id=phone_number_id)\
                             .values_list('whatsapp_token', flat=True).first()
+        if not token:
+            from ..models import Organization
+            token = Organization.objects.filter(whatsapp_phone_id=phone_number_id)\
+                                .values_list('whatsapp_token', flat=True).first()
         if not token:
             return JsonResponse({"error": "WhatsApp token missing"}, status=400)
 
@@ -163,7 +168,7 @@ class whatsappcontroller:
                 # persist bot message (uses timezone.now)
                 user = User.objects.filter(phone_no=phone).first()
                 if not user:
-                    user = User.objects.create(name='bot', phone_no=phone, created_at=datetime.now(), is_in_inbox=True)
+                    user = User.objects.create(name='bot', phone_no=phone, created_at=timezone.now(), is_in_inbox=True)
                 Message.objects.create(user_id=user, messages=message, created_at=timezone.now(), who='bot')
                 return JsonResponse({"ok": True, "provider_response": data}, status=200)
             else:
@@ -254,7 +259,11 @@ class whatsappcontroller:
     @csrf_exempt
     def get_message(request):
         # SECURITY: Use environment variable for webhook verification
-        VERIFY_TOKEN = os.environ.get('WHATSAPP_VERIFY_TOKEN', 'speeed')
+        # SECURITY: Require environment variable for webhook verification
+        VERIFY_TOKEN = os.environ.get('WHATSAPP_VERIFY_TOKEN')
+        if not VERIFY_TOKEN:
+            webhook_logger.error("WHATSAPP_VERIFY_TOKEN environment variable not set")
+            return HttpResponse("Server misconfiguration", status=500)
 
         if request.method == 'GET':
             mode = request.GET.get('hub.mode')
@@ -324,7 +333,7 @@ class whatsappcontroller:
                             if not existing_user:
                                 existing_user = User(
                                     phone_no=phone,
-                                    created_at=datetime.now(),
+                                    created_at=timezone.now(),
                                     admin_id=admin_check,
                                     is_in_inbox=True,  # Ensure user appears in inbox
                                 )
@@ -349,6 +358,7 @@ class whatsappcontroller:
 
                             
                             # ==================== IMAGE/DOCUMENT HANDLING ====================
+                            media_already_saved = False  # Track if we already saved the human message
                             if msg_type == 'image':
                                 from newapp.image_pdf_service import analyze_media_message, save_chat_media
                                 
@@ -369,6 +379,7 @@ class whatsappcontroller:
                                     created_at=timezone.now(),
                                     who='human'
                                 )
+                                media_already_saved = True
                                 
                                 # Analyze the image
                                 webhook_logger.info(f"Analyzing image for {phone}")
@@ -434,6 +445,7 @@ class whatsappcontroller:
                                     created_at=timezone.now(),
                                     who='human'
                                 )
+                                media_already_saved = True
                                 
                                 # Analyze the document
                                 webhook_logger.info(f"Analyzing document {filename} for {phone}")
@@ -506,12 +518,14 @@ If you have any relevant tools/functions available that can process or validate 
                                     webhook_logger.info(f"Duplicate message ignored: {msg_text[:50]}...")
                                     continue
 
-                            Message.objects.create(
-                                user_id=existing_user,
-                                messages=msg_text,
-                                created_at=timezone.now(),
-                                who='human'
-                            ) 
+                            # Only save text message if not already saved by image/doc handler
+                            if not media_already_saved:
+                                Message.objects.create(
+                                    user_id=existing_user,
+                                    messages=msg_text,
+                                    created_at=timezone.now(),
+                                    who='human'
+                                )
 
                             # ==================== BOT TOGGLE CHECK ====================
                             # If bot is disabled for this user, skip AI response
@@ -535,7 +549,7 @@ If you have any relevant tools/functions available that can process or validate 
                                     if tag.keyword and tag.keyword.lower() in msg_lower:
                                         # Apply tag to user
                                         UserTag.objects.get_or_create(user=existing_user, tag=tag)
-                                        print(f"🏷️ Auto-applied tag '{tag.name}' to {phone} (keyword: {tag.keyword})")
+                                        webhook_logger.debug(f"Auto-applied tag '{tag.name}' to {phone} (keyword: {tag.keyword})")
                             except Exception as kt_e:
                                 webhook_logger.error(f"Keyword tagging error: {kt_e}")
                             # ==================== END KEYWORD MACRO TAGGING ====================
@@ -786,7 +800,7 @@ If the user's question relates to this document, answer based on your analysis a
                                             
                                             system_prompt += cf_info
                                             
-                                            print(f"[CustomFields] Injected {admin_custom_fields.count()} custom fields for user {existing_user.phone_no}")# --- END CUSTOM FIELD INTEGRATION ---
+                                            webhook_logger.debug(f"[CustomFields] Injected {admin_custom_fields.count()} custom fields for user {existing_user.phone_no}")# --- END CUSTOM FIELD INTEGRATION ---
                                         # Prepare API Call Params
                                         api_params = {
                                             "model": "gpt-4-turbo", # Need tool support
@@ -805,22 +819,19 @@ If the user's question relates to this document, answer based on your analysis a
                                         response_message = resp.choices[0].message
                                         
                                         if response_message.tool_calls:
-                                            with open('debug_log.txt', 'a', encoding='utf-8') as f:
-                                                f.write(f"[Tool] AI wants to call {len(response_message.tool_calls)} tools\n")
+                                            webhook_logger.debug(f"[Tool] AI wants to call {len(response_message.tool_calls)} tools")
                                             # Append the assistant's message (with tool calls) to history
                                             api_params["messages"].append(response_message)
                                             
                                             for tool_call in response_message.tool_calls:
                                                 function_name = tool_call.function.name
                                                 arguments = json.loads(tool_call.function.arguments)
-                                                with open('debug_log.txt', 'a', encoding='utf-8') as f:
-                                                    f.write(f"[Tool] Calling {function_name} with {arguments}\n")
+                                                webhook_logger.debug(f"[Tool] Calling {function_name} with {arguments}")
                                                 
                                                 # Execute
                                                 tool_result = execute_tool(function_name, arguments, admin_check)
                                                 
-                                                with open('debug_log.txt', 'a', encoding='utf-8') as f:
-                                                    f.write(f"[Tool Result] Output: {tool_result}\n")
+                                                webhook_logger.debug(f"[Tool Result] Output: {tool_result}")
                                                 
                                                 # Append result
                                                 api_params["messages"].append({
@@ -837,27 +848,25 @@ If the user's question relates to this document, answer based on your analysis a
                                             bot_response = response_message.content.strip()
 
                                         # --- TOOL INTEGRATION END ---
-                                        with open('debug_log.txt', 'a', encoding='utf-8') as f:
-                                            f.write(f"[Debug] Bot Response generated: {bot_response}\n")
+                                        webhook_logger.debug(f"[Debug] Bot Response generated: {bot_response}")
                                     except Exception as oe:
-                                        with open('debug_log.txt', 'a', encoding='utf-8') as f:
-                                            f.write(f"[LLM] OpenAI error details: {str(oe)}\n")
-                                            import traceback
-                                            traceback.print_exc(file=f)
+                                        webhook_logger.error(f"[LLM] OpenAI error details: {str(oe)}", exc_info=True)
                                         resp = None
 
                                     if bot_response:
-                                         with open('debug_log.txt', 'a', encoding='utf-8') as f:
-                                            f.write("[Debug] Bot response is valid\n")
+                                         webhook_logger.debug("Bot response is valid")
                                     else:
-                                         with open('debug_log.txt', 'a', encoding='utf-8') as f:
-                                            f.write("[Debug] Bot response is Empty/None\n")
+                                         webhook_logger.warning("Bot response is Empty/None")
                                          bot_response = "Sorry, I couldn’t generate a response just now."
                                 elif pine_token:
                                     try:
                                         pc = Pinecone(api_key=pine_token)
-                                        admin = Admin.objects.first()
-                                        assistant_name = admin.assistant_name
+                                        # Use the admin already resolved from webhook metadata
+                                        assistant_name = admin_check.assistant_name if admin_check else None
+                                        if not assistant_name:
+                                            webhook_logger.error("No assistant_name configured for Pinecone")
+                                            bot_response = "Sorry, my assistant is not configured yet."
+                                            raise Exception("No assistant_name")
                                         assistant = pc.assistant.Assistant(assistant_name=assistant_name)
                                         pmsg = Pinemessage(content=msg_text)
                                         presp = assistant.chat(messages=[pmsg])
@@ -931,8 +940,7 @@ If the user's question relates to this document, answer based on your analysis a
                                 if api_responses:
                                     final_reply_text += "\n\n" + "\n".join(api_responses)
                                     
-                                with open('debug_log.txt', 'a') as f:
-                                    f.write(f"[Debug] Actions executed: {len(action_result.get('actions_executed', []))}\n")
+                                webhook_logger.debug(f"Actions executed: {len(action_result.get('actions_executed', []))}")
 
                                 # 2.5 Process Custom Field Tags (after action processing)
                                 from newapp.custom_field_processor import process_response_with_custom_fields
@@ -966,8 +974,7 @@ If the user's question relates to this document, answer based on your analysis a
                                 # Update final_reply_text with the processed version (tags removed)
                                 final_reply_text = img_result.get('final_text', final_reply_text)
                                 
-                                with open('debug_log.txt', 'a') as f:
-                                    f.write(f"[Debug] Response processed. Images sent: {img_result.get('images_sent', 0)}, Text sent: {img_result.get('text_sent', False)}\n")
+                                webhook_logger.debug(f"Response processed. Images sent: {img_result.get('images_sent', 0)}, Text sent: {img_result.get('text_sent', False)}")
                                 
                                 if img_result.get('success'):
                                     webhook_logger.info(f"Bot reply sent to {existing_user.phone_no}")
@@ -975,8 +982,7 @@ If the user's question relates to this document, answer based on your analysis a
                                     webhook_logger.warning(f"Partial success sending to {existing_user.phone_no}")
                                     
                             except Exception as e:
-                                with open('debug_log.txt', 'a') as f:
-                                    f.write(f"[Error] Sending Exception: {str(e)}\n")
+                                webhook_logger.error(f"Sending Exception: {str(e)}", exc_info=True)
                                 webhook_logger.error(f"Error in send_whatsapp_message: {e}")
                                 
                                 # Fallback to regular text sending if image processing fails
@@ -1058,8 +1064,8 @@ If the user's question relates to this document, answer based on your analysis a
                                         # Resolve admin for FollowUpMessage lookup
                                         # If org mode (admin_check is None), fallback to first Admin
                                         followup_admin = admin_check
-                                        if not followup_admin and org_check:
-                                            followup_admin = Admin.objects.first()
+                                        if not followup_admin and org_check and org_check.whatsapp_phone_id:
+                                            followup_admin = Admin.objects.filter(whatsapp_phone_id=org_check.whatsapp_phone_id).first()
                                         
                                         step1_config = FollowUpMessage.objects.filter(
                                             admin=followup_admin,

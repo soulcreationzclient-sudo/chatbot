@@ -453,33 +453,29 @@ def calendly_webhook(request):
             message += f"📅 *Event:* {event_name}\n"
             message += f"🕐 *Time:* {formatted_time}\n"
             
-            # Send WhatsApp notification to admin
+            # Send WhatsApp notification to all admins with WhatsApp configured
             try:
-                from newapp.models import Admin
-                admin = Admin.objects.first()
-                if admin and admin.whatsapp_phone_id and admin.whatsapp_token:
-                    # Use a known working phone number for notifications
-                    # You can change this to any number you want to receive notifications
-                    notify_phone = "919327606510"  # Your WhatsApp number
-                    
-                    print(f"[Calendly Webhook] Sending notification to: {notify_phone}")
-                    
-                    import requests
-                    whatsapp_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
-                    headers = {
-                        "Authorization": f"Bearer {admin.whatsapp_token}",
-                        "Content-Type": "application/json"
-                    }
-                    payload_wa = {
-                        "messaging_product": "whatsapp",
-                        "to": notify_phone,
-                        "type": "text",
-                        "text": {"body": message}
-                    }
-                    r = requests.post(whatsapp_url, json=payload_wa, headers=headers)
-                    print(f"[Calendly Webhook] WhatsApp notification sent: {r.status_code}")
-                    if r.status_code != 200:
-                        print(f"[Calendly Webhook] WhatsApp error response: {r.text}")
+                from newapp.models import Admin, Organization
+                import requests
+                
+                # Try to notify all orgs/admins with WhatsApp config
+                admins_notified = []
+                for admin in Admin.objects.exclude(whatsapp_phone_id='').exclude(whatsapp_token=''):
+                    if admin.whatsapp_phone_id and admin.whatsapp_token and admin.display_phone_no:
+                        notify_phone = admin.display_phone_no.replace(' ', '').replace('+', '')
+                        whatsapp_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
+                        headers = {
+                            "Authorization": f"Bearer {admin.whatsapp_token}",
+                            "Content-Type": "application/json"
+                        }
+                        payload_wa = {
+                            "messaging_product": "whatsapp",
+                            "to": notify_phone,
+                            "type": "text",
+                            "text": {"body": message}
+                        }
+                        r = requests.post(whatsapp_url, json=payload_wa, headers=headers)
+                        admins_notified.append(admin.id)
             except Exception as wa_err:
                 print(f"[Calendly Webhook] WhatsApp error: {wa_err}")
             
@@ -492,23 +488,23 @@ def calendly_webhook(request):
             
             try:
                 from newapp.models import Admin
-                admin = Admin.objects.first()
-                if admin and admin.whatsapp_phone_id and admin.whatsapp_token:
-                    admin_phone = admin.display_phone_no.replace(' ', '').replace('+', '')
-                    
-                    import requests
-                    whatsapp_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
-                    headers = {
-                        "Authorization": f"Bearer {admin.whatsapp_token}",
-                        "Content-Type": "application/json"
-                    }
-                    payload_wa = {
-                        "messaging_product": "whatsapp",
-                        "to": admin_phone,
-                        "type": "text",
-                        "text": {"body": message}
-                    }
-                    requests.post(whatsapp_url, json=payload_wa, headers=headers)
+                import requests
+                
+                for admin in Admin.objects.exclude(whatsapp_phone_id='').exclude(whatsapp_token=''):
+                    if admin.whatsapp_phone_id and admin.whatsapp_token and admin.display_phone_no:
+                        admin_phone = admin.display_phone_no.replace(' ', '').replace('+', '')
+                        whatsapp_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
+                        headers = {
+                            "Authorization": f"Bearer {admin.whatsapp_token}",
+                            "Content-Type": "application/json"
+                        }
+                        payload_wa = {
+                            "messaging_product": "whatsapp",
+                            "to": admin_phone,
+                            "type": "text",
+                            "text": {"body": message}
+                        }
+                        requests.post(whatsapp_url, json=payload_wa, headers=headers)
             except Exception as wa_err:
                 print(f"[Calendly Webhook] WhatsApp error: {wa_err}")
             

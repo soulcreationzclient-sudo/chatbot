@@ -33,9 +33,9 @@ def schedule_followup(user_id, step=1):
         admin = user.admin_id
         organization = user.organization
         
-        # Fallback: If user has organization but no admin, use first admin
-        if not admin and organization:
-            admin = Admin.objects.first()
+        # Fallback: If user has organization but no admin, find matching admin
+        if not admin and organization and organization.whatsapp_phone_id:
+            admin = Admin.objects.filter(whatsapp_phone_id=organization.whatsapp_phone_id).first()
         
         # Check if follow-ups are enabled (organization takes priority)
         followup_enabled = True
@@ -58,10 +58,11 @@ def schedule_followup(user_id, step=1):
         if admin:
             followup_configs = FollowUpMessage.objects.filter(admin=admin, is_active=True).order_by('step')
         elif organization:
-            # Fallback to first admin if no admin assigned
-            first_admin = Admin.objects.first()
-            if first_admin:
-                followup_configs = FollowUpMessage.objects.filter(admin=first_admin, is_active=True).order_by('step')
+            # Fallback: find admin via org's whatsapp_phone_id
+            if organization and organization.whatsapp_phone_id:
+                matched_admin = Admin.objects.filter(whatsapp_phone_id=organization.whatsapp_phone_id).first()
+                if matched_admin:
+                    followup_configs = FollowUpMessage.objects.filter(admin=matched_admin, is_active=True).order_by('step')
         
         max_steps = followup_configs.count() if followup_configs and followup_configs.exists() else 3
         

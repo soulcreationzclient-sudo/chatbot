@@ -69,7 +69,18 @@ class Inboxcontroller:
 
         if selected_user_id:
             selected_user = User.objects.filter(id=selected_user_id).first()
-            messages = Message.objects.filter(user_id=selected_user_id).order_by('created_at', 'id')
+            
+            # SECURITY: Verify selected user belongs to current org/admin
+            if selected_user:
+                if org_id and selected_user.organization_id != org_id:
+                    selected_user = None  # Don't show cross-tenant data
+                elif admin_id and str(selected_user.admin_id_id) != str(admin_id):
+                    selected_user = None
+            
+            if selected_user:
+                messages = Message.objects.filter(user_id=selected_user_id).order_by('created_at', 'id')
+            else:
+                messages = []
             
             # Check 24-hour window for selected user
             if selected_user:
@@ -110,6 +121,16 @@ class Inboxcontroller:
         
         if not user_id:
             return JsonResponse({'error': 'Missing user_id'}, status=400)
+        
+        # SECURITY: Verify user belongs to current org/admin
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        user = User.objects.filter(id=user_id).first()
+        if user:
+            if org_id and user.organization_id != org_id:
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+            if admin_id and str(user.admin_id_id) != str(admin_id):
+                return JsonResponse({'error': 'Permission denied'}, status=403)
             
         new_msgs = Message.objects.filter(
             user_id=user_id, 

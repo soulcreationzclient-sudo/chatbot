@@ -521,15 +521,24 @@ class Settingcontroller :
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         
-        # Get admin - either from session or fallback for org users
+        # Get admin - either from session or via org's WhatsApp phone ID
         admin = None
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
         elif org_id:
-            admin = Admin.objects.first()
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
             
         if not admin:
-            return redirect('/login/')
+            # Follow-ups require an Admin record to be linked
+            return render(request, 'set/followup_settings.html', {
+                'admin': None,
+                'followups': [],
+                'tags': Tag.objects.none(),
+                'error_message': 'Follow-up settings require a WhatsApp connection. Please connect WhatsApp first in Settings > Channels.'
+            })
         
         followups = FollowUpMessage.objects.filter(admin=admin).order_by('step')
         
@@ -559,16 +568,18 @@ class Settingcontroller :
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         
-        # Get admin - either from session or fallback to first admin for org users
+        # Get admin - either from session or via org's WhatsApp phone ID
         admin = None
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
         elif org_id:
-            # For organization users, use first admin as fallback
-            admin = Admin.objects.first()
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
         
         if not admin:
-            return JsonResponse({'error': 'Admin not found. Please configure admin settings.'}, status=404)
+            return JsonResponse({'error': 'Follow-up settings require a WhatsApp connection. Please connect WhatsApp first.'}, status=404)
         
         # Check limit (max 4)
         existing_count = FollowUpMessage.objects.filter(admin=admin).count()
@@ -607,7 +618,10 @@ class Settingcontroller :
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
         elif org_id:
-            admin = Admin.objects.first()
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
         
         if not admin:
             return JsonResponse({'error': 'Admin not found'}, status=404)
@@ -643,7 +657,10 @@ class Settingcontroller :
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
         elif org_id:
-            admin = Admin.objects.first()
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
         
         if not admin:
             return JsonResponse({'error': 'Admin not found'}, status=404)
@@ -678,7 +695,10 @@ class Settingcontroller :
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
         elif org_id:
-            admin = Admin.objects.first()
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
         
         if not admin:
             return JsonResponse({'error': 'Admin not found'}, status=404)

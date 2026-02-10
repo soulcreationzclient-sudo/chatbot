@@ -12,7 +12,6 @@ class Logincontroller:
     def login_view(request):
         request.session.flush()
         return render(request,'login_form.html')
-    @csrf_exempt
     def login_post(request):
         if request.method != 'POST':
             return HttpResponse('INVALID REQUEST', status=405)
