@@ -961,8 +961,8 @@ If the user's question relates to this document, answer based on your analysis a
                                     webhook_logger.warning(f"Failed to process {cf_result.get('fields_failed', 0)} custom field(s)")
 
                                 # 3. Process Image Tags
-                                from newapp.image_tag_processor import process_image_tags
-                                img_result = process_image_tags(
+                                from newapp.image_tag_processor import process_response_with_images
+                                img_result = process_response_with_images(
                                     final_reply_text,
                                     admin_check,
                                     existing_user.phone_no,
