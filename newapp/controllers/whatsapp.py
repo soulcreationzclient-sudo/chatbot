@@ -712,7 +712,7 @@ If the user's question relates to this document, answer based on your analysis a
                                             webhook_logger.info(f"Registered {len(openai_tools)} External API tool(s)")
                                         
                                         # --- TAG INTEGRATION ---
-                                        from newapp.models import Tag
+                                        # Tag is already imported at the top of the file
                                         if org_check:
                                             admin_tags = Tag.objects.filter(organization=org_check)
                                         else:
@@ -843,9 +843,9 @@ If the user's question relates to this document, answer based on your analysis a
                                             
                                             # Get Final Response after tools
                                             second_response = client.chat.completions.create(**api_params)
-                                            bot_response = second_response.choices[0].message.content.strip()
+                                            bot_response = (second_response.choices[0].message.content or "").strip()
                                         else:
-                                            bot_response = response_message.content.strip()
+                                            bot_response = (response_message.content or "").strip()
 
                                         # --- TOOL INTEGRATION END ---
                                         webhook_logger.debug(f"[Debug] Bot Response generated: {bot_response}")
