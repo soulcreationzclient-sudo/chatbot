@@ -881,22 +881,28 @@
       const data = await res.json();
 
       if (res.ok && data.url) {
-        // Send the image as a message
-        const msgPrefix = data.type === 'image' ? '[Image: ' : '[Document: ';
-        const mediaMsg = `${msgPrefix}${data.url}]`;
-
-        // Send via WhatsApp
+        // Send the media as a proper WhatsApp image/document message
         const sendData = new FormData();
-        sendData.append('message', mediaMsg);
         sendData.append('user_id', currentUserId);
+        sendData.append('media_url', data.url);
+        sendData.append('media_type', data.type);  // 'image', 'video', or 'document'
+        sendData.append('message', file.name);  // caption/filename
 
-        await fetch('/inbox/send/', {
+        const sendRes = await fetch('/inbox/send/', {
           method: 'POST',
           headers: { 'X-CSRFToken': getCookie('csrftoken') },
           body: sendData
         });
 
-        appendMessage(mediaMsg, 'bot');
+        if (sendRes.ok) {
+          const displayMsg = data.type === 'image' 
+            ? `[Image: ${data.url}]` 
+            : `[Document: ${data.url}]`;
+          appendMessage(displayMsg, 'bot');
+        } else {
+          const errData = await sendRes.json();
+          alert('Send failed: ' + (errData.error || 'Unknown error'));
+        }
         msgInput.value = '';
       } else {
         alert('Upload failed: ' + (data.error || 'Unknown error'));
@@ -958,45 +964,7 @@
     window.location.href = url.toString();
   }
 
-  // File Upload Logic
-  async function handleFileUpload(input) {
-    if (!input.files || input.files.length === 0) return;
-    const file = input.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-
-    // Show loading?
-    const msgInput = document.getElementById('userMessage');
-    const originalPlaceholder = msgInput.placeholder;
-    msgInput.placeholder = "Uploading...";
-    msgInput.disabled = true;
-
-    try {
-      const res = await fetch('/api/inbox/upload_media/', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-
-      if (data.url) {
-        let tag = "";
-        if (data.type === 'image') tag = `[Image: ${data.url}] `;
-        else tag = `[Document: ${data.url}] `;
-
-        msgInput.value = (msgInput.value + " " + tag).trim();
-        msgInput.focus();
-      } else {
-        alert("Upload failed: " + (data.error || "Unknown error"));
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Upload network error");
-    } finally {
-      msgInput.placeholder = originalPlaceholder;
-      msgInput.disabled = false;
-      input.value = ""; // reset
-    }
-  }
+  // (Duplicate handleFileUpload removed - using the one defined above)
 
 
   const threadBody = document.getElementById('threadBody');

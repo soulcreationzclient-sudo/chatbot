@@ -945,8 +945,10 @@ def send_inbox_message(request):
         # Get message and user_id from form data
         message = request.POST.get("message", "").strip()
         user_id = request.POST.get("user_id")
+        media_url = request.POST.get("media_url", "").strip()
+        media_type = request.POST.get("media_type", "").strip()  # 'image', 'video', 'document'
         
-        if not message:
+        if not message and not media_url:
             return JsonResponse({"error": "Message cannot be empty."}, status=400)
         if not user_id:
             return JsonResponse({"error": "User ID is required."}, status=400)
@@ -1011,34 +1013,76 @@ def send_inbox_message(request):
             }, status=403)
         
         # Send message to WhatsApp
-        if whatsapp_phone_id and whatsapp_token:
-            whatsapp_api_url = f"https://graph.facebook.com/v17.0/{whatsapp_phone_id}/messages"
-            headers = {
-                "Authorization": f"Bearer {whatsapp_token}",
-                "Content-Type": "application/json"
-            }
+        whatsapp_api_url = f"https://graph.facebook.com/v17.0/{whatsapp_phone_id}/messages"
+        headers = {
+            "Authorization": f"Bearer {whatsapp_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Determine if this is a media message or text message
+        if media_url and media_type in ('image', 'video', 'document'):
+            # Send as WhatsApp media message (image/document/video)
+            if media_type == 'image':
+                payload = {
+                    "messaging_product": "whatsapp",
+                    "to": user_obj.phone_no,
+                    "type": "image",
+                    "image": {
+                        "link": media_url,
+                        "caption": message if message else ""
+                    }
+                }
+                db_message = f"[Image: {media_url}]" + (f" {message}" if message else "")
+            elif media_type == 'video':
+                payload = {
+                    "messaging_product": "whatsapp",
+                    "to": user_obj.phone_no,
+                    "type": "video",
+                    "video": {
+                        "link": media_url,
+                        "caption": message if message else ""
+                    }
+                }
+                db_message = f"[Video: {media_url}]" + (f" {message}" if message else "")
+            else:  # document
+                payload = {
+                    "messaging_product": "whatsapp",
+                    "to": user_obj.phone_no,
+                    "type": "document",
+                    "document": {
+                        "link": media_url,
+                        "caption": message if message else "",
+                        "filename": message if message else "document"
+                    }
+                }
+                db_message = f"[Document: {media_url}]" + (f" {message}" if message else "")
+            
+            print(f"[send_inbox_message] Sending {media_type} media: {media_url}")
+        else:
+            # Regular text message
             payload = {
                 "messaging_product": "whatsapp",
                 "to": user_obj.phone_no,
                 "type": "text",
                 "text": {"body": message}
             }
-            wa_response = requests.post(whatsapp_api_url, json=payload, headers=headers)
-            
-            if wa_response.status_code != 200:
-                return JsonResponse({"error": f"WhatsApp API error: {wa_response.text}"}, status=502)
-        else:
-            return JsonResponse({"error": "WhatsApp not configured."}, status=403)
+            db_message = message
+        
+        wa_response = requests.post(whatsapp_api_url, json=payload, headers=headers)
+        
+        if wa_response.status_code != 200:
+            print(f"[send_inbox_message] WhatsApp API error: {wa_response.text}")
+            return JsonResponse({"error": f"WhatsApp API error: {wa_response.text}"}, status=502)
         
         # Save message to database
         Message.objects.create(
             user_id=user_obj,
-            messages=message,
+            messages=db_message,
             created_at=timezone.now(),
             who='bot'  # 'bot' means from agent/admin side
         )
         
-        return JsonResponse({"response": message, "success": True})
+        return JsonResponse({"response": db_message, "success": True})
         
     except Exception as e:
         print(f"send_inbox_message error: {e}")

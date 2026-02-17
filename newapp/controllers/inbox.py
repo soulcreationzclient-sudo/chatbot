@@ -154,7 +154,10 @@ class Inboxcontroller:
             f = request.FILES['file']
             # Save to specific folder
             path = default_storage.save(f'chat_uploads/{f.name}', ContentFile(f.read()))
-            url = os.path.join(settings.MEDIA_URL, path).replace('\\', '/')
+            relative_url = os.path.join(settings.MEDIA_URL, path).replace('\\', '/')
+            
+            # Build full absolute URL so it works when sent via WhatsApp API
+            full_url = request.build_absolute_uri(relative_url)
             
             # Determine type
             ftype = 'file'
@@ -162,8 +165,13 @@ class Inboxcontroller:
                 ftype = 'image'
             elif f.content_type.startswith('video'):
                 ftype = 'video'
+            elif f.content_type in ('application/pdf', 'application/msword', 
+                                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                     'application/vnd.ms-excel',
+                                     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'):
+                ftype = 'document'
                 
-            return JsonResponse({'url': url, 'type': ftype})
+            return JsonResponse({'url': full_url, 'type': ftype})
         return JsonResponse({'error': 'No file provided'}, status=400)
 
     @csrf_exempt
