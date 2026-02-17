@@ -37,6 +37,17 @@ def parse_image_tags(text):
     return list(zip(full_tags, matches))
 
 
+def parse_image_path_tags(text):
+    """
+    Extract [Image: /media/path] tags from text.
+    Handles the case where AI outputs direct image paths.
+    """
+    pattern = r'\[Image:\s*(/media/[^\]]+)\]'
+    matches = re.findall(pattern, text)
+    full_tags = re.findall(r'\[Image:\s*/media/[^\]]+\]', text)
+    return list(zip(full_tags, matches))
+
+
 def get_image_asset(name, admin, organization=None):
     """
     Look up an ImageAsset by name for a specific admin or organization.
@@ -328,14 +339,63 @@ def process_response_with_images(response_text, admin, phone, phone_number_id, t
         'final_text': response_text
     }
     
-    # Parse image tags
+    # Parse image tags - try {{image:name}} format first
     image_tags = parse_image_tags(response_text)
     
-    if not image_tags:
-        # No image tags found, just send as regular text
+    # Also check for [Image: /media/path] format (AI sometimes outputs paths directly)
+    path_tags = parse_image_path_tags(response_text)
+    
+    if not image_tags and not path_tags:
+        # No image tags found in any format, send as regular text
         success = send_whatsapp_text(response_text, phone, phone_number_id, token)
         result['text_sent'] = success
         result['success'] = success
+        return result
+    
+    # Handle [Image: /media/path] tags by sending images from disk
+    if path_tags and not image_tags:
+        print(f"[ImageTag] Found {len(path_tags)} [Image: path] tag(s)")
+        remaining_text = response_text
+        
+        for full_tag, img_path in path_tags:
+            # Build full file path: /media/image_assets/file.jpg -> MEDIA_ROOT/image_assets/file.jpg
+            rel_path = img_path.lstrip('/')
+            if rel_path.startswith('media/'):
+                rel_path = rel_path[6:]
+            
+            full_path = os.path.join(settings.MEDIA_ROOT, rel_path)
+            
+            # Remove tag from remaining text
+            remaining_text = remaining_text.replace(full_tag, '').strip()
+            
+            if os.path.exists(full_path):
+                print(f"[ImageTag] Found file: {full_path}")
+                media_id = upload_image_to_whatsapp(full_path, phone_number_id, token, skip_compression=True)
+                
+                if media_id:
+                    # Use remaining text as caption for first image
+                    caption = remaining_text.strip() if result['images_sent'] == 0 else ""
+                    caption = re.sub(r'\n\s*\n', '\n', caption).strip()
+                    
+                    img_ok = send_whatsapp_image(media_id, phone, phone_number_id, token, caption=caption)
+                    if img_ok:
+                        result['images_sent'] += 1
+                        if caption:
+                            result['text_sent'] = True
+                else:
+                    print(f"[ImageTag] Upload failed for: {full_path}")
+            else:
+                print(f"[ImageTag] File not found: {full_path}")
+        
+        remaining_text = re.sub(r'\n\s*\n', '\n', remaining_text).strip()
+        result['final_text'] = remaining_text if remaining_text else ""
+        
+        # Send remaining text if not already sent as caption
+        if not result['text_sent'] and remaining_text:
+            send_whatsapp_text(remaining_text, phone, phone_number_id, token)
+            result['text_sent'] = True
+        
+        print(f"[ImageTag] Path processing done. Images sent: {result['images_sent']}")
         return result
     
     print(f"[ImageTag] Found {len(image_tags)} image tag(s) in response")
