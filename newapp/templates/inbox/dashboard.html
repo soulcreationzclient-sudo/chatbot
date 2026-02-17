@@ -836,19 +836,27 @@
     // Close modal
     if (assetPickerModal) assetPickerModal.hide();
 
-    const mediaMsg = `[Image: ${url}]`;
+    // Build absolute URL for WhatsApp API
+    const absoluteUrl = url.startsWith('http') ? url : window.location.origin + url;
 
     const sendData = new FormData();
-    sendData.append('message', mediaMsg);
     sendData.append('user_id', currentUserId);
+    sendData.append('media_url', absoluteUrl);
+    sendData.append('media_type', 'image');
+    sendData.append('message', '');  // no caption
 
     try {
-      await fetch('/inbox/send/', {
+      const res = await fetch('/inbox/send/', {
         method: 'POST',
         headers: { 'X-CSRFToken': getCookie('csrftoken') },
         body: sendData
       });
-      appendMessage(mediaMsg, 'bot');
+      if (res.ok) {
+        appendMessage(`[Image: ${url}]`, 'bot');
+      } else {
+        const errData = await res.json();
+        alert('Send failed: ' + (errData.error || 'Unknown error'));
+      }
     } catch (e) {
       alert('Failed to send image');
       console.error(e);
