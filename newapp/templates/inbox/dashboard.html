@@ -531,8 +531,10 @@
         <select id="tagFilter" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
           <option value="">All Tags</option>
           {% for t in all_tags %}
-          <option value="{{ t.id }}" {% if request.GET.tag_id==t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}
+          {% with t.id|stringformat:"s" as tid %}
+          <option value="{{ t.id }}" {% if request.GET.tag_id==tid %}selected{% endif %}>{{ t.name }}
           </option>
+          {% endwith %}
           {% endfor %}
         </select>
       </div>
