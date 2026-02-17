@@ -197,7 +197,7 @@
   /* RESPONSIVE */
   @media (max-width: 1200px) {
     .right-panel {
-      width: 260px;
+      width: 280px;
     }
   }
 
@@ -220,13 +220,15 @@
 
   /* RIGHT PANEL - Always Visible */
   .right-panel {
-    width: 300px;
+    width: 320px;
+    min-width: 280px;
     background: var(--bg-panel);
     border-left: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .right-panel-head {
@@ -298,6 +300,10 @@
     font-weight: 500;
     cursor: pointer;
     transition: opacity 0.15s ease;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .tag-pill:hover {
@@ -402,6 +408,9 @@
     font-weight: 600;
     font-size: 14px;
     color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .accordion-icon {
@@ -522,7 +531,7 @@
         <select id="tagFilter" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
           <option value="">All Tags</option>
           {% for t in all_tags %}
-          <option value="{{ t.id }}" {% if request.GET.tag_id == t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}
+          <option value="{{ t.id }}" {% if request.GET.tag_id==t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}
           </option>
           {% endfor %}
         </select>
@@ -539,7 +548,8 @@
   <section class="thread">
     <div class="thread-head">
       {% if selected_user %}
-      <div class="avatar" style="width:36px;height:36px">{{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
+      <div class="avatar" style="width:36px;height:36px">{{
+        selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
       <div style="flex:1">
         <div style="font-weight:700">{{ selected_user.name|default:"User" }}</div>
         <div class="text-muted" style="font-size:12px">{{ selected_user.phone_no }}</div>
@@ -895,8 +905,8 @@
         });
 
         if (sendRes.ok) {
-          const displayMsg = data.type === 'image' 
-            ? `[Image: ${data.url}]` 
+          const displayMsg = data.type === 'image'
+            ? `[Image: ${data.url}]`
             : `[Document: ${data.url}]`;
           appendMessage(displayMsg, 'bot');
         } else {
@@ -1114,7 +1124,7 @@
   // Polling Logic
   let lastMessageId = 0;
   {% if messages %}
-  lastMessageId = {{ messages.last.id|default:0 }};
+  lastMessageId = {{ messages.last.id |default: 0 }};
   {% endif %}
   const currentUserId = "{{ selected_user.id|default:'' }}";
 
