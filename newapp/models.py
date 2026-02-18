@@ -22,11 +22,15 @@ class Organization(models.Model):
     # OpenAI Configuration
     openai_api_key = models.TextField(blank=True, null=True)
     GPT_MODEL_CHOICES = (
-        ('gpt-4o-mini', 'GPT-4o Mini (Fast & Affordable)'),
-        ('gpt-4o', 'GPT-4o (Balanced)'),
+        ('gpt-4.1', 'GPT-4.1 (Latest & Best)'),
+        ('gpt-4.1-mini', 'GPT-4.1 Mini (Fast & Smart)'),
+        ('gpt-4.1-nano', 'GPT-4.1 Nano (Fastest & Cheapest)'),
+        ('gpt-4o', 'GPT-4o (Powerful)'),
+        ('gpt-4o-mini', 'GPT-4o Mini (Affordable)'),
+        ('o3-mini', 'o3-mini (Reasoning)'),
         ('gpt-4-turbo', 'GPT-4 Turbo (Legacy)'),
     )
-    gpt_model = models.CharField(max_length=50, choices=GPT_MODEL_CHOICES, default='gpt-4o-mini')
+    gpt_model = models.CharField(max_length=50, default='gpt-4o-mini')
     assistant_name = models.CharField(max_length=100, null=True, blank=True, default='')
     CHATGPT_MODE_CHOICES = (
         ('prompt', 'Prompt'),

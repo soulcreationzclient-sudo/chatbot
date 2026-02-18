@@ -522,11 +522,13 @@
         <div class="mb-3">
           <label for="chatgptModelConnected" class="form-label fw-semibold">GPT Model</label>
           <select id="chatgptModelConnected" class="form-select">
-            <option value="gpt-4o-mini" {% if current_gpt_model == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o Mini (Fast &
-              Affordable)</option>
-            <option value="gpt-4o" {% if current_gpt_model == 'gpt-4o' %}selected{% endif %}>GPT-4o (Balanced)</option>
-            <option value="gpt-4-turbo" {% if current_gpt_model == 'gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo
-              (Legacy)</option>
+            <option value="gpt-4.1" {% if current_gpt_model == 'gpt-4.1' %}selected{% endif %}>GPT-4.1 (Latest & Best)</option>
+            <option value="gpt-4.1-mini" {% if current_gpt_model == 'gpt-4.1-mini' %}selected{% endif %}>GPT-4.1 Mini (Fast & Smart)</option>
+            <option value="gpt-4.1-nano" {% if current_gpt_model == 'gpt-4.1-nano' %}selected{% endif %}>GPT-4.1 Nano (Fastest & Cheapest)</option>
+            <option value="gpt-4o" {% if current_gpt_model == 'gpt-4o' %}selected{% endif %}>GPT-4o (Powerful)</option>
+            <option value="gpt-4o-mini" {% if current_gpt_model == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o Mini (Affordable)</option>
+            <option value="o3-mini" {% if current_gpt_model == 'o3-mini' %}selected{% endif %}>o3-mini (Reasoning)</option>
+            <option value="gpt-4-turbo" {% if current_gpt_model == 'gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo (Legacy)</option>
           </select>
           <div class="form-text">Choose the AI model for your chatbot responses.</div>
         </div>
@@ -540,8 +542,12 @@
         <div class="mb-3">
           <label for="chatgptModelNew" class="form-label fw-semibold">GPT Model</label>
           <select id="chatgptModelNew" class="form-select">
-            <option value="gpt-4o-mini" selected>GPT-4o Mini (Fast & Affordable)</option>
-            <option value="gpt-4o">GPT-4o (Balanced)</option>
+            <option value="gpt-4.1">GPT-4.1 (Latest & Best)</option>
+            <option value="gpt-4.1-mini">GPT-4.1 Mini (Fast & Smart)</option>
+            <option value="gpt-4.1-nano">GPT-4.1 Nano (Fastest & Cheapest)</option>
+            <option value="gpt-4o">GPT-4o (Powerful)</option>
+            <option value="gpt-4o-mini" selected>GPT-4o Mini (Affordable)</option>
+            <option value="o3-mini">o3-mini (Reasoning)</option>
             <option value="gpt-4-turbo">GPT-4 Turbo (Legacy)</option>
           </select>
           <div class="form-text">Choose the AI model for your chatbot responses.</div>

@@ -1673,9 +1673,8 @@ def set_gpt_model(request):
     if request.method == "POST":
         data = json.loads(request.body.decode("utf-8"))
         gpt_model = data.get("gpt_model", "").strip()
-        valid_models = ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo']
-        if gpt_model not in valid_models:
-            return JsonResponse({"success": False, "error": f"Invalid model. Choose from: {', '.join(valid_models)}"}, status=400)
+        if not gpt_model:
+            return JsonResponse({"success": False, "error": "Model name is required."}, status=400)
 
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
