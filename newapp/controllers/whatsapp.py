@@ -802,13 +802,34 @@ If the user's question relates to this document, answer based on your analysis a
                                             system_prompt += cf_info
                                             
                                             webhook_logger.debug(f"[CustomFields] Injected {admin_custom_fields.count()} custom fields for user {existing_user.phone_no}")# --- END CUSTOM FIELD INTEGRATION ---
+                                        # --- LOAD CONVERSATION HISTORY ---
+                                        # Get last 20 messages for this user to provide context
+                                        chat_history = Message.objects.filter(
+                                            user_id=existing_user
+                                        ).order_by('-id')[:20]
+                                        
+                                        # Build messages list with history (oldest first)
+                                        openai_messages = [
+                                            {"role": "system", "content": system_prompt},
+                                        ]
+                                        
+                                        # Add history in chronological order (reverse since we fetched newest first)
+                                        for hist_msg in reversed(list(chat_history)):
+                                            role = "assistant" if hist_msg.who == "bot" else "user"
+                                            msg_content = hist_msg.messages or ""
+                                            if msg_content.strip():
+                                                openai_messages.append({"role": role, "content": msg_content})
+                                        
+                                        # Add current message
+                                        openai_messages.append({"role": "user", "content": msg_text})
+                                        
+                                        webhook_logger.debug(f"[ChatHistory] Loaded {len(openai_messages) - 2} history messages for context")
+                                        # --- END CONVERSATION HISTORY ---
+
                                         # Prepare API Call Params
                                         api_params = {
                                             "model": "gpt-4-turbo", # Need tool support
-                                            "messages": [
-                                                {"role": "system", "content": system_prompt},
-                                                {"role": "user", "content": msg_text},
-                                            ],
+                                            "messages": openai_messages,
                                             "timeout": 30,
                                         }
                                         if openai_tools:
