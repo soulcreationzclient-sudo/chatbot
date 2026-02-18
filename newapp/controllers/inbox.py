@@ -198,20 +198,28 @@ class Inboxcontroller:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
         # SOFT DELETE: Archive from inbox instead of deleting
-        # Contact remains in All Contacts view and all data is preserved
+        # Contact record is kept but all associated data is wiped clean
         user.is_in_inbox = False
         user.archived_at = timezone.now()
-        user.save(update_fields=['is_in_inbox', 'archived_at'])
+        user.followup_count = 0
+        user.bot_enabled = True
+        user.save(update_fields=['is_in_inbox', 'archived_at', 'followup_count', 'bot_enabled'])
         
-        # CUSTOM DELETE LOGIC:
-        # User requested: Remove tags and delete history, but keep contact.
-        from ..models import UserTag, Message
+        # DELETE ALL ASSOCIATED DATA:
+        # Remove tags, messages, custom fields, logs, and follow-ups
+        from ..models import UserTag, Message, CustomFieldValue, UserLog, ScheduledFollowUp
         # 1. Remove all tags
         UserTag.objects.filter(user=user).delete()
         # 2. Delete message history
         Message.objects.filter(user=user).delete()
+        # 3. Delete custom field values
+        CustomFieldValue.objects.filter(user=user).delete()
+        # 4. Delete user logs
+        UserLog.objects.filter(user=user).delete()
+        # 5. Cancel scheduled follow-ups
+        ScheduledFollowUp.objects.filter(user=user).delete()
         
-        return JsonResponse({'success': True, 'msg': 'Contact archived from inbox'})
+        return JsonResponse({'success': True, 'msg': 'Contact archived and all data cleared'})
 
     @csrf_exempt
     def restore_user(request, user_id):
