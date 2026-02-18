@@ -1612,6 +1612,7 @@ def connect_openai_key(request):
     if request.method == "POST":
         data = json.loads(request.body.decode("utf-8"))
         api_key = data.get("api_key", "").strip()
+        gpt_model = data.get("gpt_model", "gpt-4o-mini").strip()
         if not api_key:
             return JsonResponse({"msg": "API key is required."}, status=400)
 
@@ -1626,7 +1627,8 @@ def connect_openai_key(request):
                 return JsonResponse({"msg": "Organization not found."}, status=404)
             org.pinecone_token = ""
             org.openai_api_key = api_key
-            org.save(update_fields=['pinecone_token', 'openai_api_key'])
+            org.gpt_model = gpt_model
+            org.save(update_fields=['pinecone_token', 'openai_api_key', 'gpt_model'])
             return JsonResponse({"msg": "ChatGPT API key connected."})
         elif admin_id:
             # Legacy admin-based auth
@@ -1665,8 +1667,33 @@ def disconnect_openai_key(request):
         return JsonResponse({"msg": "Not authenticated."}, status=401)
     return JsonResponse({"msg": "Invalid request."}, status=405)
 
-# import logging
-# import requests
+
+def set_gpt_model(request):
+    """Endpoint to update GPT model selection without reconnecting."""
+    if request.method == "POST":
+        data = json.loads(request.body.decode("utf-8"))
+        gpt_model = data.get("gpt_model", "").strip()
+        valid_models = ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo']
+        if gpt_model not in valid_models:
+            return JsonResponse({"success": False, "error": f"Invalid model. Choose from: {', '.join(valid_models)}"}, status=400)
+
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+
+        if org_id:
+            from .models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                org.gpt_model = gpt_model
+                org.save(update_fields=['gpt_model'])
+                return JsonResponse({"success": True, "model": gpt_model})
+        elif admin_id:
+            # For legacy admin-based, we can store it in session
+            request.session['gpt_model'] = gpt_model
+            return JsonResponse({"success": True, "model": gpt_model})
+
+        return JsonResponse({"success": False, "error": "Not authenticated."}, status=401)
+    return JsonResponse({"success": False, "error": "Invalid request."}, status=405)
 
 # logger = logging.getLogger(__name__)
 

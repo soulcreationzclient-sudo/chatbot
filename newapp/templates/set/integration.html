@@ -237,12 +237,13 @@
     confirmChatGPTConnectBtn.addEventListener('click', async () => {
       clearAlert('chatgptAlert');
       const apiKey = document.getElementById('chatgptKey').value.trim();
+      const gptModel = document.getElementById('chatgptModelNew')?.value || 'gpt-4o-mini';
       if (!apiKey) { showAlert('Please enter an API key.', 'warning', 'chatgptAlert'); return; }
       try {
         const res = await fetch('/connect_openai_key/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-          body: JSON.stringify({ api_key: apiKey })
+          body: JSON.stringify({ api_key: apiKey, gpt_model: gptModel })
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
@@ -266,6 +267,31 @@
         setTimeout(() => window.location.reload(), 600);
       } catch (err) {
         showAlert('Failed to disconnect. ' + err.message, 'danger', 'chatgptAlert');
+      }
+    });
+  }
+
+  // Save GPT Model handler
+  const saveGptModelBtn = document.getElementById('saveGptModel');
+  if (saveGptModelBtn) {
+    saveGptModelBtn.addEventListener('click', async () => {
+      clearAlert('chatgptAlert');
+      const model = document.getElementById('chatgptModelConnected').value;
+      try {
+        const res = await fetch('/set_gpt_model/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+          body: JSON.stringify({ gpt_model: model })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showAlert('Model updated to ' + model, 'success', 'chatgptAlert');
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          showAlert(data.error || 'Failed to update model', 'danger', 'chatgptAlert');
+        }
+      } catch (err) {
+        showAlert('Failed to save model. ' + err.message, 'danger', 'chatgptAlert');
       }
     });
   }
@@ -395,6 +421,11 @@
                 {% elif chatgpt_mode == "ai_agent" %}AI Agent Mode
                 {% else %}Not Set{% endif %}
               </span>
+              {% if chatgpt_connected %}
+              <span class="badge rounded-pill ms-1" style="background: #dcfce7 !important; color: #166534;">
+                {{ current_gpt_model|default:"gpt-4o-mini" }}
+              </span>
+              {% endif %}
             </div>
             <div class="d-flex align-items-center gap-3">
               {% if chatgpt_connected %}
@@ -488,11 +519,32 @@
       <div class="modal-body">
         {% if chatgpt_connected %}
         <p>ChatGPT is currently <b>connected</b>. Do you want to disconnect?</p>
+        <div class="mb-3">
+          <label for="chatgptModelConnected" class="form-label fw-semibold">GPT Model</label>
+          <select id="chatgptModelConnected" class="form-select">
+            <option value="gpt-4o-mini" {% if current_gpt_model=='gpt-4o-mini' %}selected{% endif %}>GPT-4o Mini (Fast &
+              Affordable)</option>
+            <option value="gpt-4o" {% if current_gpt_model=='gpt-4o' %}selected{% endif %}>GPT-4o (Balanced)</option>
+            <option value="gpt-4-turbo" {% if current_gpt_model=='gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo
+              (Legacy)</option>
+          </select>
+          <div class="form-text">Choose the AI model for your chatbot responses.</div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="saveGptModel">💾 Save Model</button>
         {% else %}
         <div class="mb-3">
           <label for="chatgptKey" class="form-label">OpenAI API Key</label>
           <input type="text" id="chatgptKey" class="form-control" placeholder="Enter OpenAI API Key" />
           <div class="form-text">We'll store this securely to enable ChatGPT features.</div>
+        </div>
+        <div class="mb-3">
+          <label for="chatgptModelNew" class="form-label fw-semibold">GPT Model</label>
+          <select id="chatgptModelNew" class="form-select">
+            <option value="gpt-4o-mini" selected>GPT-4o Mini (Fast & Affordable)</option>
+            <option value="gpt-4o">GPT-4o (Balanced)</option>
+            <option value="gpt-4-turbo">GPT-4 Turbo (Legacy)</option>
+          </select>
+          <div class="form-text">Choose the AI model for your chatbot responses.</div>
         </div>
         {% endif %}
         <div id="chatgptAlert" class="alert d-none" role="alert"></div>
@@ -524,7 +576,9 @@
         <p>Calendly is currently <b>connected</b>.</p>
         <div class="mb-3">
           <label class="form-label">Scheduling URL</label>
-          <input type="text" class="form-control" value="{% if org %}{{ org.calendly_scheduling_url }}{% else %}{{ admin.calendly_scheduling_url }}{% endif %}" disabled>
+          <input type="text" class="form-control"
+            value="{% if org %}{{ org.calendly_scheduling_url }}{% else %}{{ admin.calendly_scheduling_url }}{% endif %}"
+            disabled>
         </div>
         <hr>
 

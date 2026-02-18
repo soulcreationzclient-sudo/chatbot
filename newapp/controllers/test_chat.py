@@ -108,6 +108,7 @@ def test_chat_send(request):
 
         # Get OpenAI API key from organization or admin
         openai_key = None
+        gpt_model = 'gpt-4o-mini'
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
         
@@ -115,6 +116,7 @@ def test_chat_send(request):
             try:
                 org = Organization.objects.get(id=org_id)
                 openai_key = org.openai_api_key
+                gpt_model = getattr(org, 'gpt_model', 'gpt-4o-mini')
             except Organization.DoesNotExist:
                 pass
         
@@ -132,7 +134,7 @@ def test_chat_send(request):
                 client = OpenAI(api_key=openai_key)
                 
                 response = client.chat.completions.create(
-                    model="gpt-4-turbo",
+                    model=gpt_model,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_message}

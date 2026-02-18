@@ -190,6 +190,7 @@ urlpatterns = [
     #chatgpt
     path('connect_openai_key/', views.connect_openai_key, name='connect_openai_key'),
     path('disconnect_openai_key/', views.disconnect_openai_key, name='disconnect_openai_key'),
+    path('set_gpt_model/', views.set_gpt_model, name='set_gpt_model'),
     path('set_chatgpt_mode/', Integrationcontroller.set_chatgpt_mode, name='set_chatgpt_mode'),
     path('chatgpt_prompt/', views.chatgpt_prompt_page, name='chatgpt_prompt_page'),
     path('chatgpt/respond/', views.chatgpt_respond, name='chatgpt_respond'),

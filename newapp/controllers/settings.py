@@ -70,6 +70,7 @@ class Settingcontroller :
             'admin': admin,
             'org': org if org_id else None,
             'chatgpt_mode': chatgpt_mode,
+            'current_gpt_model': getattr(org, 'gpt_model', 'gpt-4o-mini') if org_id and org else 'gpt-4o-mini',
         })
     
     def external_apis(request):

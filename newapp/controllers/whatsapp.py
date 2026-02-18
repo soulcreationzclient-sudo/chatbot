@@ -42,6 +42,7 @@ def get_credentials(admin_check, org_check):
             'openai_key': (org_check.openai_api_key or '').strip(),
             'pinecone_token': (org_check.pinecone_token or '').strip(),
             'chatgpt_mode': getattr(org_check, 'chatgpt_mode', 'prompt'),
+            'gpt_model': getattr(org_check, 'gpt_model', 'gpt-4o-mini'),
             'calendly_url': getattr(org_check, 'calendly_scheduling_url', ''),
             'source': 'organization',
             'source_id': org_check.id,
@@ -53,6 +54,7 @@ def get_credentials(admin_check, org_check):
             'openai_key': (getattr(admin_check, 'openai_api_key', '') or '').strip(),
             'pinecone_token': (getattr(admin_check, 'pinecone_token', '') or '').strip(),
             'chatgpt_mode': getattr(admin_check, 'chatgpt_mode', 'prompt'),
+            'gpt_model': 'gpt-4o-mini',
             'calendly_url': getattr(admin_check, 'calendly_scheduling_url', ''),
             'source': 'admin',
             'source_id': admin_check.id,
@@ -63,6 +65,7 @@ def get_credentials(admin_check, org_check):
         'openai_key': '',
         'pinecone_token': '',
         'chatgpt_mode': 'prompt',
+        'gpt_model': 'gpt-4o-mini',
         'calendly_url': '',
         'source': None,
         'source_id': None,
@@ -827,8 +830,9 @@ If the user's question relates to this document, answer based on your analysis a
                                         # --- END CONVERSATION HISTORY ---
 
                                         # Prepare API Call Params
+                                        selected_model = creds.get('gpt_model', 'gpt-4o-mini')
                                         api_params = {
-                                            "model": "gpt-4-turbo", # Need tool support
+                                            "model": selected_model,
                                             "messages": openai_messages,
                                             "timeout": 30,
                                         }
