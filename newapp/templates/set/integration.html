@@ -522,10 +522,10 @@
         <div class="mb-3">
           <label for="chatgptModelConnected" class="form-label fw-semibold">GPT Model</label>
           <select id="chatgptModelConnected" class="form-select">
-            <option value="gpt-4o-mini" {% if current_gpt_model=='gpt-4o-mini' %}selected{% endif %}>GPT-4o Mini (Fast &
+            <option value="gpt-4o-mini" {% if current_gpt_model == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o Mini (Fast &
               Affordable)</option>
-            <option value="gpt-4o" {% if current_gpt_model=='gpt-4o' %}selected{% endif %}>GPT-4o (Balanced)</option>
-            <option value="gpt-4-turbo" {% if current_gpt_model=='gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo
+            <option value="gpt-4o" {% if current_gpt_model == 'gpt-4o' %}selected{% endif %}>GPT-4o (Balanced)</option>
+            <option value="gpt-4-turbo" {% if current_gpt_model == 'gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo
               (Legacy)</option>
           </select>
           <div class="form-text">Choose the AI model for your chatbot responses.</div>
