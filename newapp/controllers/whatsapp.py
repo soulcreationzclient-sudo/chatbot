@@ -899,19 +899,62 @@ If the user's question relates to this document, answer based on your analysis a
                                         cleaned_response = cleaned_response.rstrip()[:-3].rstrip()
                                     bot_response = cleaned_response
 
+                                webhook_logger.debug(f"[JSON Parse] bot_response first 200 chars: {bot_response[:200]}")
+
                                 if bot_response.strip().startswith("{") or bot_response.strip().startswith("["):
                                     try:
                                         data_json = json.loads(bot_response)
                                     except json.JSONDecodeError:
-                                        data_json = None
+                                        # Try fixing common AI issues: single quotes, trailing commas
+                                        try:
+                                            import ast
+                                            data_json = ast.literal_eval(bot_response)
+                                            if isinstance(data_json, dict):
+                                                webhook_logger.debug("[JSON Parse] Parsed via ast.literal_eval")
+                                            else:
+                                                data_json = None
+                                        except Exception:
+                                            data_json = None
+
                                     if data_json is not None:
                                         messages = data_json.get("messages", [])
-                                        if messages and isinstance(messages, list) and len(messages) > 0:
-                                            final_reply_text = messages[0].get("text") or messages[0].get("message", {}).get("text", "")
+                                        text_parts = []
+                                        if messages and isinstance(messages, list):
+                                            for msg_item in messages:
+                                                if isinstance(msg_item, dict):
+                                                    # Try messages[i]["text"] directly
+                                                    t = msg_item.get("text")
+                                                    if not t:
+                                                        # Try messages[i]["message"]["text"]
+                                                        t = msg_item.get("message", {}).get("text", "")
+                                                    if t and isinstance(t, str) and t.strip():
+                                                        text_parts.append(t.strip())
+                                        
+                                        if text_parts:
+                                            final_reply_text = "\n\n".join(text_parts)
+                                            webhook_logger.debug(f"[JSON Parse] Extracted {len(text_parts)} text parts from JSON")
                                         else:
                                             final_reply_text = str(bot_response)
+                                            webhook_logger.warning("[JSON Parse] JSON parsed but no text found in messages")
                                     else:
-                                        final_reply_text = str(bot_response)
+                                        # JSON parsing failed completely - try regex fallback
+                                        import re
+                                        text_matches = re.findall(r'"text"\s*:\s*"((?:[^"\\]|\\.)*)"', bot_response)
+                                        if text_matches:
+                                            # Unescape JSON string escapes
+                                            extracted_texts = []
+                                            for t in text_matches:
+                                                t = t.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                                                if t.strip():
+                                                    extracted_texts.append(t.strip())
+                                            if extracted_texts:
+                                                final_reply_text = "\n\n".join(extracted_texts)
+                                                webhook_logger.debug(f"[JSON Parse] Regex extracted {len(extracted_texts)} text parts")
+                                            else:
+                                                final_reply_text = str(bot_response)
+                                        else:
+                                            final_reply_text = str(bot_response)
+                                            webhook_logger.warning(f"[JSON Parse] Could not extract text from JSON-like response")
                                 else:
                                     final_reply_text = str(bot_response)
                             else:
