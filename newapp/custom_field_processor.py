@@ -112,11 +112,14 @@ def validate_field_value(field, value):
 
     elif field_type == 'number':
         try:
-            # Try to convert to float to validate numeric input
-            float(value)
-            return (True, value, None)
+            # Strip currency symbols and common prefixes before validation
+            cleaned_num = re.sub(r'[^\d.,\-]', '', value)  # Remove everything except digits, dots, commas, minus
+            if not cleaned_num:
+                return (False, None, "Value must be a number")
+            float(cleaned_num.replace(',', ''))
+            return (True, cleaned_num.replace(',', ''), None)
         except ValueError:
-            return (False, None, "Value must be a number")
+            return (False, None, f"Value must be a number (got: {value})")
 
     elif field_type == 'phone':
         # Accept various phone formats, just basic validation
@@ -258,7 +261,12 @@ def process_response_with_custom_fields(response_text, admin, user, organization
     field_tags = parse_custom_field_tags(response_text)
 
     if not field_tags:
-        # No custom field tags found
+        # No custom field tags found - log for debugging
+        has_curly = '{{' in response_text
+        if has_curly:
+            print(f"[CustomField] WARNING: Response contains '{{{{' but no custom_field tags found. First 300 chars: {response_text[:300]}")
+        else:
+            print(f"[CustomField] No custom field tags in response (first 100 chars: {response_text[:100]})")
         return result
 
     print(f"[CustomField] Found {len(field_tags)} custom field tag(s) in response")
