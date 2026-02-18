@@ -641,33 +641,85 @@
 
             <!-- Test Chat Tab -->
             <div class="tab-content" id="test-chat-tab">
-                <div class="chat-layout">
-                    <div class="chat-header">
-                        <div class="chat-title">
-                            <h2>AI Test Simulator</h2>
-                            <span class="badge">Live Preview</span>
+                <div style="display: flex; gap: 20px; height: 100%;">
+                    <!-- Chat Area (Left) -->
+                    <div class="chat-layout" style="flex: 1; max-width: none;">
+                        <div class="chat-header">
+                            <div class="chat-title">
+                                <h2>AI Test Simulator</h2>
+                                <span class="badge">Live Preview</span>
+                            </div>
+                            <div style="font-size: 13px; color: #64748b;">
+                                Using Settings configuration
+                            </div>
                         </div>
-                        <div style="font-size: 13px; color: #64748b;">
-                            Using Settings configuration
+
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="empty-state">
+                                <div class="empty-icon">👋</div>
+                                <h3>Welcome to AI Simulator</h3>
+                                <p style="max-width: 300px; margin-top: 8px;">
+                                    Test your AI's responses in real-time. Tags and custom fields will appear on the
+                                    right panel.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="chat-input-wrapper">
+                            <div class="chat-input-container">
+                                <input type="text" class="chat-input" id="chat-input"
+                                    placeholder="Type a message to test..." onkeypress="handleKeyPress(event)">
+                                <button class="icon-btn send-btn" onclick="sendMessage()">➤</button>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="chat-messages" id="chat-messages">
-                        <div class="empty-state">
-                            <div class="empty-icon">👋</div>
-                            <h3>Welcome to AI Simulator</h3>
-                            <p style="max-width: 300px; margin-top: 8px;">
-                                Test your AI's responses in real-time. The system uses the prompt currently saved in
-                                Settings.
-                            </p>
+                    <!-- Right Sidebar (Tags & Custom Fields) -->
+                    <div id="simulator-sidebar"
+                        style="width: 320px; flex-shrink: 0; background: white; border-radius: 16px; border: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column;">
+                        <div style="padding: 16px 20px; border-bottom: 1px solid var(--border);">
+                            <h3 style="font-size: 15px; font-weight: 600; color: var(--text-main);">📋 AI Response
+                                Details</h3>
                         </div>
-                    </div>
 
-                    <div class="chat-input-wrapper">
-                        <div class="chat-input-container">
-                            <input type="text" class="chat-input" id="chat-input"
-                                placeholder="Type a message to test..." onkeypress="handleKeyPress(event)">
-                            <button class="icon-btn send-btn" onclick="sendMessage()">➤</button>
+                        <!-- Tags Section -->
+                        <div style="padding: 16px 20px; border-bottom: 1px solid var(--border);">
+                            <h4
+                                style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
+                                🏷️ Tags Applied</h4>
+                            <div id="sidebar-tags">
+                                <span style="font-size: 13px; color: #94a3b8;">No tags detected yet</span>
+                            </div>
+                        </div>
+
+                        <!-- Custom Fields Section -->
+                        <div style="padding: 16px 20px; border-bottom: 1px solid var(--border);">
+                            <h4
+                                style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
+                                📝 Custom Fields Captured</h4>
+                            <div id="sidebar-custom-fields">
+                                <span style="font-size: 13px; color: #94a3b8;">No custom fields detected yet</span>
+                            </div>
+                        </div>
+
+                        <!-- Accumulated Tags -->
+                        <div style="padding: 16px 20px; border-bottom: 1px solid var(--border);">
+                            <h4
+                                style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
+                                📊 All Tags (Session)</h4>
+                            <div id="sidebar-all-tags">
+                                <span style="font-size: 13px; color: #94a3b8;">—</span>
+                            </div>
+                        </div>
+
+                        <!-- Accumulated Custom Fields -->
+                        <div style="padding: 16px 20px; flex: 1;">
+                            <h4
+                                style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
+                                📊 All Custom Fields (Session)</h4>
+                            <div id="sidebar-all-fields">
+                                <span style="font-size: 13px; color: #94a3b8;">—</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -678,20 +730,18 @@
     <script>
         // Global State
         let selectedPromptId = null;
+        let allSessionTags = new Set();
+        let allSessionFields = {};
 
         function switchTab(tabName) {
-            // Update Tab Buttons
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            // Find button that triggered this or matches the tab
             const buttons = document.querySelectorAll('.tab-btn');
             if (tabName === 'dashboard') buttons[0].classList.add('active');
             else buttons[1].classList.add('active');
 
-            // Update Tab Content
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(tabName + '-tab').classList.add('active');
 
-            // Update Sidebar
             const navItems = document.querySelectorAll('.nav-item');
             navItems.forEach(item => item.classList.remove('active'));
             if (tabName === 'dashboard') navItems[0].classList.add('active');
@@ -724,6 +774,7 @@
                     removeTyping();
                     if (data.status === 'success') {
                         addMessage('bot', data.bot_message.content);
+                        updateSidebar(data.bot_message.tags || [], data.bot_message.custom_fields || []);
                     } else {
                         addMessage('system', 'Error: ' + data.message);
                     }
@@ -734,6 +785,53 @@
                 });
         }
 
+        function updateSidebar(tags, customFields) {
+            // Current response tags
+            const tagsDiv = document.getElementById('sidebar-tags');
+            if (tags.length > 0) {
+                tagsDiv.innerHTML = tags.map(t =>
+                    `<span style="display: inline-block; background: #eff6ff; color: #3b82f6; padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: 600; margin: 2px 4px 2px 0;">${t}</span>`
+                ).join('');
+                tags.forEach(t => allSessionTags.add(t));
+            } else {
+                tagsDiv.innerHTML = '<span style="font-size: 13px; color: #94a3b8;">None in this response</span>';
+            }
+
+            // Current response custom fields
+            const fieldsDiv = document.getElementById('sidebar-custom-fields');
+            if (customFields.length > 0) {
+                fieldsDiv.innerHTML = customFields.map(cf =>
+                    `<div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
+                        <span style="font-size: 13px; font-weight: 600; color: var(--text-main);">${cf.name}</span>
+                        <span style="font-size: 13px; color: var(--primary); font-weight: 500;">${cf.value}</span>
+                    </div>`
+                ).join('');
+                customFields.forEach(cf => { allSessionFields[cf.name] = cf.value; });
+            } else {
+                fieldsDiv.innerHTML = '<span style="font-size: 13px; color: #94a3b8;">None in this response</span>';
+            }
+
+            // Accumulated tags
+            const allTagsDiv = document.getElementById('sidebar-all-tags');
+            if (allSessionTags.size > 0) {
+                allTagsDiv.innerHTML = Array.from(allSessionTags).map(t =>
+                    `<span style="display: inline-block; background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: 600; margin: 2px 4px 2px 0;">${t}</span>`
+                ).join('');
+            }
+
+            // Accumulated custom fields
+            const allFieldsDiv = document.getElementById('sidebar-all-fields');
+            const fieldEntries = Object.entries(allSessionFields);
+            if (fieldEntries.length > 0) {
+                allFieldsDiv.innerHTML = fieldEntries.map(([name, value]) =>
+                    `<div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
+                        <span style="font-size: 13px; font-weight: 600; color: var(--text-main);">${name}</span>
+                        <span style="font-size: 13px; color: #10b981; font-weight: 500;">${value}</span>
+                    </div>`
+                ).join('');
+            }
+        }
+
         function addMessage(role, text) {
             const container = document.getElementById('chat-messages');
             const empty = container.querySelector('.empty-state');
@@ -741,7 +839,12 @@
 
             const div = document.createElement('div');
             div.className = `message ${role}`;
-            div.textContent = text;
+            if (role === 'bot') {
+                // Render line breaks properly for bot messages
+                div.innerHTML = text.replace(/\n/g, '<br>');
+            } else {
+                div.textContent = text;
+            }
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }

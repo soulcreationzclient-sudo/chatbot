@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
+import re
 from newapp.models import ChatGPTPrompt, Admin, Organization
 from datetime import datetime
 
@@ -12,6 +13,75 @@ def test_chat(request):
     Simple chat interface for testing prompts - redirects to dashboard with chat tab.
     """
     return redirect('/webchat/dashboard/?tab=test-chat')
+
+
+def _parse_ai_response(raw_response):
+    """
+    Parse AI response to extract clean text, tags, and custom fields.
+    Returns dict with 'clean_text', 'tags', 'custom_fields', 'raw_response'.
+    """
+    tags = []
+    custom_fields = []
+    clean_text = raw_response
+
+    # --- Try to extract text from JSON ---
+    stripped = raw_response.strip()
+    # Strip markdown code fences
+    if stripped.startswith('```'):
+        stripped = re.sub(r'^```(?:json)?\s*', '', stripped)
+        stripped = re.sub(r'\s*```$', '', stripped)
+        stripped = stripped.strip()
+
+    if stripped.startswith('{') or stripped.startswith('['):
+        try:
+            data_json = json.loads(stripped)
+            messages = data_json.get("messages", [])
+            text_parts = []
+            if messages and isinstance(messages, list):
+                for msg_item in messages:
+                    if isinstance(msg_item, dict):
+                        t = msg_item.get("text")
+                        if not t:
+                            t = msg_item.get("message", {}).get("text", "")
+                        if t and isinstance(t, str) and t.strip():
+                            text_parts.append(t.strip())
+            if text_parts:
+                clean_text = "\n\n".join(text_parts)
+        except (json.JSONDecodeError, AttributeError):
+            # Try regex fallback
+            text_matches = re.findall(r'"text"\s*:\s*"((?:[^"\\]|\\.)*)"', stripped)
+            if text_matches:
+                extracted = []
+                for t in text_matches:
+                    t = t.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                    if t.strip():
+                        extracted.append(t.strip())
+                if extracted:
+                    clean_text = "\n\n".join(extracted)
+
+    # --- Extract tags from text ---
+    tag_matches = re.findall(r'\{\{tag:add:([^}]+)\}\}', clean_text)
+    for tag_name in tag_matches:
+        tags.append(tag_name.strip())
+    # Remove tag markers from clean text
+    clean_text = re.sub(r'\s*\{\{tag:add:[^}]+\}\}\s*', '', clean_text).strip()
+
+    # --- Extract custom fields from text ---
+    cf_matches = re.findall(r'\{\{custom_field:([a-zA-Z0-9_]+):(.+?)\}\}', clean_text)
+    for field_name, field_value in cf_matches:
+        custom_fields.append({'name': field_name, 'value': field_value.strip()})
+    # Remove custom field markers from clean text
+    clean_text = re.sub(r'\s*\{\{custom_field:[a-zA-Z0-9_]+:.+?\}\}\s*', '', clean_text).strip()
+
+    # --- Clean up extra whitespace ---
+    clean_text = re.sub(r'\n\s*\n\s*\n', '\n\n', clean_text)
+
+    return {
+        'clean_text': clean_text,
+        'tags': tags,
+        'custom_fields': custom_fields,
+        'raw_response': raw_response,
+    }
 
 
 @csrf_exempt
@@ -74,6 +144,9 @@ def test_chat_send(request):
         else:
             ai_response = f"Test Mode: You said '{user_message}'. (No OpenAI API key configured)"
 
+        # Parse the response to extract clean text, tags, and custom fields
+        parsed = _parse_ai_response(ai_response)
+
         # Return response
         now = datetime.now().isoformat()
         
@@ -84,7 +157,10 @@ def test_chat_send(request):
                 'created_at': now
             },
             'bot_message': {
-                'content': ai_response,
+                'content': parsed['clean_text'],
+                'raw_content': parsed['raw_response'],
+                'tags': parsed['tags'],
+                'custom_fields': parsed['custom_fields'],
                 'created_at': now
             }
         })
