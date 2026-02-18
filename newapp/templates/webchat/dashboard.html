@@ -773,7 +773,7 @@
                 .then(data => {
                     removeTyping();
                     if (data.status === 'success') {
-                        addMessage('bot', data.bot_message.content);
+                        addMessage('bot', data.bot_message.content, data.bot_message.images || []);
                         updateSidebar(data.bot_message.tags || [], data.bot_message.custom_fields || []);
                     } else {
                         addMessage('system', 'Error: ' + data.message);
@@ -832,7 +832,7 @@
             }
         }
 
-        function addMessage(role, text) {
+        function addMessage(role, text, images) {
             const container = document.getElementById('chat-messages');
             const empty = container.querySelector('.empty-state');
             if (empty) empty.remove();
@@ -841,7 +841,16 @@
             div.className = `message ${role}`;
             if (role === 'bot') {
                 // Render line breaks properly for bot messages
-                div.innerHTML = text.replace(/\n/g, '<br>');
+                let html = text.replace(/\n/g, '<br>');
+                // Render images if present
+                if (images && images.length > 0) {
+                    html += '<div style="margin-top: 8px;">';
+                    images.forEach(img => {
+                        html += `<a href="${img.url}" target="_blank" style="display:block; margin-top:6px;"><img src="${img.url}" alt="${img.name}" style="max-width:100%; max-height:300px; border-radius:8px; cursor:pointer;"></a>`;
+                    });
+                    html += '</div>';
+                }
+                div.innerHTML = html;
             } else {
                 div.textContent = text;
             }

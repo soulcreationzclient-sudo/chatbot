@@ -260,6 +260,40 @@ session=session,
                 logger.error(f"AI response error: {str(ai_error)}")
                 bot_response_text = "Sorry, I'm having trouble connecting to the AI service. Please try again later."
             
+            # Process {{image:name}} tags for webchat
+            image_urls = []
+            if bot_response_text:
+                try:
+                    from ..image_tag_processor import parse_image_tags, get_image_asset
+                    from ..models import Admin as AdminModel, ImageAsset
+                    from ..models import Organization # Import Organization model
+                    import re
+                    
+                    image_tags = parse_image_tags(bot_response_text)
+                    if image_tags:
+                        # Get admin/org for looking up assets
+                        admin_obj = None
+                        org_obj = None
+                        if session.organization_id:
+                            org_obj = Organization.objects.filter(id=session.organization_id).first()
+                        if session.admin_id:
+                            admin_obj = AdminModel.objects.filter(id=session.admin_id).first()
+                        
+                        for full_tag, image_name in image_tags:
+                            asset = get_image_asset(image_name, admin_obj, org_obj)
+                            if asset and asset.image:
+                                image_urls.append({
+                                    'name': image_name,
+                                    'url': asset.image.url,
+                                })
+                        
+                        # Remove image tags from text
+                        bot_response_text = re.sub(r'\{\{image:[a-zA-Z0-9_]+\}\}', '', bot_response_text).strip()
+                        # Clean up extra whitespace
+                        bot_response_text = re.sub(r'\n\s*\n\s*\n', '\n\n', bot_response_text)
+                except Exception as img_error:
+                    logger.error(f"Image tag processing error: {str(img_error)}")
+            
             # Create bot message
             bot_message = WebChatMessage.objects.create(
                 session=session,
@@ -293,6 +327,7 @@ session=session,
                     'content': bot_message.content,
                     'sender': bot_message.sender,
                     'created_at': bot_message.created_at.isoformat(),
+                    'images': image_urls,
                 }
             }
             

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -213,6 +214,7 @@
                 opacity: 0;
                 transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -290,9 +292,13 @@
         }
 
         @keyframes typingBounce {
-            0%, 60%, 100% {
+
+            0%,
+            60%,
+            100% {
                 transform: translateY(0);
             }
+
             30% {
                 transform: translateY(-6px);
             }
@@ -512,11 +518,12 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Chat Launcher Button -->
     <div class="chat-launcher" id="chatLauncher" title="Open Chat">
         <svg viewBox="0 0 24 24">
-            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
         </svg>
     </div>
 
@@ -526,7 +533,7 @@
         <div class="chat-header">
             <div class="chat-header-icon">
                 <svg viewBox="0 0 24 24">
-                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
                 </svg>
             </div>
             <div class="chat-header-info">
@@ -535,7 +542,8 @@
             </div>
             <button class="chat-header-close" id="closeChat">
                 <svg viewBox="0 0 24 24">
-                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    <path
+                        d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                 </svg>
             </button>
         </div>
@@ -550,7 +558,7 @@
         <div class="chat-messages" id="chatMessages">
             <div class="welcome-message" id="welcomeMessage">
                 <svg viewBox="0 0 24 24">
-                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
                 </svg>
                 <h3>Welcome!</h3>
                 <p>How can we help you today?</p>
@@ -567,18 +575,20 @@
             <div class="chat-input-wrapper">
                 <button class="input-action-btn" id="attachBtn" title="Attach file">
                     <svg viewBox="0 0 24 24">
-                        <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+                        <path
+                            d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" />
                     </svg>
                 </button>
                 <button class="input-action-btn" id="voiceBtn" title="Voice input">
                     <svg viewBox="0 0 24 24">
-                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
+                        <path
+                            d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z" />
                     </svg>
                 </button>
                 <textarea class="chat-input" id="chatInput" placeholder="Type your message..." rows="1"></textarea>
                 <button class="send-btn" id="sendBtn" disabled>
                     <svg viewBox="0 0 24 24">
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                     </svg>
                 </button>
             </div>
@@ -781,7 +791,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-body: JSON.stringify({
+                    body: JSON.stringify({
                         session_id: state.sessionId,
                         message: message,
                         content_type: 'text'
@@ -794,7 +804,7 @@ body: JSON.stringify({
                 hideTyping();
 
                 if (data.success) {
-                    addMessage(data.bot_message.content, 'bot');
+                    addMessage(data.bot_message.content, 'bot', data.bot_message.images || []);
                 } else {
                     addMessage('Sorry, something went wrong. Please try again.', 'bot');
                 }
@@ -806,12 +816,21 @@ body: JSON.stringify({
         }
 
         // Add message to chat
-        function addMessage(content, sender) {
+        function addMessage(content, sender, images) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${sender}`;
 
             // Handle multiline messages
-            const formattedContent = content.replace(/\n/g, '<br>');
+            let formattedContent = content.replace(/\n/g, '<br>');
+
+            // Render images if present
+            if (images && images.length > 0 && sender === 'bot') {
+                formattedContent += '<div style="margin-top: 8px;">';
+                images.forEach(img => {
+                    formattedContent += `<a href="${img.url}" target="_blank" style="display:block; margin-top:6px;"><img src="${img.url}" alt="${img.name}" style="max-width:100%; max-height:250px; border-radius:8px; cursor:pointer;"></a>`;
+                });
+                formattedContent += '</div>';
+            }
 
             messageDiv.innerHTML = `
                 <div class="message-content">${formattedContent}</div>
@@ -909,4 +928,5 @@ body: JSON.stringify({
         }
     </script>
 </body>
+
 </html>

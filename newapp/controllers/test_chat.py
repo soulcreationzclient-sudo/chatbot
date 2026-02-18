@@ -149,6 +149,37 @@ def test_chat_send(request):
         # Parse the response to extract clean text, tags, and custom fields
         parsed = _parse_ai_response(ai_response)
 
+        # Process {{image:name}} tags
+        image_urls = []
+        clean_text = parsed['clean_text']
+        try:
+            import re as re_mod
+            from newapp.image_tag_processor import parse_image_tags, get_image_asset
+            from newapp.models import Admin as AdminModel, Organization as OrgModel
+            
+            img_tags = parse_image_tags(clean_text)
+            if img_tags:
+                admin_obj = None
+                org_obj = None
+                if org_id:
+                    org_obj = OrgModel.objects.filter(id=org_id).first()
+                if admin_id:
+                    admin_obj = AdminModel.objects.filter(id=admin_id).first()
+                
+                for full_tag, img_name in img_tags:
+                    asset = get_image_asset(img_name, admin_obj, org_obj)
+                    if asset and asset.image:
+                        image_urls.append({
+                            'name': img_name,
+                            'url': asset.image.url,
+                        })
+                
+                # Remove image tags from text
+                clean_text = re_mod.sub(r'\{\{image:[a-zA-Z0-9_]+\}\}', '', clean_text).strip()
+                clean_text = re_mod.sub(r'\n\s*\n\s*\n', '\n\n', clean_text)
+        except Exception as img_err:
+            pass  # Silently fail if image processing fails
+
         # Return response
         now = datetime.now().isoformat()
         
@@ -159,10 +190,11 @@ def test_chat_send(request):
                 'created_at': now
             },
             'bot_message': {
-                'content': parsed['clean_text'],
+                'content': clean_text,
                 'raw_content': parsed['raw_response'],
                 'tags': parsed['tags'],
                 'custom_fields': parsed['custom_fields'],
+                'images': image_urls,
                 'created_at': now
             }
         })
