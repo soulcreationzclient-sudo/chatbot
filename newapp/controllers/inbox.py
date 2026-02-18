@@ -210,8 +210,8 @@ class Inboxcontroller:
         from ..models import UserTag, Message, CustomFieldValue, UserLog, ScheduledFollowUp
         # 1. Remove all tags
         UserTag.objects.filter(user=user).delete()
-        # 2. Delete message history
-        Message.objects.filter(user=user).delete()
+        # 2. Delete message history (Message FK field is named 'user_id', not 'user')
+        Message.objects.filter(user_id=user).delete()
         # 3. Delete custom field values
         CustomFieldValue.objects.filter(user=user).delete()
         # 4. Delete user logs
