@@ -887,6 +887,18 @@ If the user's question relates to this document, answer based on your analysis a
                             data_json = None
 
                             if bot_response:
+                                # Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+                                cleaned_response = bot_response.strip()
+                                if cleaned_response.startswith("```"):
+                                    # Remove opening fence (```json or ```)
+                                    first_newline = cleaned_response.find("\n")
+                                    if first_newline != -1:
+                                        cleaned_response = cleaned_response[first_newline + 1:]
+                                    # Remove closing fence
+                                    if cleaned_response.rstrip().endswith("```"):
+                                        cleaned_response = cleaned_response.rstrip()[:-3].rstrip()
+                                    bot_response = cleaned_response
+
                                 if bot_response.strip().startswith("{") or bot_response.strip().startswith("["):
                                     try:
                                         data_json = json.loads(bot_response)
