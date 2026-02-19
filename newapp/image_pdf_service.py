@@ -123,13 +123,19 @@ def convert_pdf_to_images(pdf_bytes: bytes) -> List[str]:
         from pdf2image import convert_from_bytes
         import platform
         
-        # Set Poppler path for Windows
+        # Set Poppler path for Windows (configurable via environment variable)
         poppler_path = None
         if platform.system() == 'Windows':
-            poppler_path = r"C:\Users\Meet\.gemini\poppler-25.12.0\Library\bin"
+            poppler_path = os.environ.get('POPPLER_PATH', r"C:\Users\Meet\.gemini\poppler-25.12.0\Library\bin")
         
         # Convert PDF to images (limit to first 5 pages to avoid API overload)
-        images = convert_from_bytes(pdf_bytes, dpi=150, poppler_path=poppler_path, first_page=1, last_page=5)
+        # Make page limit configurable via environment variable
+        max_pages = int(os.environ.get('MAX_PDF_PAGES', '5'))
+        images = convert_from_bytes(pdf_bytes, dpi=150, poppler_path=poppler_path, first_page=1, last_page=max_pages)
+        
+        # Log if PDF has more pages than analyzed
+        if len(images) >= max_pages:
+            print(f"[ImageService] Warning: PDF has {max_pages}+ pages, analyzing first {max_pages} only")
         
         base64_images = []
         for img in images:
@@ -299,9 +305,20 @@ def analyze_media_message(
     
     # Download the media
     try:
+        # BUG FIX: Add size validation
+        MAX_MEDIA_SIZE_MB = 16
         media_bytes = download_whatsapp_media(media_id, wa_token)
+        
+        if not media_bytes:
+            return "Sorry, I couldn't download your file. Please try sending it again."
+        
+        # Check file size
+        media_size_mb = len(media_bytes) / (1024 * 1024)
+        if media_size_mb > MAX_MEDIA_SIZE_MB:
+            return f"Sorry, the file is too large (max {MAX_MEDIA_SIZE_MB}MB). Please send a smaller file."
+        
         with open('debug_log.txt', 'a') as f:
-            f.write(f"[Vision] Downloaded media bytes: {len(media_bytes)}\n")
+            f.write(f"[Vision] Downloaded media bytes: {len(media_bytes)} ({media_size_mb:.2f}MB)\n")
     except Exception as e:
         with open('debug_log.txt', 'a') as f:
             f.write(f"[Vision] Download check failed: {str(e)}\n")
@@ -435,8 +452,8 @@ def transcribe_audio(media_id: str, openai_key: str, whatsapp_token: str) -> Opt
         if temp_path:
             try:
                 os.unlink(temp_path)
-            except:
-                pass
+            except Exception as cleanup_error:
+                print(f"[Audio] Warning: Could not delete temp file: {cleanup_error}")
 
 
 def save_chat_media(media_id: str, access_token: str) -> Optional[str]:

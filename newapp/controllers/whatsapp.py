@@ -354,11 +354,14 @@ class whatsappcontroller:
                             if wa_name:
                                 existing_user.name = wa_name
                             
-                            # Reset follow-up counter when user sends a new message
+                            # BUG FIX: Only reset follow-up counter for actual human messages
                             # This ensures follow-ups start from 1st again after user replies
-                            existing_user.followup_count = 0
-                            existing_user.save()
-                            webhook_logger.info(f"Reset follow-up counter for {phone}")
+                            # Don't reset for system/bot messages to prevent loop issues
+                            human_message_types = ['text', 'image', 'document', 'audio']
+                            if msg_type in human_message_types:
+                                existing_user.followup_count = 0
+                                existing_user.save()
+                                webhook_logger.info(f"Reset follow-up counter for {phone}")
 
                             
                             # ==================== IMAGE/DOCUMENT HANDLING ====================
