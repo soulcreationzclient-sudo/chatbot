@@ -148,7 +148,7 @@ def process_pending_followups():
                 # Check if user replied since scheduling (cancel if so)
                 last_user_msg = Message.objects.filter(
                     user_id=user,
-                    who='user',
+                    who='human',
                     created_at__gt=followup.created_at
                 ).exists()
                 

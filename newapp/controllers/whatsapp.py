@@ -1131,6 +1131,15 @@ If the user's question relates to this document, answer based on your analysis a
                                         existing_user.save(update_fields=['followup_count'])
                                         webhook_logger.info(f"Reset followup_count for {existing_user.phone_no}")
                                     
+                                    # Cancel any pending follow-ups since user just replied
+                                    from newapp.models import ScheduledFollowUp
+                                    cancelled_count = ScheduledFollowUp.objects.filter(
+                                        user=existing_user,
+                                        status='pending'
+                                    ).update(status='cancelled')
+                                    if cancelled_count > 0:
+                                        webhook_logger.info(f"Cancelled {cancelled_count} pending follow-up(s) for {existing_user.phone_no}")
+                                    
                                     # Check if a follow-up was already scheduled in this conversation window
                                     # Use a timestamp check: only schedule if last bot message was > 30 seconds ago
                                     
