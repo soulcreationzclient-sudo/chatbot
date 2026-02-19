@@ -1109,10 +1109,16 @@ If the user's question relates to this document, answer based on your analysis a
                                 followup_enabled = False
                                 delay_minutes = 10  # default
                                 
+                                print(f"[FOLLOWUP DEBUG] org_check={org_check}, admin_check={admin_check}")
+                                
                                 if org_check:
                                     followup_enabled = getattr(org_check, 'followup_enabled', True)
+                                    print(f"[FOLLOWUP DEBUG] org followup_enabled={followup_enabled}")
                                 elif admin_check:
                                     followup_enabled = getattr(admin_check, 'followup_enabled', True)
+                                    print(f"[FOLLOWUP DEBUG] admin followup_enabled={followup_enabled}")
+                                else:
+                                    print(f"[FOLLOWUP DEBUG] No org_check or admin_check found!")
                                 
                                 if followup_enabled:
                                     # PREVENT DUPLICATE FOLLOW-UPS:
@@ -1134,10 +1140,13 @@ If the user's question relates to this document, answer based on your analysis a
                                         created_at__gte=timezone.now() - timedelta(seconds=30)
                                     ).count()
                                     
+                                    print(f"[FOLLOWUP DEBUG] recent_bot_msg={recent_bot_msg}")
+                                    
                                     # If there are multiple bot messages in last 30 sec, skip scheduling
                                     # (prevents duplicate follow-ups from rapid message exchanges)
                                     if recent_bot_msg > 1:
                                         webhook_logger.info(f"Skipping follow-up for {existing_user.phone_no}")
+                                        print(f"[FOLLOWUP DEBUG] Skipped: too many recent bot msgs")
                                     else:
                                         # Get delay from FollowUpMessage step 1 (UI settings)
                                         from newapp.models import FollowUpMessage
@@ -1165,12 +1174,16 @@ If the user's question relates to this document, answer based on your analysis a
                                         
                                         delay_seconds = delay_minutes * 60
                                         # Use new persistent scheduling (schedule_followup creates a ScheduledFollowUp record)
+                                        print(f"[FOLLOWUP DEBUG] Scheduling follow-up for user {existing_user.id}, delay={delay_minutes}min")
                                         schedule_followup.delay(existing_user.id, step=1)
                                         webhook_logger.info(f"Follow-up scheduled for {existing_user.phone_no}")
+                                        print(f"[FOLLOWUP DEBUG] Follow-up scheduled successfully!")
                                 else:
                                     webhook_logger.info(f"Follow-ups disabled for {existing_user.phone_no}")
+                                    print(f"[FOLLOWUP DEBUG] Follow-ups DISABLED!")
                             except Exception as fu_err:
                                 webhook_logger.error(f"Follow-up error: {fu_err}")
+                                print(f"[FOLLOWUP DEBUG] EXCEPTION: {fu_err}")
                             # ===== END FOLLOW-UP SCHEDULING =====
 
                 return HttpResponse("Message stored", status=200)
