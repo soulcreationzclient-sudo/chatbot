@@ -4,7 +4,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mynewsite.settings')
 sys.path.insert(0, '/home/ubuntu/speedbot')
 django.setup()
 
-from newapp.models import User, AdminCustomUser, Organization, ImageAsset
+from newapp.models import User, Organization, ImageAsset
 
 # Check who owns 919327606510
 users = User.objects.filter(phone_no__contains='919327606510')
@@ -16,9 +16,9 @@ print("\n=== All Organizations ===")
 for o in Organization.objects.all():
     print(f"  Org ID={o.id} Name={o.name}")
 
-print("\n=== All Admins ===")
-for a in AdminCustomUser.objects.all():
-    print(f"  Admin ID={a.id} Phone={a.phone_no} Org={a.organization_id}")
+print("\n=== All Admins (from User admin_id) ===")
+admin_ids = set(User.objects.values_list('admin_id', flat=True).distinct())
+print(f"  Admin IDs in use: {admin_ids}")
 
 print("\n=== Image Assets with paths ===")
 for ia in ImageAsset.objects.all():
