@@ -235,10 +235,41 @@ def process_pending_followups():
                 
                 logger.info(f"✅ Follow-up step {followup.step} sent to {user.phone_no}")
                 
-                # Schedule next step
-                next_step = followup.step + 1
-                schedule_followup.delay(user.id, next_step)
-                
+                # BUG FIX: Prevent repeated follow-up messages
+                user_replied_recently = Message.objects.filter(
+                    user_id=user,
+                    who='human',
+                    created_at__gte=now - timezone.timedelta(minutes=2)
+                ).exists()
+
+                existing_pending = ScheduledFollowUp.objects.filter(
+                    user=user,
+                    status='pending'
+                ).exists()
+
+                if user_replied_recently:
+                    logger.info(f"⏭️ User replied recently - not scheduling next follow-up")
+                    user.followup_count = 0
+                    user.save(update_fields=['followup_count'])
+                elif existing_pending:
+                    logger.info(f"⏭️ Pending follow-up already exists - skipping duplicate")
+                else:
+                    # Check for "one last time" loop
+                    recent_bot_message = Message.objects.filter(
+                        user_id=user,
+                        who='bot',
+                        messages__icontains='one last time',
+                        created_at__gte=now - timezone.timedelta(minutes=5)
+                    ).exists()
+
+                    if recent_bot_message:
+                        logger.warning(f"⏭️ Detected one last time loop - stopping follow-ups")
+                        user.followup_count = 999
+                        user.save(update_fields=['followup_count'])
+                    else:
+                        next_step = followup.step + 1
+                        schedule_followup.delay(user.id, next_step)
+
                 processed += 1
             else:
                 followup.error_message = error or 'Unknown error'

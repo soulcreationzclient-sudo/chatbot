@@ -547,6 +547,24 @@ class whatsappcontroller:
                                 continue
                             # ==================== END BOT TOGGLE CHECK ====================
 
+                            # ==================== AUTOMATED MESSAGE DETECTION ====================
+                            # BUG FIX: Detect if the incoming message is from another bot/automated system
+                            # Check for common automated message patterns to prevent bot-on-bot conversations
+                            automated_patterns = [
+                                'demo account',
+                                'follow up',
+                                'one last time',
+                                'check if you need',
+                            ]
+
+                            is_automated = any(pattern in msg_text.lower() for pattern in automated_patterns) if msg_text else False
+
+                            if is_automated:
+                                webhook_logger.info(f"🤖 Detected automated message from {phone}, skipping AI response")
+                                # Don't generate AI response for automated messages - just log and continue
+                                continue
+                            # ==================== END AUTOMATED MESSAGE DETECTION ====================
+
                             # ==================== KEYWORD MACRO TAGGING ====================
                             # Check if user input matches any tag keywords (Manual Rule Mode)
                             try:
@@ -892,7 +910,15 @@ If the user's question relates to this document, answer based on your analysis a
                                          webhook_logger.debug("Bot response is valid")
                                     else:
                                          webhook_logger.warning("Bot response is Empty/None")
-                                         bot_response = "Sorry, I couldn’t generate a response just now."
+                                         # BUG FIX: More specific error messages
+                                         if not openai_key:
+                                             bot_response = "Sorry, my AI assistant is not configured. Please contact support."
+                                         elif 'rate_limit' in str(oe).lower() or 'quota' in str(oe).lower():
+                                             bot_response = "Sorry, I'm experiencing high demand right now. Please try again in a few moments."
+                                         elif 'timeout' in str(oe).lower():
+                                             bot_response = "Sorry, the request timed out. Please try again."
+                                         else:
+                                             bot_response = "Sorry, I encountered an issue processing your request. Please try again."
                                 elif pine_token:
                                     try:
                                         pc = Pinecone(api_key=pine_token)
