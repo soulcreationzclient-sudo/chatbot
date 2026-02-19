@@ -555,7 +555,7 @@
           <option value="">All Tags</option>
           {% for t in all_tags %}
           {% with t.id|stringformat:"s" as tid %}
-          <option value="{{ t.id }}" {% if request.GET.tag_id == tid %}selected{% endif %}>{{ t.name }}
+          <option value="{{ t.id }}" {% if request.GET.tag_id==tid %}selected{% endif %}>{{ t.name }}
           </option>
           {% endwith %}
           {% endfor %}
@@ -573,7 +573,8 @@
   <section class="thread">
     <div class="thread-head">
       {% if selected_user %}
-      <div class="avatar" style="width:36px;height:36px">{{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
+      <div class="avatar" style="width:36px;height:36px">{{
+        selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
       <div style="flex:1">
         <div style="font-weight:700">{{ selected_user.name|default:"User" }}</div>
         <div class="text-muted" style="font-size:12px">{{ selected_user.phone_no }}</div>
@@ -1120,10 +1121,10 @@
     meta.classList.add('meta');
     if (createdAt) {
       const d = new Date(createdAt);
-      meta.textContent = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+      meta.textContent = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
     } else {
       const now = new Date();
-      meta.textContent = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+      meta.textContent = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
     }
     bubble.appendChild(meta);
 
@@ -1136,34 +1137,39 @@
 
   function formatMessage(text) {
     if (!text) return '';
-    // Image
-    const imgMatch = text.match(/^\[Image:\s*(.*?)\]\s*(.*)/is);
-    if (imgMatch) {
-      const url = imgMatch[1].trim();
-      const caption = imgMatch[2].trim();
-      return `
-        <a href="${url}" target="_blank">
-          <img src="${url}" style="max-width:300px; width:100%; border-radius:8px; margin-bottom:4px;" onerror="this.style.display='none'" onload="scrollToBottom()">
-        </a>
-        ${caption ? `<div class="mt-1">${caption}</div>` : ''}
-      `;
-    }
-    // Document
-    const docMatch = text.match(/^\[Document:\s*(.*?)\]\s*(.*)/is);
-    if (docMatch) {
-      const url = docMatch[1].trim();
-      const caption = docMatch[2].trim();
-      if (url.startsWith('/') || url.startsWith('http')) {
-        return `
-          <div class="d-flex align-items-center gap-2 p-2 bg-light rounded text-dark">
-            <i class="fa-solid fa-file-lines fs-4 text-primary"></i>
-            <a href="${url}" target="_blank" class="text-decoration-underline text-break" download>Download Document</a>
-          </div>
-          ${caption ? `<div class="mt-1 small">${caption}</div>` : ''}
-        `;
+
+    // Check if text contains any [Image: ...] or [Document: ...] tags
+    const hasImageTags = /\[Image:\s*[^\]]+\]/i.test(text);
+    const hasDocTags = /\[Document:\s*[^\]]+\]/i.test(text);
+
+    if (hasImageTags || hasDocTags) {
+      // Process text with embedded media tags
+      let html = '';
+      // Split on [Image: ...] and [Document: ...] tags, keeping the tags
+      const parts = text.split(/(\[Image:\s*[^\]]+\]|\[Document:\s*[^\]]+\])/i);
+
+      for (const part of parts) {
+        const imgMatch = part.match(/^\[Image:\s*(.*?)\]$/i);
+        const docMatch = part.match(/^\[Document:\s*(.*?)\]$/i);
+
+        if (imgMatch) {
+          const url = imgMatch[1].trim();
+          html += `<a href="${url}" target="_blank"><img src="${url}" style="max-width:300px; width:100%; border-radius:8px; margin:4px 0;" onerror="this.style.display='none'" onload="scrollToBottom()"></a>`;
+        } else if (docMatch) {
+          const url = docMatch[1].trim();
+          if (url.startsWith('/') || url.startsWith('http')) {
+            html += `<div class="d-flex align-items-center gap-2 p-2 bg-light rounded text-dark" style="margin:4px 0;"><i class="fa-solid fa-file-lines fs-4 text-primary"></i><a href="${url}" target="_blank" class="text-decoration-underline text-break" download>Download Document</a></div>`;
+          }
+        } else if (part.trim()) {
+          // Regular text part - escape HTML and convert newlines
+          const safeText = part.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+          html += safeText.replace(/\n/g, '<br>');
+        }
       }
+      return html;
     }
-    // Text
+
+    // Plain text - escape HTML and convert newlines
     const safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     return safeText.replace(/\n/g, '<br>');
   }
@@ -1175,7 +1181,7 @@
       // Logic to auto-format existing can be simplified or kept if needed
       if (!el.classList.contains('meta')) {
         const raw = el.innerText;
-        if (raw.trim().startsWith('[Image:') || raw.trim().startsWith('[Document:')) {
+        if (raw.includes('[Image:') || raw.includes('[Document:')) {
           el.innerHTML = formatMessage(raw);
         }
       }
@@ -1185,7 +1191,7 @@
   // Polling Logic
   let lastMessageId = 0;
   {% if messages %}
-  lastMessageId = {{ messages.last.id |default:0 }};
+  lastMessageId = {{ messages.last.id |default: 0 }};
   {% endif %}
   const currentUserId = "{{ selected_user.id|default:'' }}";
 

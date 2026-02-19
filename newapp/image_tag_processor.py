@@ -359,6 +359,12 @@ def process_response_with_images(response_text, admin, phone, phone_number_id, t
         print(f"[ImageTag] Found {len(path_tags)} [Image: path] tag(s)")
         remaining_text = response_text
         
+        # Build caption text (without image tags) for WhatsApp
+        caption_text = response_text
+        for full_tag, _ in path_tags:
+            caption_text = caption_text.replace(full_tag, '').strip()
+        caption_text = re.sub(r'\n\s*\n', '\n', caption_text).strip()
+        
         for full_tag, img_path in path_tags:
             # Build full file path: /media/image_assets/file.jpg -> MEDIA_ROOT/image_assets/file.jpg
             rel_path = img_path.lstrip('/')
@@ -367,17 +373,13 @@ def process_response_with_images(response_text, admin, phone, phone_number_id, t
             
             full_path = os.path.join(settings.MEDIA_ROOT, rel_path)
             
-            # Remove tag from remaining text
-            remaining_text = remaining_text.replace(full_tag, '').strip()
-            
             if os.path.exists(full_path):
                 print(f"[ImageTag] Found file: {full_path}")
                 media_id = upload_image_to_whatsapp(full_path, phone_number_id, token, skip_compression=True)
                 
                 if media_id:
-                    # Use remaining text as caption for first image
-                    caption = remaining_text.strip() if result['images_sent'] == 0 else ""
-                    caption = re.sub(r'\n\s*\n', '\n', caption).strip()
+                    # Use caption text (text without image tags) for first image
+                    caption = caption_text if result['images_sent'] == 0 else ""
                     
                     img_ok = send_whatsapp_image(media_id, phone, phone_number_id, token, caption=caption)
                     if img_ok:
@@ -389,6 +391,7 @@ def process_response_with_images(response_text, admin, phone, phone_number_id, t
             else:
                 print(f"[ImageTag] File not found: {full_path}")
         
+        # Keep [Image: path] tags in final_text for inbox display
         remaining_text = re.sub(r'\n\s*\n', '\n', remaining_text).strip()
         result['final_text'] = remaining_text if remaining_text else ""
         
@@ -418,18 +421,20 @@ def process_response_with_images(response_text, admin, phone, phone_number_id, t
                 images_to_send.append({
                     'path': image_path,
                     'name': image_name,
-                    'tag': full_tag
+                    'tag': full_tag,
+                    'url': asset.image.url  # Save URL for inbox display
                 })
                 print(f"[ImageTag] Found image asset: {image_name} -> {image_path}")
+                # Replace tag with [Image: url] for inbox display
+                remaining_text = remaining_text.replace(full_tag, f'[Image: {asset.image.url}]')
             else:
                 print(f"[ImageTag] Warning: Image file not found at {image_path}")
+                remaining_text = remaining_text.replace(full_tag, '').strip()
         else:
             print(f"[ImageTag] Warning: Image asset '{image_name}' not found for admin")
-        
-        # Remove the tag from the text
-        remaining_text = remaining_text.replace(full_tag, '').strip()
+            remaining_text = remaining_text.replace(full_tag, '').strip()
     
-    # Clean up extra whitespace/newlines from removed tags
+    # Clean up extra whitespace/newlines
     remaining_text = re.sub(r'\n\s*\n', '\n\n', remaining_text).strip()
     result['final_text'] = remaining_text if remaining_text else "(Image sent)"
     
