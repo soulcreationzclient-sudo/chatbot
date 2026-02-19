@@ -11,15 +11,17 @@ phone = '919327606510'
 
 # Check follow-up message configs
 print("=== Follow-Up Message Configs ===")
-for fm in FollowUpMessage.objects.all().order_by('step_number'):
-    print(f"  Step {fm.step_number}: delay={fm.delay_minutes}min msg='{fm.message[:80]}' org={fm.organization_id} admin={fm.admin_id} enabled={fm.is_enabled}")
+for fm in FollowUpMessage.objects.all().order_by('step'):
+    print(f"  Step {fm.step}: delay={fm.delay_minutes}min msg='{fm.message[:80]}' admin={fm.admin_id} active={fm.is_active} tag={fm.tag_id}")
 
 # Check scheduled follow-ups for this user
 print("\n=== Scheduled Follow-Ups for this user ===")
 scheduled = ScheduledFollowUp.objects.filter(user__phone_no=phone).order_by('-created_at')[:15]
 print(f"Total: {scheduled.count()}")
 for s in scheduled:
-    print(f"  ID={s.id} step={s.step_number} status={s.status} scheduled={s.scheduled_at} created={s.created_at} sent={getattr(s, 'sent_at', 'N/A')}")
+    fields = {f.name for f in s._meta.get_fields()}
+    print(f"  ID={s.id} fields={fields}")
+    print(f"    scheduled={getattr(s,'scheduled_at','?')} status={getattr(s,'status','?')} step={getattr(s,'step','?')} created={getattr(s,'created_at','?')}")
 
 # Check recent bot messages (follow-ups)
 print("\n=== Recent bot messages for this user ===")
