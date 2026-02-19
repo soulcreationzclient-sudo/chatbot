@@ -124,129 +124,151 @@ def schedule_followup(user_id, step=1):
 def process_pending_followups():
     """
     Periodic task: Process all due follow-ups.
-    Run this every 60 seconds via Celery Beat.
+    Run this eveny 60 seconds via Celery Beat.
     
-    Uses select_for_update with skip_locked to prevent double-processing
-    in case of multiple workers.
+    Uses manual 'processing' status update as a lock mechanism 
+    since SQLite's select_for_update is unreliable/unsupported.
     """
     now = timezone.now()
     processed = 0
     
-    # Get all pending follow-ups that are due
-    with transaction.atomic():
-        pending = ScheduledFollowUp.objects.select_for_update(skip_locked=True).filter(
-            status='pending',
-            scheduled_for__lte=now
-        )[:50]  # Process max 50 at a time to avoid long transactions
+    # 1. Find candidates (don't lock yet)
+    # Get IDs of pending follow-ups that are due
+    candidate_ids = list(ScheduledFollowUp.objects.filter(
+        status='pending',
+        scheduled_for__lte=now
+    ).values_list('id', flat=True)[:50])  # Process max 50 at a time
+    
+    for followup_id in candidate_ids:
+        # 2. Try to acquire lock by atomic update
+        # This returns the number of rows updated (0 if someone else took it or status changed)
+        # This acts as a manual mutex for SQLite
+        with transaction.atomic():
+            updated_count = ScheduledFollowUp.objects.filter(
+                id=followup_id, 
+                status='pending'
+            ).update(status='processing', last_attempt_at=now)
         
-        for followup in pending:
-            try:
-                user = followup.user
-                admin = followup.admin
-                organization = followup.organization
+        if updated_count == 0:
+            # Already grabbed by another worker or cancelled
+            continue
+            
+        # 3. Process the locked item
+        try:
+            followup = ScheduledFollowUp.objects.get(id=followup_id)
+            user = followup.user
+            admin = followup.admin
+            organization = followup.organization
+            
+            # Check if user replied since scheduling (cancel if so)
+            last_user_msg = Message.objects.filter(
+                user_id=user,
+                who='human',
+                created_at__gt=followup.created_at
+            ).exists()
+            
+            if last_user_msg:
+                followup.status = 'cancelled'
+                followup.save()
+                # Reset follow-up count since user replied
+                user.followup_count = 0
+                user.save(update_fields=['followup_count'])
+                logger.info(f"⏭️ User {user.phone_no} replied. Cancelled follow-up.")
+                continue
+            
+            # Check if bot/follow-ups enabled
+            if not getattr(user, 'bot_enabled', True):
+                followup.status = 'cancelled'
+                followup.save()
+                logger.info(f"🛑 Bot disabled for {user.phone_no}. Cancelled follow-up.")
+                continue
+            
+            followup_enabled = True
+            if organization:
+                followup_enabled = getattr(organization, 'followup_enabled', True)
+            elif admin:
+                followup_enabled = getattr(admin, 'followup_enabled', True)
+            
+            if not followup_enabled:
+                followup.status = 'cancelled'
+                followup.save()
+                logger.info(f"🛑 Follow-ups disabled for org/admin. Cancelled for {user.phone_no}.")
+                continue
+            
+            # Get WhatsApp credentials
+            whatsapp_phone_id = None
+            whatsapp_token = None
+            
+            if organization and organization.whatsapp_phone_id and organization.whatsapp_token:
+                whatsapp_phone_id = organization.whatsapp_phone_id
+                whatsapp_token = organization.whatsapp_token
+            elif admin and admin.whatsapp_phone_id and admin.whatsapp_token:
+                whatsapp_phone_id = admin.whatsapp_phone_id
+                whatsapp_token = admin.whatsapp_token
+            
+            # Send the message
+            success, error = send_whatsapp_text(
+                phone_id=whatsapp_phone_id,
+                token=whatsapp_token,
+                to_phone=user.phone_no,
+                message=followup.message
+            )
+            
+            followup.attempts += 1
+            
+            if success:
+                followup.status = 'sent'
+                followup.sent_at = now
+                followup.save()
                 
-                # Check if user replied since scheduling (cancel if so)
-                last_user_msg = Message.objects.filter(
+                # Save to Message table
+                Message.objects.create(
                     user_id=user,
-                    who='human',
-                    created_at__gt=followup.created_at
-                ).exists()
-                
-                if last_user_msg:
-                    followup.status = 'cancelled'
-                    followup.save()
-                    # Reset follow-up count since user replied
-                    user.followup_count = 0
-                    user.save(update_fields=['followup_count'])
-                    logger.info(f"⏭️ User {user.phone_no} replied. Cancelled follow-up.")
-                    continue
-                
-                # Check if bot is still enabled
-                if not getattr(user, 'bot_enabled', True):
-                    followup.status = 'cancelled'
-                    followup.save()
-                    logger.info(f"🛑 Bot disabled for {user.phone_no}. Cancelled follow-up.")
-                    continue
-                
-                # Check if follow-ups are still enabled (organization priority)
-                followup_enabled = True
-                if organization:
-                    followup_enabled = getattr(organization, 'followup_enabled', True)
-                elif admin:
-                    followup_enabled = getattr(admin, 'followup_enabled', True)
-                
-                if not followup_enabled:
-                    followup.status = 'cancelled'
-                    followup.save()
-                    logger.info(f"🛑 Follow-ups disabled for org/admin. Cancelled for {user.phone_no}.")
-                    continue
-                
-                # Get WhatsApp credentials (organization priority)
-                whatsapp_phone_id = None
-                whatsapp_token = None
-                
-                if organization and organization.whatsapp_phone_id and organization.whatsapp_token:
-                    whatsapp_phone_id = organization.whatsapp_phone_id
-                    whatsapp_token = organization.whatsapp_token
-                elif admin and admin.whatsapp_phone_id and admin.whatsapp_token:
-                    whatsapp_phone_id = admin.whatsapp_phone_id
-                    whatsapp_token = admin.whatsapp_token
-                
-                # Send the message
-                success, error = send_whatsapp_text(
-                    phone_id=whatsapp_phone_id,
-                    token=whatsapp_token,
-                    to_phone=user.phone_no,
-                    message=followup.message
+                    messages=followup.message,
+                    created_at=now,
+                    who='bot'
                 )
                 
-                followup.attempts += 1
-                followup.last_attempt_at = now
+                # Update follow-up count
+                user.followup_count = followup.step
+                user.save(update_fields=['followup_count'])
                 
-                if success:
-                    followup.status = 'sent'
-                    followup.sent_at = now
-                    followup.save()
-                    
-                    # Save to Message table
-                    Message.objects.create(
-                        user_id=user,
-                        messages=followup.message,
-                        created_at=now,
-                        who='bot'
-                    )
-                    
-                    # Update follow-up count
-                    user.followup_count = followup.step
-                    user.save(update_fields=['followup_count'])
-                    
-                    logger.info(f"✅ Follow-up step {followup.step} sent to {user.phone_no}")
-                    
-                    # Schedule next step
-                    next_step = followup.step + 1
-                    schedule_followup.delay(user.id, next_step)
-                    
-                    processed += 1
-                else:
-                    followup.error_message = error or 'Unknown error'
-                    
-                    if followup.attempts >= MAX_SEND_RETRIES:
-                        followup.status = 'failed'
-                        logger.error(f"❌ Follow-up failed after {MAX_SEND_RETRIES} attempts: {user.phone_no}")
-                    else:
-                        # Keep as pending for retry, but push scheduled_for back 5 minutes
-                        followup.scheduled_for = now + timezone.timedelta(minutes=5)
-                        logger.warning(f"⚠️ Follow-up send failed, will retry: {user.phone_no}")
-                    
-                    followup.save()
-                    
-            except Exception as e:
-                followup.attempts += 1
-                followup.error_message = str(e)
+                logger.info(f"✅ Follow-up step {followup.step} sent to {user.phone_no}")
+                
+                # Schedule next step
+                next_step = followup.step + 1
+                schedule_followup.delay(user.id, next_step)
+                
+                processed += 1
+            else:
+                followup.error_message = error or 'Unknown error'
+                
                 if followup.attempts >= MAX_SEND_RETRIES:
                     followup.status = 'failed'
+                    logger.error(f"❌ Follow-up failed after {MAX_SEND_RETRIES} attempts: {user.phone_no}")
+                else:
+                    # Retry logic: Reset status to pending so it gets picked up again later
+                    # Push scheduled_for back 5 minutes
+                    followup.status = 'pending'
+                    followup.scheduled_for = now + timezone.timedelta(minutes=5)
+                    logger.warning(f"⚠️ Follow-up send failed, will retry: {user.phone_no}")
+                
                 followup.save()
-                logger.error(f"❌ Error processing follow-up {followup.id}: {e}")
+                
+        except Exception as e:
+            # Handle crash - try to record failure
+            try:
+                # Re-fetch fresh object to avoid stale data
+                f = ScheduledFollowUp.objects.get(id=followup_id)
+                f.attempts += 1
+                f.status = 'failed' if f.attempts >= MAX_SEND_RETRIES else 'pending'
+                f.error_message = str(e)
+                if f.status == 'pending':
+                    f.scheduled_for = now + timezone.timedelta(minutes=5)
+                f.save()
+                logger.error(f"❌ Error processing follow-up {followup_id}: {e}")
+            except Exception as inner_e:
+                logger.error(f"❌ Critical error in follow-up crash handler: {inner_e}")
     
     if processed > 0:
         logger.info(f"📬 Processed {processed} follow-ups")

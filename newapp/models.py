@@ -653,6 +653,7 @@ class ScheduledFollowUp(models.Model):
     """
     STATUS_CHOICES = [
         ('pending', 'Pending'),
+        ('processing', 'Processing'),  # Locked for sending
         ('sent', 'Sent'),
         ('cancelled', 'Cancelled'),  # User replied before follow-up
         ('failed', 'Failed'),
