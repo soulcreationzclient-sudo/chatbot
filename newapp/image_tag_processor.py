@@ -73,6 +73,8 @@ def get_image_asset(name, admin, organization=None):
             
         return None
     except Exception as e:
+        import logging
+        logging.error(f"[ImageTag] Error looking up image asset '{name}': {e}")
         print(f"[ImageTag] Error looking up image asset '{name}': {e}")
         return None
 

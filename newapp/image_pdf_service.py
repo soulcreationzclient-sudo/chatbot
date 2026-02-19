@@ -86,7 +86,8 @@ def download_whatsapp_media(media_id: str, access_token: str) -> Optional[bytes]
         url = f"https://graph.facebook.com/v17.0/{media_id}"
         headers = {"Authorization": f"Bearer {access_token}"}
         
-        response = requests.get(url, headers=headers)
+        # BUG FIX: Add timeout to prevent hanging
+        response = requests.get(url, headers=headers, timeout=30)
         if response.status_code != 200:
             print(f"Failed to get media URL: {response.text}")
             return None
@@ -131,7 +132,17 @@ def convert_pdf_to_images(pdf_bytes: bytes) -> List[str]:
         # Convert PDF to images (limit to first 5 pages to avoid API overload)
         # Make page limit configurable via environment variable
         max_pages = int(os.environ.get('MAX_PDF_PAGES', '5'))
-        images = convert_from_bytes(pdf_bytes, dpi=150, poppler_path=poppler_path, first_page=1, last_page=max_pages)
+        
+        # BUG FIX: Handle password-protected PDFs
+        try:
+            images = convert_from_bytes(pdf_bytes, dpi=150, poppler_path=poppler_path, first_page=1, last_page=max_pages)
+        except Exception as pdf_error:
+            error_msg = str(pdf_error).lower()
+            if 'password' in error_msg or 'encrypted' in error_msg:
+                print("[ImageService] ERROR: PDF is password-protected")
+                return []
+            # Re-raise other errors
+            raise
         
         # Log if PDF has more pages than analyzed
         if len(images) >= max_pages:

@@ -279,7 +279,12 @@ class whatsappcontroller:
 
         if request.method == 'POST':
             try:
-                data = json.loads(request.body.decode("utf-8"))
+                # BUG FIX: Handle malformed JSON gracefully
+                try:
+                    data = json.loads(request.body.decode("utf-8"))
+                except json.JSONDecodeError as json_err:
+                    webhook_logger.error(f"Invalid JSON in webhook: {json_err}")
+                    return HttpResponse("Invalid JSON", status=400)
                 webhook_logger.debug(f"[RAW_WEBHOOK] Received data: {json.dumps(data)[:500]}")
                 webhook_logger.debug(f"Received webhook data: {data}")
                 sys.stdout.flush()
@@ -525,14 +530,19 @@ class whatsappcontroller:
                             if not msg_text.strip():
                                 continue
 
-                            # Deduplication: Ignore if same text sent within 60 seconds
-                            last_msg = Message.objects.filter(who='human', user_id=existing_user).order_by('-id').first()
-                            if last_msg and last_msg.messages == msg_text:
-                                time_diff = (timezone.now() - last_msg.created_at).total_seconds()
-                                if time_diff < 60:
-                                    webhook_logger.info(f"Skipping duplicate message from {phone}")
-                                    webhook_logger.info(f"Duplicate message ignored: {msg_text[:50]}...")
-                                    continue
+                            # BUG FIX: Improved deduplication with better logging
+                            # Only check for exact duplicates within 30 seconds
+                            last_msg = Message.objects.filter(
+                                who='human', 
+                                user_id=existing_user
+                            ).order_by('-id').first()
+                            
+                            if last_msg and last_msg.messages and msg_text:
+                                if last_msg.messages.strip() == msg_text.strip():
+                                    time_diff = (timezone.now() - last_msg.created_at).total_seconds()
+                                    if time_diff < 30:
+                                        webhook_logger.info(f"Skipping duplicate message from {phone}: {msg_text[:30]}...")
+                                        continue
 
                             # Only save text message if not already saved by image/doc handler
                             if not media_already_saved:

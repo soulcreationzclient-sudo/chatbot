@@ -117,7 +117,7 @@ def schedule_followup(user_id, step=1):
     except User.DoesNotExist:
         logger.error(f"User with id {user_id} not found")
     except Exception as e:
-        logger.error(f"Error scheduling followup: {e}")
+        logger.error(f"Error scheduling followup: {e}", exc_info=True)
 
 
 @shared_task

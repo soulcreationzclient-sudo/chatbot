@@ -72,10 +72,14 @@ class Inboxcontroller:
             
             # SECURITY: Verify selected user belongs to current org/admin
             if selected_user:
-                if org_id and selected_user.organization_id != org_id:
+                # BUG FIX: Add null check for organization_id
+                if org_id and selected_user.organization_id and selected_user.organization_id != org_id:
                     selected_user = None  # Don't show cross-tenant data
-                elif admin_id and str(selected_user.admin_id_id) != str(admin_id):
-                    selected_user = None
+                elif admin_id:
+                    # Handle both admin_id as integer and as Admin object
+                    user_admin_id = getattr(selected_user, 'admin_id_id', None)
+                    if user_admin_id and str(user_admin_id) != str(admin_id):
+                        selected_user = None
             
             if selected_user:
                 messages = Message.objects.filter(user_id=selected_user_id).order_by('created_at', 'id')
