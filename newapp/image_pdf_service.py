@@ -266,7 +266,9 @@ def analyze_media_message(
     media_type: str,
     user_question: str,
     admin,  # Admin model instance
-    mime_type: str = None
+    mime_type: str = None,
+    openai_key: str = None,
+    whatsapp_token: str = None
 ) -> str:
     """
     Main function to analyze media (image or PDF) from WhatsApp.
@@ -277,20 +279,25 @@ def analyze_media_message(
         user_question: The user's question/caption
         admin: Admin model instance with API keys
         mime_type: MIME type of the document (for PDFs)
+        openai_key: Optional OpenAI API key (preferred over admin's key)
+        whatsapp_token: Optional WhatsApp token (preferred over admin's token)
         
     Returns:
         Analysis response string
     """
-    # Get API keys from admin
-    if not admin or not admin.openai_api_key:
+    # Get API keys - prefer passed-in keys (from org/creds), fall back to admin
+    api_key = openai_key or (getattr(admin, 'openai_api_key', None) if admin else None)
+    wa_token = whatsapp_token or (getattr(admin, 'whatsapp_token', None) if admin else None)
+    
+    if not api_key:
         return "Sorry, I cannot analyze images right now. The AI service is not configured."
     
-    if not admin.whatsapp_token:
+    if not wa_token:
         return "Sorry, I cannot download your media. WhatsApp is not configured."
     
     # Download the media
     try:
-        media_bytes = download_whatsapp_media(media_id, admin.whatsapp_token)
+        media_bytes = download_whatsapp_media(media_id, wa_token)
         with open('debug_log.txt', 'a') as f:
             f.write(f"[Vision] Downloaded media bytes: {len(media_bytes)}\n")
     except Exception as e:
@@ -350,7 +357,7 @@ def analyze_media_message(
     response = analyze_images_with_vision(
         base64_images,
         user_question,
-        admin.openai_api_key,
+        api_key,
         enhanced_prompt
     )
     
@@ -358,6 +365,72 @@ def analyze_media_message(
         f.write(f"\n[Vision] OpenAI Response:\n{response}\n")
         
     return response
+
+
+def transcribe_audio(media_id: str, openai_key: str, whatsapp_token: str) -> Optional[str]:
+    """
+    Download audio from WhatsApp and transcribe using OpenAI Whisper.
+    Supports: ogg/opus (WhatsApp voice), mp3, m4a, wav, webm
+    
+    Args:
+        media_id: WhatsApp media ID
+        openai_key: OpenAI API key
+        whatsapp_token: WhatsApp API access token
+        
+    Returns:
+        Transcription text, or None if failed
+    """
+    if not openai_key:
+        print("[Audio] No OpenAI key for transcription")
+        return None
+    
+    if not whatsapp_token:
+        print("[Audio] No WhatsApp token for media download")
+        return None
+    
+    # Download audio from WhatsApp
+    audio_bytes = download_whatsapp_media(media_id, whatsapp_token)
+    if not audio_bytes:
+        print("[Audio] Failed to download audio")
+        return None
+    
+    # Save to temp file (Whisper API needs a file object)
+    temp_path = None
+    try:
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.ogg', delete=False) as f:
+            f.write(audio_bytes)
+            temp_path = f.name
+        
+        # Transcribe with OpenAI Whisper
+        from openai import OpenAI
+        client = OpenAI(api_key=openai_key)
+        
+        with open(temp_path, 'rb') as audio_file:
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file
+            )
+        
+        transcribed_text = transcript.text.strip() if transcript.text else None
+        if transcribed_text:
+            print(f"[Audio] Transcribed: {transcribed_text[:100]}...")
+        else:
+            print("[Audio] Whisper returned empty transcription")
+        
+        return transcribed_text
+        
+    except Exception as e:
+        print(f"[Audio] Transcription error: {e}")
+        with open('debug_log.txt', 'a') as f:
+            f.write(f"[Audio] Transcription error: {e}\n")
+        return None
+    finally:
+        if temp_path:
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
 
 
 def save_chat_media(media_id: str, access_token: str) -> Optional[str]:

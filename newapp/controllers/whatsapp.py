@@ -391,7 +391,9 @@ class whatsappcontroller:
                                     media_id=media_id,
                                     media_type='image',
                                     user_question=caption,
-                                    admin=admin_check
+                                    admin=admin_check,
+                                    openai_key=creds.get('openai_key'),
+                                    whatsapp_token=creds.get('whatsapp_token')
                                 )
                                 webhook_logger.debug(f"Vision analysis complete: {reply[:100]}...")
                                 
@@ -458,7 +460,9 @@ class whatsappcontroller:
                                     media_type='document',
                                     user_question=caption,
                                     admin=admin_check,
-                                    mime_type=mime_type
+                                    mime_type=mime_type,
+                                    openai_key=creds.get('openai_key'),
+                                    whatsapp_token=creds.get('whatsapp_token')
                                 )
                                 webhook_logger.debug(f"Vision analysis complete: {reply[:100]}...")
                                 
@@ -502,10 +506,66 @@ If you have any relevant tools/functions available that can process or validate 
                                 # Need to skip the 'msg_text' retrieval block below since we just set it
 
                             
+                            elif msg_type == 'audio':
+                                # ==================== AUDIO/VOICE HANDLING ====================
+                                from newapp.image_pdf_service import transcribe_audio
+                                
+                                audio_info = m.get('audio', {})
+                                media_id = audio_info.get('id')
+                                
+                                if not media_id:
+                                    webhook_logger.warning(f"Audio message from {phone} has no media ID")
+                                    continue
+                                
+                                # Save incoming voice message record
+                                Message.objects.create(
+                                    user_id=existing_user,
+                                    messages="[Voice Message]",
+                                    created_at=timezone.now(),
+                                    who='human'
+                                )
+                                media_already_saved = True
+                                
+                                # Transcribe audio using OpenAI Whisper
+                                webhook_logger.info(f"Transcribing audio for {phone}")
+                                transcription = transcribe_audio(
+                                    media_id=media_id,
+                                    openai_key=creds.get('openai_key'),
+                                    whatsapp_token=creds.get('whatsapp_token')
+                                )
+                                
+                                if transcription:
+                                    webhook_logger.info(f"Audio transcribed for {phone}: {transcription[:80]}...")
+                                    msg_text = transcription  # Feed transcription to AI as if user typed it
+                                else:
+                                    webhook_logger.warning(f"Failed to transcribe audio for {phone}")
+                                    # Send error message to user
+                                    error_msg = "Sorry, I couldn't understand that audio. Could you type your message instead?"
+                                    Message.objects.create(
+                                        user_id=existing_user,
+                                        messages=error_msg,
+                                        created_at=timezone.now(),
+                                        who='bot'
+                                    )
+                                    whatsapp_api_url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
+                                    headers = {
+                                        "Authorization": f"Bearer {creds['whatsapp_token']}",
+                                        "Content-Type": "application/json"
+                                    }
+                                    payload = {
+                                        "messaging_product": "whatsapp",
+                                        "to": phone,
+                                        "type": "text",
+                                        "text": {"body": error_msg}
+                                    }
+                                    requests.post(whatsapp_api_url, json=payload, headers=headers)
+                                    continue
+                                # ==================== END AUDIO HANDLING ====================
+                            
                             elif msg_type != 'text':
-                                # Skip other message types (audio, video, sticker, etc.)
+                                # Skip other message types (video, sticker, location, etc.)
                                 continue
-                            # ==================== END IMAGE/DOCUMENT HANDLING ====================
+                            # ==================== END IMAGE/DOCUMENT/AUDIO HANDLING ====================
 
                             # Only get text if not already set by Vision
                             if msg_text is None:
