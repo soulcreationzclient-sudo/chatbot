@@ -235,11 +235,12 @@ def process_pending_followups():
                 
                 logger.info(f"✅ Follow-up step {followup.step} sent to {user.phone_no}")
                 
-                # BUG FIX: Prevent repeated follow-up messages
+                # BUG FIX: Only stop if user sent a NEW message AFTER this follow-up was scheduled
+                # (not the original message that triggered the bot reply)
                 user_replied_recently = Message.objects.filter(
                     user_id=user,
                     who='human',
-                    created_at__gte=now - timezone.timedelta(minutes=2)
+                    created_at__gt=followup.created_at
                 ).exists()
 
                 existing_pending = ScheduledFollowUp.objects.filter(
