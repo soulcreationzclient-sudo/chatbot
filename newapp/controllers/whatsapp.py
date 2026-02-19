@@ -935,15 +935,7 @@ If the user's question relates to this document, answer based on your analysis a
                                         webhook_logger.info("Pinecone used for response")
                                     except Exception as pe:
                                         webhook_logger.error(f"Pinecone error: {pe}")
-                                         # BUG FIX: More specific error messages
-                                         if not openai_key:
-                                             bot_response = "Sorry, my AI assistant is not configured. Please contact support."
-                                         elif 'rate_limit' in str(oe).lower() or 'quota' in str(oe).lower():
-                                             bot_response = "Sorry, I'm experiencing high demand right now. Please try again in a few moments."
-                                         elif 'timeout' in str(oe).lower():
-                                             bot_response = "Sorry, the request timed out. Please try again."
-                                         else:
-                                             bot_response = "Sorry, I encountered an issue processing your request. Please try again."
+                                        bot_response = "Sorry, I couldn't generate a response just now."
                                 else:
                                     bot_response = "Sorry, my assistant is offline right now."
 
