@@ -401,33 +401,9 @@ class whatsappcontroller:
                                 from newapp.image_pdf_service import store_document_context
                                 store_document_context(phone, reply, 'image')
                                 
-                                # Save and send reply
-                                Message.objects.create(
-                                    user_id=existing_user,
-                                    messages=reply,
-                                    created_at=timezone.now(),
-                                    who='bot'
-                                )
-                                
-                                whatsapp_api_url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
-                                headers = {
-                                    "Authorization": f"Bearer {creds['whatsapp_token']}",
-                                    "Content-Type": "application/json"
-                                }
-                                payload = {
-                                    "messaging_product": "whatsapp",
-                                    "to": phone,
-                                    "type": "text",
-                                    "text": {"body": reply}
-                                }
-                                # requests.post(whatsapp_api_url, json=payload, headers=headers)
-                                # webhook_logger.debug(f"Vision reply sent to {phone}")
-                                
-                                # DO NOT CONTINUE - Let it fall through to AI
-                                # continue
-                                
-                                # Inject Analysis into Message Text
-                                msg_text = f"I have uploaded an image. content: {reply}"
+                                # Inject analysis into message text for AI to process in-character
+                                # Do NOT save raw analysis as bot message (avoids duplicate in inbox)
+                                msg_text = f"I have uploaded an image. Here is what the image contains: {reply}"
                             
                             elif msg_type == 'document':
                                 from newapp.image_pdf_service import analyze_media_message, save_chat_media
@@ -470,38 +446,13 @@ class whatsappcontroller:
                                 from newapp.image_pdf_service import store_document_context
                                 store_document_context(phone, reply, 'document', filename)
                                 
-                                # Save and send reply
-                                Message.objects.create(
-                                    user_id=existing_user,
-                                    messages=reply,
-                                    created_at=timezone.now(),
-                                    who='bot'
-                                )
-                                
-                                whatsapp_api_url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
-                                headers = {
-                                    "Authorization": f"Bearer {creds['whatsapp_token']}",
-                                    "Content-Type": "application/json"
-                                }
-                                payload = {
-                                    "messaging_product": "whatsapp",
-                                    "to": phone,
-                                    "type": "text",
-                                    "text": {"body": reply}
-                                }
-                                # requests.post(whatsapp_api_url, json=payload, headers=headers)
-                                # webhook_logger.debug(f"Vision reply sent to {phone}")
-                                
-                                # DO NOT CONTINUE - Let it fall through
-                                # continue 
-                                
-                                # Inject Analysis into Message Text for AI Processing
-                                # Keep it generic - let the AI decide what to do based on configured External APIs
-                                msg_text = f"""The user has uploaded a document. Here is the extracted content:
+                                # Inject analysis into message text for AI to process in-character
+                                # Do NOT save raw analysis as bot message (avoids duplicate in inbox)
+                                msg_text = f"""The user has uploaded a document ({filename}). Here is the extracted content:
 
 {reply}
 
-If you have any relevant tools/functions available that can process or validate this document, use them. Otherwise, respond helpfully based on the document content."""
+Respond helpfully based on the document content. If the document is relevant to your services, guide the user accordingly. If it's unrelated, acknowledge what you see and ask how you can help."""
                                 
                                 # Need to skip the 'msg_text' retrieval block below since we just set it
 

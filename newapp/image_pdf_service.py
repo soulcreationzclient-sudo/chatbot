@@ -128,8 +128,8 @@ def convert_pdf_to_images(pdf_bytes: bytes) -> List[str]:
         if platform.system() == 'Windows':
             poppler_path = r"C:\Users\Meet\.gemini\poppler-25.12.0\Library\bin"
         
-        # Convert PDF to images (one per page)
-        images = convert_from_bytes(pdf_bytes, dpi=150, poppler_path=poppler_path)
+        # Convert PDF to images (limit to first 5 pages to avoid API overload)
+        images = convert_from_bytes(pdf_bytes, dpi=150, poppler_path=poppler_path, first_page=1, last_page=5)
         
         base64_images = []
         for img in images:
@@ -246,10 +246,12 @@ def analyze_images_with_vision(
         })
         
         # Call OpenAI Vision API
+        # Scale max_tokens based on number of images (more pages = more tokens needed)
+        tokens = min(1500 * len(base64_images), 4096)
         response = client.chat.completions.create(
             model="gpt-4o",  # GPT-4o has vision capabilities
             messages=messages,
-            max_tokens=1500
+            max_tokens=tokens
         )
         
         return response.choices[0].message.content
