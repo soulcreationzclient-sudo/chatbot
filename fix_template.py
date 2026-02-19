@@ -1,46 +1,123 @@
-"""Fix the avatar template expression split across lines"""
-path = r'c:\Users\Meet\.gemini\chatbot\19 08\chatbot\newapp\templates\inbox\dashboard.html'
+"""
+Fix polling UI: appendMessage should render messages identically to Django template,
+including timestamps. Also update the API to return created_at for proper rendering.
+"""
+import os
 
-with open(path, 'r', encoding='utf-8') as f:
+BASE = os.path.dirname(os.path.abspath(__file__))
+
+# ============================================================
+# FIX 1: Update appendMessage in dashboard.html to include timestamp
+# and match the Django template rendering structure
+# ============================================================
+
+dashboard_path = os.path.join(BASE, 'newapp', 'templates', 'inbox', 'dashboard.html')
+
+with open(dashboard_path, 'r', encoding='utf-8') as f:
     content = f.read()
 
-# Fix: The multiline {{ }} tag on lines 576-577 needs to be on one line
-# and we need to use {% firstof %} or a simpler approach
-old = '''<div class="avatar" style="width:36px;height:36px">{{
-        selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>'''
+fixes = []
 
-new = '''<div class="avatar" style="width:36px;height:36px">{{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>'''
+# --- Fix appendMessage function to include timestamp ---
+OLD_APPEND = """  function appendMessage(msg, sender, msgId = null) {
+    // De-duplication check
+    if (msgId && displayedMessageIds.has(msgId)) {
+      console.log("Duplicate message ignored:", msgId);
+      return;
+    }
+    if (msgId) displayedMessageIds.add(msgId);
 
-if old in content:
-    content = content.replace(old, new)
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(content)
-    print("FIXED: Joined multiline template tag onto single line")
+    const row = document.createElement('div');
+    row.classList.add('rowmsg', sender);
+    const bubble = document.createElement('div');
+    bubble.classList.add('bubble');
+
+    bubble.innerHTML = formatMessage(msg);
+
+    row.appendChild(bubble);
+    threadBody.appendChild(row);
+
+    scrollToBottom();
+    setTimeout(scrollToBottom, 50);
+  }"""
+
+NEW_APPEND = """  function appendMessage(msg, sender, msgId = null, createdAt = null) {
+    // De-duplication check
+    if (msgId && displayedMessageIds.has(msgId)) {
+      console.log("Duplicate message ignored:", msgId);
+      return;
+    }
+    if (msgId) displayedMessageIds.add(msgId);
+
+    const row = document.createElement('div');
+    row.classList.add('rowmsg', sender === 'human' ? 'user' : sender);
+    const bubble = document.createElement('div');
+    bubble.classList.add('bubble');
+
+    // Render message content
+    const msgDiv = document.createElement('div');
+    if (msg === '[Voice Message]') {
+      msgDiv.innerHTML = '<div class="voice-message"><audio controls preload="none" style="height:32px;width:200px;"><source type="audio/ogg;codecs=opus">Your browser does not support audio.</audio><div class="voice-label">🎤 Voice Message</div></div>';
+    } else {
+      msgDiv.innerHTML = formatMessage(msg);
+    }
+    bubble.appendChild(msgDiv);
+
+    // Add timestamp
+    const meta = document.createElement('div');
+    meta.classList.add('meta');
+    if (createdAt) {
+      const d = new Date(createdAt);
+      meta.textContent = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+    } else {
+      const now = new Date();
+      meta.textContent = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    }
+    bubble.appendChild(meta);
+
+    row.appendChild(bubble);
+    threadBody.appendChild(row);
+
+    scrollToBottom();
+    setTimeout(scrollToBottom, 50);
+  }"""
+
+if OLD_APPEND in content:
+    content = content.replace(OLD_APPEND, NEW_APPEND)
+    fixes.append("Updated appendMessage to include timestamps and voice message support")
 else:
-    print("Pattern not found - checking alternative...")
-    # Try to find it with different whitespace
-    import re
-    pattern = re.compile(r'<div class="avatar"[^>]*>\{\{\s*\n\s*selected_user\.name\|default:selected_user\.phone_no\|slice:":2"\|upper\s*\}\}', re.MULTILINE)
-    m = pattern.search(content)
-    if m:
-        found = m.group(0)
-        # Replace with single-line version
-        fixed = found.replace('\n', '').replace('  ', ' ')
-        # Clean up extra spaces
-        fixed = re.sub(r'\{\{\s+', '{{ ', fixed)
-        fixed = re.sub(r'\s+\}\}', ' }}', fixed)
-        content = content.replace(found, fixed)
-        with open(path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print(f"FIXED (regex): Joined multiline template tag")
-        print(f"  Was: {repr(found[:100])}")
-        print(f"  Now: {repr(fixed[:100])}")
+    print("WARNING: Could not find appendMessage function - checking if already fixed...")
+    if 'createdAt = null' in content:
+        print("  Already fixed.")
     else:
-        print("Could not find pattern at all")
+        print("  ERROR: appendMessage has unexpected content")
 
-# Verify
-with open(path, 'r', encoding='utf-8') as f:
-    lines = f.readlines()
-for i, l in enumerate(lines):
-    if 'selected_user.name' in l and 'slice' in l:
-        print(f"  Line {i+1}: {l.strip()}")
+# --- Fix fetchNewMessages to pass created_at to appendMessage ---
+OLD_FETCH_CALL = """          appendMessage(msg.messages, msg.who, mId);"""
+NEW_FETCH_CALL = """          appendMessage(msg.messages, msg.who, mId, msg.created_at);"""
+
+if OLD_FETCH_CALL in content:
+    content = content.replace(OLD_FETCH_CALL, NEW_FETCH_CALL)
+    fixes.append("Updated fetchNewMessages to pass created_at to appendMessage")
+elif NEW_FETCH_CALL in content:
+    print("  fetchNewMessages call already passes created_at")
+
+# --- Fix the manual send to also pass timestamp ---
+OLD_SEND_APPEND = """        appendMessage(displayMsg, 'bot');"""
+NEW_SEND_APPEND = """        appendMessage(displayMsg, 'bot', null, new Date().toISOString());"""
+
+if OLD_SEND_APPEND in content:
+    content = content.replace(OLD_SEND_APPEND, NEW_SEND_APPEND)
+    fixes.append("Updated manual send to include timestamp")
+
+# Save
+if fixes:
+    with open(dashboard_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    print(f"\nApplied {len(fixes)} fix(es) to dashboard.html:")
+    for f_item in fixes:
+        print(f"  - {f_item}")
+else:
+    print("\nNo changes needed for dashboard.html")
+
+print("\nDone!")

@@ -950,7 +950,7 @@
           const displayMsg = data.type === 'image'
             ? `[Image: ${data.url}]`
             : `[Document: ${data.url}]`;
-          appendMessage(displayMsg, 'bot');
+          appendMessage(displayMsg, 'bot', null, new Date().toISOString());
         } else {
           const errData = await sendRes.json();
           alert('Send failed: ' + (errData.error || 'Unknown error'));
@@ -1093,7 +1093,7 @@
     return false;
   }
 
-  function appendMessage(msg, sender, msgId = null) {
+  function appendMessage(msg, sender, msgId = null, createdAt = null) {
     // De-duplication check
     if (msgId && displayedMessageIds.has(msgId)) {
       console.log("Duplicate message ignored:", msgId);
@@ -1102,11 +1102,30 @@
     if (msgId) displayedMessageIds.add(msgId);
 
     const row = document.createElement('div');
-    row.classList.add('rowmsg', sender);
+    row.classList.add('rowmsg', sender === 'human' ? 'user' : sender);
     const bubble = document.createElement('div');
     bubble.classList.add('bubble');
 
-    bubble.innerHTML = formatMessage(msg);
+    // Render message content
+    const msgDiv = document.createElement('div');
+    if (msg === '[Voice Message]') {
+      msgDiv.innerHTML = '<div class="voice-message"><audio controls preload="none" style="height:32px;width:200px;"><source type="audio/ogg;codecs=opus">Your browser does not support audio.</audio><div class="voice-label">🎤 Voice Message</div></div>';
+    } else {
+      msgDiv.innerHTML = formatMessage(msg);
+    }
+    bubble.appendChild(msgDiv);
+
+    // Add timestamp
+    const meta = document.createElement('div');
+    meta.classList.add('meta');
+    if (createdAt) {
+      const d = new Date(createdAt);
+      meta.textContent = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+    } else {
+      const now = new Date();
+      meta.textContent = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    }
+    bubble.appendChild(meta);
 
     row.appendChild(bubble);
     threadBody.appendChild(row);
@@ -1187,7 +1206,7 @@
         data.messages.forEach(msg => {
           // Pass ID to appendMessage for de-dupe
           const mId = parseInt(msg.id);
-          appendMessage(msg.messages, msg.who, mId);
+          appendMessage(msg.messages, msg.who, mId, msg.created_at);
           lastMessageId = Math.max(lastMessageId, mId);
         });
       }
