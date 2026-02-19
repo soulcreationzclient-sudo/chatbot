@@ -411,8 +411,12 @@ def transcribe_audio(media_id: str, openai_key: str, whatsapp_token: str) -> Opt
         with open(temp_path, 'rb') as audio_file:
             transcript = client.audio.transcriptions.create(
                 model="whisper-1",
-                file=audio_file
+                file=audio_file,
+                prompt="This is a voice message from a WhatsApp conversation."
             )
+        
+        with open('debug_log.txt', 'a', encoding='utf-8') as f:
+            f.write(f"[Audio] Transcribed: {transcript.text[:200] if transcript.text else 'EMPTY'}\n")
         
         transcribed_text = transcript.text.strip() if transcript.text else None
         if transcribed_text:
