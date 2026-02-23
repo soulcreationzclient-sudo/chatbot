@@ -62,7 +62,7 @@ def get_custom_field(field_name, admin, organization=None):
         if organization:
             field = CustomField.objects.filter(
                 organization=organization,
-                name=field_name,
+                name__iexact=field_name,
                 is_active=True
             ).first()
             if field:
@@ -72,7 +72,7 @@ def get_custom_field(field_name, admin, organization=None):
         if admin:
             field = CustomField.objects.filter(
                 admin=admin,
-                name=field_name,
+                name__iexact=field_name,
                 is_active=True
             ).first()
             if field:

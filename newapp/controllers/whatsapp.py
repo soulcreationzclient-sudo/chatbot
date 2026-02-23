@@ -494,6 +494,21 @@ class whatsappcontroller:
                                 if transcription:
                                     webhook_logger.info(f"Audio transcribed for {phone}: {transcription[:80]}...")
                                     msg_text = transcription  # Feed transcription to AI as if user typed it
+                                    
+                                    # BUG FIX: Update the saved [Voice Message] with actual transcription
+                                    # so conversation history has meaningful content for future AI calls
+                                    try:
+                                        last_voice_msg = Message.objects.filter(
+                                            user_id=existing_user,
+                                            messages="[Voice Message]",
+                                            who='human'
+                                        ).order_by('-id').first()
+                                        if last_voice_msg:
+                                            last_voice_msg.messages = f"[Voice Message] {transcription}"
+                                            last_voice_msg.save(update_fields=['messages'])
+                                            webhook_logger.debug(f"Updated voice message record with transcription for {phone}")
+                                    except Exception as vm_err:
+                                        webhook_logger.error(f"Failed to update voice message record: {vm_err}")
                                 else:
                                     webhook_logger.warning(f"Failed to transcribe audio for {phone}")
                                     # Send error message to user
