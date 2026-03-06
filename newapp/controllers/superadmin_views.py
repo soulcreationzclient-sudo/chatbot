@@ -193,6 +193,11 @@ def organization_update(request, pk):
     org.whatsapp_token = request.POST.get('whatsapp_token', org.whatsapp_token)
     org.openai_api_key = request.POST.get('openai_api_key', org.openai_api_key)
     org.is_active = request.POST.get('is_active') == 'on'
+    
+    # Feature flag / canary deployment settings
+    org.is_beta_tester = request.POST.get('is_beta_tester') == 'on'
+    org.app_version = request.POST.get('app_version', org.app_version)
+    
     org.save()
     
     messages.success(request, f'Organization "{org.name}" updated successfully!')

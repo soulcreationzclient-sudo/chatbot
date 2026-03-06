@@ -21,6 +21,7 @@ from newapp import calendly_integration_views
 # Multi-tenant admin imports
 from newapp.controllers import auth_views, superadmin_views, client_views
 from newapp.controllers import broadcast as broadcast_views
+from newapp.controllers import pipeline as pipeline_views
 
 # Controller instances
 integration_controller = Integrationcontroller()
@@ -196,6 +197,8 @@ urlpatterns = [
     path('chatgpt/respond/', views.chatgpt_respond, name='chatgpt_respond'),
     path('inbox/send/', views.send_inbox_message, name='send_inbox_message'),
     path('ai_agent/upload/', integration_controller.ai_agent_upload, name='ai_agent_upload'),
+    path('api/ai_agent/set_default/', Integrationcontroller.set_default_agent, name='ai_agent_set_default'),
+    path('api/ai_agent/delete/<int:agent_id>/', Integrationcontroller.delete_agent, name='ai_agent_delete'),
     path('ai_agent/delete/<int:pk>/', delete_pdf, name='delete_pdf'),
     path('whatsapp/chatgpt_webhook/', views.get_message_chatgpt, name='chatgpt_webhook'),
  
@@ -239,6 +242,7 @@ urlpatterns = [
     path('api/inbox/user_log/create/', Inboxcontroller.create_user_log, name='inbox_create_user_log'),
     # Inbox User Tags API
     path('api/inbox/user_tags/', Inboxcontroller.get_user_tags, name='inbox_get_user_tags'),
+    path('api/inbox/export/<int:user_id>/csv/', Inboxcontroller.export_chat_csv, name='inbox_export_csv'),
     
     # ==================== WEBCHAT API ====================
     path('api/webchat/start/', api_webchat_start, name='webchat_start'),
@@ -264,6 +268,22 @@ urlpatterns = [
     path('test/chat/', test_chat, name='test_chat'),
     path('api/test/chat/send/', test_chat_send, name='test_chat_send'),
     path('api/test/chat/quick/', test_chat_quick, name='test_chat_quick'),
+    
+    # ==================== PIPELINE CRM ====================
+    path('pipeline/', pipeline_views.pipeline_list, name='pipeline_list'),
+    path('pipeline/<int:pipeline_id>/board/', pipeline_views.pipeline_board, name='pipeline_board'),
+    path('api/pipeline/create/', pipeline_views.pipeline_create, name='pipeline_create'),
+    path('api/pipeline/delete/<int:pipeline_id>/', pipeline_views.pipeline_delete, name='pipeline_delete'),
+    path('api/pipeline/<int:pipeline_id>/stage/create/', pipeline_views.stage_create, name='pipeline_stage_create'),
+    path('api/pipeline/stage/delete/<int:stage_id>/', pipeline_views.stage_delete, name='pipeline_stage_delete'),
+    path('api/pipeline/opportunity/create/', pipeline_views.opportunity_create, name='pipeline_opp_create'),
+    path('api/pipeline/opportunity/<int:opp_id>/move/', pipeline_views.opportunity_move, name='pipeline_opp_move'),
+    path('api/pipeline/opportunity/<int:opp_id>/update/', pipeline_views.opportunity_update, name='pipeline_opp_update'),
+    path('api/pipeline/opportunity/<int:opp_id>/delete/', pipeline_views.opportunity_delete, name='pipeline_opp_delete'),
+    path('api/pipeline/opportunity/<int:opp_id>/comment/', pipeline_views.opportunity_comment, name='pipeline_opp_comment'),
+    path('api/pipeline/stage/<int:stage_id>/rename/', pipeline_views.stage_rename, name='pipeline_stage_rename'),
+    path('api/pipeline/automation/create/', pipeline_views.automation_create, name='pipeline_auto_create'),
+    path('api/pipeline/automation/delete/<int:auto_id>/', pipeline_views.automation_delete, name='pipeline_auto_delete'),
     
 ]
 

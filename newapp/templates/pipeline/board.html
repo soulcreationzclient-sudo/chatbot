@@ -1,0 +1,487 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}{{ pipeline.name }}{% endblock %}
+
+{% block head_css %}
+<style>
+  :root {
+    --bg-board: #f1f5f9;
+    --bg-card: #ffffff;
+    --border: #e5e7eb;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --accent: #3b82f6;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+
+  .board-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 0 16px; flex-wrap: wrap; gap: 12px;
+  }
+  .board-header h1 { font-size: 28px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px; }
+  .board-header a { color: var(--text-muted); text-decoration: none; font-size: 14px; }
+  .board-header a:hover { color: var(--accent); }
+
+  .board-actions { display: flex; gap: 10px; align-items: center; }
+  .search-input {
+    padding: 8px 14px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 14px; width: 220px;
+  }
+  .search-input:focus { outline: none; border-color: var(--accent); }
+
+  .btn { padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; font-size: 13px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+  .btn-outline:hover { background: #f1f5f9; }
+  .btn-danger-outline { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+
+  /* Kanban */
+  .kanban {
+    display: flex; gap: 16px; overflow-x: auto; padding-bottom: 20px;
+    min-height: calc(100vh - 200px);
+  }
+
+  .column {
+    min-width: 280px; max-width: 280px; flex-shrink: 0;
+    display: flex; flex-direction: column;
+  }
+
+  .col-header {
+    padding: 12px 14px; border-radius: 12px 12px 0 0; font-weight: 700;
+    font-size: 14px; color: #fff; display: flex; justify-content: space-between;
+    align-items: center; position: relative;
+  }
+  .col-count { font-size: 12px; font-weight: 400; opacity: 0.8; }
+  .col-value { font-size: 11px; opacity: 0.7; }
+  .col-menu-btn {
+    background: none; border: none; color: #fff; cursor: pointer;
+    font-size: 18px; padding: 2px 6px; border-radius: 4px; opacity: 0.8;
+  }
+  .col-menu-btn:hover { opacity: 1; background: rgba(255,255,255,0.2); }
+
+  .col-body {
+    background: var(--bg-board); border-radius: 0 0 12px 12px; padding: 10px;
+    flex: 1; min-height: 100px; border: 1px solid var(--border); border-top: none;
+  }
+  .col-body.drag-over { background: #dbe9ff; border-color: var(--accent); }
+
+  /* Opportunity Card */
+  .opp-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px; margin-bottom: 10px; cursor: grab; transition: box-shadow 0.15s;
+    position: relative;
+  }
+  .opp-card:hover { box-shadow: 0 4px 12px rgba(15,23,42,0.08); }
+  .opp-card.dragging { opacity: 0.5; box-shadow: 0 8px 24px rgba(15,23,42,0.15); }
+
+  .opp-name { font-weight: 600; font-size: 14px; color: var(--text-main); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; }
+  .opp-phone { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+  .opp-meta { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+  .opp-value { font-weight: 600; color: var(--text-main); }
+  .opp-id { color: var(--text-muted); }
+  .opp-indicators { display: flex; gap: 8px; margin-top: 6px; font-size: 11px; color: var(--text-muted); }
+
+  .priority-dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px;
+  }
+  .priority-low { background: var(--success); }
+  .priority-medium { background: var(--warning); }
+  .priority-high { background: #f97316; }
+  .priority-urgent { background: var(--danger); }
+
+  /* Dropdown menus */
+  .dropdown-menu {
+    display: none; position: absolute; right: 0; top: 100%;
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 100; min-width: 150px;
+    overflow: hidden;
+  }
+  .dropdown-menu.show { display: block; }
+  .dropdown-item {
+    padding: 10px 16px; font-size: 13px; cursor: pointer; display: flex;
+    align-items: center; gap: 8px; color: var(--text-main);
+    transition: background 0.15s;
+  }
+  .dropdown-item:hover { background: #f1f5f9; }
+  .dropdown-item.danger { color: var(--danger); }
+  .dropdown-item.danger:hover { background: #fef2f2; }
+
+  /* Card menu button */
+  .card-menu-btn {
+    background: none; border: none; cursor: pointer; font-size: 16px;
+    color: var(--text-muted); padding: 2px 6px; border-radius: 4px;
+    line-height: 1;
+  }
+  .card-menu-btn:hover { background: #f1f5f9; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-box {
+    background: #fff; border-radius: 16px; padding: 28px; width: 460px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15); max-height: 80vh; overflow-y: auto;
+  }
+  .modal-box h2 { margin: 0 0 16px; font-size: 18px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px; box-sizing: border-box; font-family: inherit;
+  }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+  /* Automation panel */
+  .auto-panel {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  .auto-panel h3 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .auto-rule {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    background: #f8fafc; border-radius: 8px; margin-bottom: 6px; font-size: 13px;
+  }
+  .auto-rule .arrow { color: var(--accent); font-weight: 600; }
+  .auto-rule .del-auto {
+    margin-left: auto; background: none; border: none; cursor: pointer;
+    color: var(--danger); font-size: 14px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="board-header">
+  <div>
+    <a href="{% url 'pipeline_list' %}">← Pipelines</a>
+    <h1>{{ pipeline.name }}</h1>
+  </div>
+  <div class="board-actions">
+    <input type="text" class="search-input" placeholder="Search contacts..." value="{{ search }}"
+      onkeyup="debounceSearch(this.value)" id="boardSearch">
+    <button class="btn btn-outline" onclick="toggleAutoPanel()">⚡ Automations</button>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Add Opportunity</button>
+  </div>
+</div>
+
+<!-- Automation Panel (collapsible) -->
+<div class="auto-panel" id="autoPanel" style="display:none;">
+  <h3>⚡ Automation Rules</h3>
+  <div id="autoRules">
+    {% for rule in automations %}
+    <div class="auto-rule">
+      <span>{{ rule.get_trigger_type_display }}</span>
+      {% if rule.trigger_tag %}
+        <span style="background:#e0e7ff;color:var(--accent);padding:2px 8px;border-radius:12px;">🏷 {{ rule.trigger_tag.name }}</span>
+      {% elif rule.trigger_field_name %}
+        <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;">📝 {{ rule.trigger_field_name }} = {{ rule.trigger_field_value }}</span>
+      {% endif %}
+      <span class="arrow">→</span>
+      <span style="font-weight:600;">{{ rule.target_stage.name }}</span>
+      <button class="del-auto" onclick="deleteAuto({{ rule.id }})" title="Delete">✕</button>
+    </div>
+    {% empty %}
+    <div style="font-size:13px;color:var(--text-muted);padding:8px;">No automation rules yet.</div>
+    {% endfor %}
+  </div>
+  <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
+    <div class="form-group" style="margin:0;flex:1;min-width:120px;">
+      <label>When</label>
+      <select id="autoTrigger" onchange="autoTriggerChanged()">
+        <option value="tag_applied">Tag is applied</option>
+        <option value="tag_removed">Tag is removed</option>
+        <option value="custom_field_changed">Custom field changes</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin:0;flex:1;min-width:120px;" id="autoTagGroup">
+      <label>Tag</label>
+      <select id="autoTag">
+        {% for tag in tags %}
+        <option value="{{ tag.id }}">{{ tag.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin:0;flex:1;min-width:100;display:none;" id="autoFieldGroup">
+      <label>Field Name</label>
+      <input type="text" id="autoFieldName" placeholder="field_name">
+    </div>
+    <div class="form-group" style="margin:0;flex:1;min-width:100;display:none;" id="autoFieldValueGroup">
+      <label>Value</label>
+      <input type="text" id="autoFieldValue" placeholder="value (or empty=any)">
+    </div>
+    <div class="form-group" style="margin:0;flex:1;min-width:120px;">
+      <label>Move to</label>
+      <select id="autoTarget">
+        {% for stage in stages %}
+        <option value="{{ stage.id }}">{{ stage.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-success" onclick="addAutomation()">Add Rule</button>
+  </div>
+</div>
+
+<div class="kanban" id="kanban">
+  {% for stage in stages %}
+  <div class="column" data-stage-id="{{ stage.id }}">
+    <div class="col-header" style="background:{{ stage.color }};">
+      <span>{{ stage.name }} <span class="col-count">{{ stage.opp_count }}</span></span>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <span class="col-value">${{ stage.total_value|floatformat:0 }}</span>
+        <div style="position:relative;">
+          <button class="col-menu-btn" onclick="toggleMenu(event, 'stage-menu-{{ stage.id }}')">⋮</button>
+          <div class="dropdown-menu" id="stage-menu-{{ stage.id }}">
+            <div class="dropdown-item" onclick="renameStage({{ stage.id }}, '{{ stage.name|escapejs }}')">✏️ Rename</div>
+            <div class="dropdown-item danger" onclick="deleteStage({{ stage.id }})">🗑 Delete Stage</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-body" data-stage-id="{{ stage.id }}"
+         ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+      {% for opp in stage.opp_list %}
+      <div class="opp-card" draggable="true" data-opp-id="{{ opp.id }}"
+           ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)">
+        <div class="opp-name">
+          <span>
+            <span class="priority-dot priority-{{ opp.priority }}"></span>
+            {% if opp.user %}{{ opp.user.name|default:opp.user.phone_no }}{% else %}{{ opp.title|default:"Untitled" }}{% endif %}
+          </span>
+          <div style="position:relative;">
+            <button class="card-menu-btn" onclick="toggleMenu(event, 'card-menu-{{ opp.id }}')">⋮</button>
+            <div class="dropdown-menu" id="card-menu-{{ opp.id }}">
+              <div class="dropdown-item" onclick="editOpp({{ opp.id }})">✏️ Edit</div>
+              <div class="dropdown-item danger" onclick="deleteOpp({{ opp.id }})">🗑 Delete</div>
+            </div>
+          </div>
+        </div>
+        {% if opp.user %}
+        <div class="opp-phone">📱 {{ opp.user.phone_no }}</div>
+        {% endif %}
+        <div class="opp-meta">
+          <span class="opp-value">${{ opp.opportunity_value|floatformat:2 }}</span>
+          <span class="opp-id">#{{ opp.id }}</span>
+        </div>
+        <div class="opp-indicators">
+          <span>⏱ {{ opp.created_at|timesince }}</span>
+        </div>
+      </div>
+      {% empty %}
+      <div style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px;">No contacts</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Add Opportunity Modal -->
+<div class="modal-overlay" id="addOppModal">
+  <div class="modal-box">
+    <h2>Add Opportunity</h2>
+    <div class="form-group">
+      <label>Contact</label>
+      <select id="oppContact">
+        <option value="">-- Select Contact --</option>
+        {% for c in contacts %}
+        <option value="{{ c.id }}">{{ c.name|default:c.phone_no }} ({{ c.phone_no }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Title (optional)</label>
+      <input type="text" id="oppTitle" placeholder="e.g. Website Inquiry">
+    </div>
+    <div class="form-group">
+      <label>Value ($)</label>
+      <input type="number" id="oppValue" value="0" step="0.01">
+    </div>
+    <div class="form-group">
+      <label>Priority</label>
+      <select id="oppPriority">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+        <option value="urgent">Urgent</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-success" onclick="createOpp()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Stage Modal -->
+<div class="modal-overlay" id="renameModal">
+  <div class="modal-box">
+    <h2>Rename Stage</h2>
+    <input type="hidden" id="renameStageId">
+    <div class="form-group">
+      <label>Stage Name</label>
+      <input type="text" id="renameStageName">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeRenameModal()">Cancel</button>
+      <button class="btn btn-success" onclick="saveRename()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let draggedId = null;
+
+  function getCookie(n) { let v = document.cookie.match('(^|;) ?' + n + '=([^;]*)(;|$)'); return v ? v[2] : null; }
+  function api(url, data) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify(data || {})
+    });
+  }
+
+  // ====== Dropdown Menus ======
+  function toggleMenu(event, menuId) {
+    event.stopPropagation();
+    document.querySelectorAll('.dropdown-menu.show').forEach(m => {
+      if (m.id !== menuId) m.classList.remove('show');
+    });
+    document.getElementById(menuId).classList.toggle('show');
+  }
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
+  });
+
+  // ====== Drag and Drop ======
+  function handleDragStart(e) {
+    draggedId = e.target.dataset.oppId;
+    e.target.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+  function handleDragEnd(e) { e.target.classList.remove('dragging'); }
+  function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+  function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+
+  async function handleDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    const stageId = e.currentTarget.dataset.stageId;
+    if (!draggedId || !stageId) return;
+    const res = await api(`/api/pipeline/opportunity/${draggedId}/move/`, { stage_id: parseInt(stageId) });
+    if (res.ok) location.reload();
+    else alert('Failed to move');
+  }
+
+  // ====== Search ======
+  let searchTimer;
+  function debounceSearch(val) {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      const url = new URL(window.location);
+      if (val) url.searchParams.set('search', val);
+      else url.searchParams.delete('search');
+      window.location = url;
+    }, 400);
+  }
+
+  // ====== Add Opportunity ======
+  function openAddModal() { document.getElementById('addOppModal').classList.add('active'); }
+  function closeAddModal() { document.getElementById('addOppModal').classList.remove('active'); }
+
+  async function createOpp() {
+    const res = await api('/api/pipeline/opportunity/create/', {
+      pipeline_id: {{ pipeline.id }},
+      user_id: document.getElementById('oppContact').value || null,
+      title: document.getElementById('oppTitle').value,
+      value: parseFloat(document.getElementById('oppValue').value) || 0,
+      priority: document.getElementById('oppPriority').value
+    });
+    if (res.ok) location.reload();
+    else alert('Failed to create opportunity');
+  }
+
+  // ====== Delete Opportunity ======
+  async function deleteOpp(id) {
+    if (!confirm('Delete this opportunity?')) return;
+    const res = await api(`/api/pipeline/opportunity/${id}/delete/`);
+    if (res.ok) location.reload();
+    else alert('Failed to delete');
+  }
+
+  // ====== Edit Opportunity (placeholder — could expand) ======
+  function editOpp(id) {
+    alert('Edit coming soon! For now, drag cards between stages.');
+  }
+
+  // ====== Stage Management ======
+  function renameStage(id, currentName) {
+    document.getElementById('renameStageId').value = id;
+    document.getElementById('renameStageName').value = currentName;
+    document.getElementById('renameModal').classList.add('active');
+  }
+  function closeRenameModal() { document.getElementById('renameModal').classList.remove('active'); }
+
+  async function saveRename() {
+    const id = document.getElementById('renameStageId').value;
+    const name = document.getElementById('renameStageName').value.trim();
+    if (!name) return;
+    const res = await api(`/api/pipeline/stage/${id}/rename/`, { name });
+    if (res.ok) location.reload();
+    else alert('Failed to rename');
+  }
+
+  async function deleteStage(id) {
+    if (!confirm('Delete this stage? Contacts will move to the first remaining stage.')) return;
+    const res = await api(`/api/pipeline/stage/delete/${id}/`);
+    if (res.ok) location.reload();
+    else alert('Failed to delete stage');
+  }
+
+  // ====== Automation Panel ======
+  function toggleAutoPanel() {
+    const p = document.getElementById('autoPanel');
+    p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function autoTriggerChanged() {
+    const v = document.getElementById('autoTrigger').value;
+    document.getElementById('autoTagGroup').style.display = v.startsWith('tag') ? 'block' : 'none';
+    document.getElementById('autoFieldGroup').style.display = v === 'custom_field_changed' ? 'block' : 'none';
+    document.getElementById('autoFieldValueGroup').style.display = v === 'custom_field_changed' ? 'block' : 'none';
+  }
+
+  async function addAutomation() {
+    const trigger = document.getElementById('autoTrigger').value;
+    const data = {
+      pipeline_id: {{ pipeline.id }},
+      trigger_type: trigger,
+      target_stage_id: document.getElementById('autoTarget').value
+    };
+    if (trigger.startsWith('tag')) {
+      data.trigger_tag_id = document.getElementById('autoTag').value;
+    } else {
+      data.trigger_field_name = document.getElementById('autoFieldName').value;
+      data.trigger_field_value = document.getElementById('autoFieldValue').value;
+    }
+    const res = await api('/api/pipeline/automation/create/', data);
+    if (res.ok) location.reload();
+    else alert('Failed to create automation');
+  }
+
+  async function deleteAuto(id) {
+    if (!confirm('Delete this automation rule?')) return;
+    const res = await api(`/api/pipeline/automation/delete/${id}/`);
+    if (res.ok) location.reload();
+    else alert('Failed to delete');
+  }
+
+  // Close modals on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
+  });
+</script>
+{% endblock %}

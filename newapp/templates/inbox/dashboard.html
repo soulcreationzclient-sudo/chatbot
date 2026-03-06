@@ -587,6 +587,11 @@
         title="Delete contact">
         🗑️ Delete
       </button>
+      {% if is_beta %}
+      <a href="/api/inbox/export/{{ selected_user.id }}/csv/" class="btn btn-sm btn-outline-primary" title="Export chat as CSV">
+        📥 Export
+      </a>
+      {% endif %}
       {% else %}
       <div style="font-weight:700">Select a conversation</div>
       {% endif %}

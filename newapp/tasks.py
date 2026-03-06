@@ -163,7 +163,7 @@ def process_pending_followups():
             # Check if user replied since scheduling (cancel if so)
             last_user_msg = Message.objects.filter(
                 user_id=user,
-                who='human',
+                who__in=['human', 'user'],  # BUG FIX: check both 'human' and 'user'
                 created_at__gt=followup.created_at
             ).exists()
             
@@ -239,7 +239,7 @@ def process_pending_followups():
                 # (not the original message that triggered the bot reply)
                 user_replied_recently = Message.objects.filter(
                     user_id=user,
-                    who='human',
+                    who__in=['human', 'user'],  # BUG FIX: check both 'human' and 'user'
                     created_at__gt=followup.created_at
                 ).exists()
 

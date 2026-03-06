@@ -1,0 +1,179 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Pipelines{% endblock %}
+
+{% block head_css %}
+<style>
+  :root {
+    --bg-card: #ffffff;
+    --border-soft: #e5e7eb;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --accent: #3b82f6;
+  }
+
+  .pipeline-wrap {
+    max-width: 900px;
+    padding-top: 20px;
+  }
+
+  .page-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+  }
+  .page-header h1 { font-size: 24px; font-weight: 700; margin: 0; }
+
+  .btn-add {
+    background: var(--accent); color: #fff; border: none; padding: 10px 20px;
+    border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px;
+  }
+  .btn-add:hover { background: #2563eb; }
+
+  .pipeline-table {
+    width: 100%; border-collapse: collapse; background: var(--bg-card);
+    border-radius: 14px; overflow: hidden; box-shadow: 0 4px 16px rgba(15,23,42,0.04);
+  }
+  .pipeline-table th {
+    padding: 14px 20px; text-align: left; font-size: 13px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-soft); background: #f9fafb;
+  }
+  .pipeline-table td {
+    padding: 16px 20px; border-bottom: 1px solid #f1f5f9; font-size: 15px;
+  }
+  .pipeline-table tr:last-child td { border-bottom: none; }
+  .pipeline-table tr:hover td { background: #f9fafb; }
+
+  .pipeline-name { font-weight: 600; color: var(--accent); text-decoration: none; }
+  .pipeline-name:hover { text-decoration: underline; }
+
+  .contacts-badge {
+    background: #e0e7ff; color: var(--accent); padding: 4px 12px;
+    border-radius: 20px; font-size: 13px; font-weight: 600;
+  }
+
+  .actions-btn {
+    background: none; border: none; cursor: pointer; font-size: 18px;
+    color: var(--text-muted); padding: 4px 8px; border-radius: 6px;
+  }
+  .actions-btn:hover { background: #f1f5f9; }
+
+  .empty-state {
+    text-align: center; padding: 60px; color: var(--text-muted);
+    background: var(--bg-card); border-radius: 14px; border: 2px dashed var(--border-soft);
+  }
+  .empty-state h3 { color: var(--text-main); margin-bottom: 8px; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-box {
+    background: #fff; border-radius: 16px; padding: 28px; width: 400px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .modal-box h2 { margin: 0 0 16px; font-size: 18px; }
+  .modal-box input {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border-soft);
+    border-radius: 10px; font-size: 14px; box-sizing: border-box; margin-bottom: 16px;
+  }
+  .modal-box input:focus { outline: none; border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-actions button { padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; }
+  .btn-cancel { background: #e5e7eb; color: var(--text-main); }
+  .btn-save { background: var(--accent); color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pipeline-wrap">
+  <div class="page-header">
+    <h1>Pipelines</h1>
+    <button class="btn-add" onclick="openModal()">+ Add</button>
+  </div>
+
+  {% if pipelines %}
+  <table class="pipeline-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Contacts</th>
+        <th>Value</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in pipelines %}
+      <tr>
+        <td><a href="{% url 'pipeline_board' p.id %}" class="pipeline-name">{{ p.name }}</a></td>
+        <td><span class="contacts-badge">{{ p.contact_count }}</span></td>
+        <td>${{ p.total_value|floatformat:2 }}</td>
+        <td>
+          <button class="actions-btn" onclick="deletePipeline({{ p.id }})" title="Delete">🗑️</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <h3>No Pipelines Yet</h3>
+    <p>Create your first pipeline to start tracking leads.</p>
+    <button class="btn-add" onclick="openModal()" style="margin-top:12px;">+ Create Pipeline</button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Create Pipeline Modal -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal-box">
+    <h2>Create Pipeline</h2>
+    <input type="text" id="pipelineName" placeholder="e.g. Sales Leads, Support Tickets" autofocus>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="createPipeline()">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openModal() { document.getElementById('createModal').classList.add('active'); document.getElementById('pipelineName').focus(); }
+  function closeModal() { document.getElementById('createModal').classList.remove('active'); }
+
+  function getCookie(name) {
+    let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return v ? v[2] : null;
+  }
+
+  async function createPipeline() {
+    const name = document.getElementById('pipelineName').value.trim();
+    if (!name) return alert('Please enter a name');
+    const res = await fetch('/api/pipeline/create/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ name })
+    });
+    if (res.ok) location.reload();
+    else alert('Failed to create pipeline');
+  }
+
+  async function deletePipeline(id) {
+    if (!confirm('Delete this pipeline and all its data?')) return;
+    const res = await fetch(`/api/pipeline/delete/${id}/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    });
+    if (res.ok) location.reload();
+    else alert('Failed to delete');
+  }
+
+  document.getElementById('createModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+  document.getElementById('pipelineName').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') createPipeline();
+  });
+</script>
+{% endblock %}

@@ -462,6 +462,16 @@ class Inboxcontroller:
                 }
             )
             
+            # Trigger pipeline automations on field change
+            try:
+                from newapp.controllers.pipeline import run_pipeline_automations
+                run_pipeline_automations(
+                    user.id, 'custom_field_changed',
+                    field_name=field_name, field_value=str(field_value)
+                )
+            except Exception:
+                pass  # Don't break custom field flow
+            
             action = "Created" if created else "Updated"
             return JsonResponse({
                 'success': True,
@@ -681,3 +691,47 @@ class Inboxcontroller:
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
+    @staticmethod
+    def export_chat_csv(request, user_id):
+        """Export a contact's chat history as CSV file."""
+        import csv
+
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+
+        if not org_id and not admin_id:
+            return HttpResponse('Not authenticated', status=401)
+
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return HttpResponse('User not found', status=404)
+
+        # Security check
+        if org_id and user.organization_id != org_id:
+            return HttpResponse('Permission denied', status=403)
+        if admin_id and str(user.admin_id_id) != str(admin_id):
+            return HttpResponse('Permission denied', status=403)
+
+        msgs = Message.objects.filter(user_id=user).order_by('created_at', 'id')
+
+        contact_name = user.name or user.phone_no or f'user_{user_id}'
+        safe_name = "".join(c for c in contact_name if c.isalnum() or c in (' ', '-', '_')).strip()
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="chat_{safe_name}.csv"'
+        response.write('\ufeff')  # UTF-8 BOM for Excel
+
+        writer = csv.writer(response)
+        writer.writerow(['Date', 'Time', 'From', 'Message'])
+
+        for m in msgs:
+            created = m.created_at
+            sender = 'Bot/Agent' if m.who == 'bot' else 'Customer'
+            writer.writerow([
+                created.strftime('%Y-%m-%d'),
+                created.strftime('%H:%M:%S'),
+                sender,
+                m.messages or ''
+            ])
+
+        return response

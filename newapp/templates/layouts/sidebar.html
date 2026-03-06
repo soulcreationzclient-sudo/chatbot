@@ -31,10 +31,9 @@
     border-right: 1px solid #e5edff;
     padding: 16px;
     position: fixed;
-    top: 56px;
-    /* below topbar */
+    top: 0;
     left: 0;
-    height: calc(100vh - 56px);
+    height: 100vh;
     transition: transform 0.25s ease;
     z-index: 1000;
     box-sizing: border-box;
@@ -108,17 +107,16 @@
   }
 </style>
 
-<!-- TOPBAR -->
-<div class="topbar">
-  <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
-</div>
 
 <!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
-  <div class="brand">
-    <img src="{% static 'images/speedbot.png' %}" alt="Speedbots" style="width:160px; height:90px; object-fit:contain;">
+  <div class="brand" style="padding:18px 10px;text-align:center;background:#ffffff;border-bottom:1px solid #e5e7eb;margin:-1px -1px 0 -1px;">
+    {% if organization and organization.logo %}
+      <img src="{{ organization.logo.url }}" alt="{{ organization.name }}" style="width:230px; height:90px; object-fit:contain;">
+    {% else %}
+      <img src="{% static 'images/speedbot.png' %}" alt="Speedbots" style="width:230px; height:90px; object-fit:contain;">
+    {% endif %}
   </div>
-
   {% url 'dashboard' as dashboard_url %}
   <a href="{{ dashboard_url }}" class="nav-item {% if request.path == dashboard_url %}active{% endif %}">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -138,6 +136,18 @@
     </svg>
     Inbox
   </a>
+
+  {% if is_beta %}
+  {% url 'pipeline_list' as pipeline_url %}
+  <a href="{{ pipeline_url }}" class="nav-item {% if '/pipeline' in request.path %}active{% endif %}">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <rect x="3" y="3" width="5" height="18" rx="1" />
+      <rect x="10" y="8" width="5" height="13" rx="1" />
+      <rect x="17" y="5" width="5" height="16" rx="1" />
+    </svg>
+    Pipelines
+  </a>
+  {% endif %}
 
   {% url 'broadcast_msg' as broadcast_url %}
   <a href="{{ broadcast_url }}" class="nav-item {% if request.path == broadcast_url %}active{% endif %}">

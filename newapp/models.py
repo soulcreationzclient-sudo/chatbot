@@ -55,6 +55,25 @@ class Organization(models.Model):
     # Google Calendar
     google_calendar = models.TextField(blank=True, default='')
 
+    # Organization Logo (shown in topbar)
+    logo = models.ImageField(upload_to='org_logos/', blank=True, null=True, help_text="Custom logo for the topbar")
+    # Feature Flag / Canary Deployment
+    is_beta_tester = models.BooleanField(
+        default=False,
+        help_text="If True, this org sees new features before general rollout"
+    )
+    APP_VERSION_CHOICES = (
+        ('stable', 'Stable'),
+        ('beta', 'Beta'),
+        ('canary', 'Canary'),
+    )
+    app_version = models.CharField(
+        max_length=20,
+        choices=APP_VERSION_CHOICES,
+        default='stable',
+        help_text="Which version of features this org uses"
+    )
+
     class Meta:
         db_table = 'organizations'
         ordering = ['name']
@@ -343,18 +362,22 @@ class ChatGPTPrompt(models.Model):
         return f"ChatGPT Prompt (updated {self.updated_at})"
     
 class AIAgentConfig(models.Model):
-    admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, null=True, blank=True)
+    name = models.CharField(max_length=100, default='Default Agent', help_text="Agent name (e.g. Sales Agent, Support Agent)")
     pdf_file = models.FileField(upload_to='ai_agent_pdfs/')  # PDFs will be uploaded to MEDIA_ROOT/ai_agent_pdfs/
     instruction = models.TextField(blank=True)
     pdf_text = models.TextField(blank=True, null=True)               
-    is_active = models.BooleanField(default=True)            
+    is_active = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False, help_text="If true, this agent is used for incoming messages")
     uploaded_at = models.DateTimeField(auto_now_add=True)    
 
     class Meta:
         db_table = 'ai_agent_config'
         
     def __str__(self):
-        return f"AI Agent Config - {self.pdf_file.name} - Active: {self.is_active}"  
+        default_label = " ⭐ DEFAULT" if self.is_default else ""
+        return f"AI Agent: {self.name}{default_label}"  
     
 from django import forms
 from .models import AIAgentConfig
@@ -952,3 +975,120 @@ class WebChatAnalytics(models.Model):
     class Meta:
         db_table = 'webchat_analytics'
         ordering = ['-created_at']
+
+
+# ==================== PIPELINE CRM MODELS ====================
+
+class Pipeline(models.Model):
+    """Multiple pipelines per organization (e.g., 'Sales Leads', 'Support Tickets')."""
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='pipelines')
+    name = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'pipelines'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name
+
+
+class PipelineStage(models.Model):
+    """Columns in the Kanban board."""
+    pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='stages')
+    name = models.CharField(max_length=100)
+    order = models.IntegerField(default=0)
+    color = models.CharField(max_length=7, default='#3b82f6', help_text="Hex color for column header")
+
+    class Meta:
+        db_table = 'pipeline_stages'
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.pipeline.name} → {self.name}"
+
+
+class Opportunity(models.Model):
+    """Contact cards on the Kanban board."""
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('won', 'Won'),
+        ('lost', 'Lost'),
+        ('abandoned', 'Abandoned'),
+    ]
+
+    pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='opportunities')
+    stage = models.ForeignKey(PipelineStage, on_delete=models.CASCADE, related_name='opportunities')
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='opportunities', null=True, blank=True)
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='opportunities')
+    title = models.CharField(max_length=200, blank=True, default='')
+    opportunity_value = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    description = models.TextField(blank=True, default='')
+    due_date = models.DateField(null=True, blank=True)
+    created_by = models.CharField(max_length=100, default='Manual')
+    moved_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'opportunities'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        name = self.user.name if self.user and self.user.name else self.title or f"Opp #{self.id}"
+        return f"{name} - {self.stage.name}"
+
+
+class OpportunityComment(models.Model):
+    """Comments on an opportunity."""
+    opportunity = models.ForeignKey(Opportunity, on_delete=models.CASCADE, related_name='comments')
+    author = models.CharField(max_length=100, default='Admin')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'opportunity_comments'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Comment on {self.opportunity} by {self.author}"
+
+
+class PipelineAutomation(models.Model):
+    """Automation rules: when trigger fires, move opportunity to target stage."""
+    TRIGGER_CHOICES = [
+        ('tag_applied', 'When tag is applied'),
+        ('tag_removed', 'When tag is removed'),
+        ('custom_field_changed', 'When custom field value changes'),
+    ]
+
+    pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='automations')
+    trigger_type = models.CharField(max_length=30, choices=TRIGGER_CHOICES)
+    # For tag triggers
+    trigger_tag = models.ForeignKey('Tag', on_delete=models.CASCADE, null=True, blank=True,
+                                     help_text="Tag that triggers the automation")
+    # For custom field triggers
+    trigger_field_name = models.CharField(max_length=100, blank=True, default='',
+                                           help_text="Custom field name to watch")
+    trigger_field_value = models.CharField(max_length=200, blank=True, default='',
+                                            help_text="Value that triggers the move (empty = any change)")
+    # Target
+    target_stage = models.ForeignKey(PipelineStage, on_delete=models.CASCADE,
+                                      help_text="Move opportunity to this stage")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'pipeline_automations'
+
+    def __str__(self):
+        return f"{self.get_trigger_type_display()} → {self.target_stage.name}"
+

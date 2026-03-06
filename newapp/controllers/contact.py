@@ -261,7 +261,15 @@ class Contactcontroller:
                 return JsonResponse({'error': 'User or Tag not found'}, status=404)
             
             # Create if not exists
-            UserTag.objects.get_or_create(user=user, tag=tag)
+            obj, created = UserTag.objects.get_or_create(user=user, tag=tag)
+            
+            # Trigger pipeline automations if tag was newly applied
+            if created:
+                try:
+                    from newapp.controllers.pipeline import run_pipeline_automations
+                    run_pipeline_automations(user.id, 'tag_applied', tag_id=tag.id)
+                except Exception:
+                    pass  # Don't break tag flow if automation fails
             
             return JsonResponse({'success': True})
         except Exception as e:
