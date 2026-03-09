@@ -730,23 +730,25 @@ If the user's question relates to this document, answer based on your analysis a
                                         openai_tools = []
                                         if db_tools.exists():
                                             for tool in db_tools:
-                                                # Extract parameter names from payload placeholders like {{param_name}}
+                                                # Extract parameter names from URL {param} and payload {{param}} placeholders
                                                 payload_str = json.dumps(tool.payload or {})
                                                 url_str = tool.url or ""
-                                                combined = payload_str + url_str
                                                 
-                                                # Find all {{xxx}} placeholders
-                                                param_pattern = r'\{\{(\w+)\}\}'
-                                                param_names = list(set(re.findall(param_pattern, combined)))
+                                                # Find both {param} (URL path) and {{param}} (payload) placeholders
+                                                single_brace_params = re.findall(r'(?<!\{)\{(\w+)\}(?!\})', url_str)
+                                                double_brace_params = re.findall(r'\{\{(\w+)\}\}', payload_str + url_str)
+                                                param_names = list(set(single_brace_params + double_brace_params))
                                                 
                                                 # Build dynamic properties from extracted params
                                                 if param_names:
                                                     properties = {}
+                                                    required_params = []
                                                     for pname in param_names:
                                                         properties[pname] = {
                                                             "type": "string",
-                                                            "description": f"Value for {pname}"
+                                                            "description": f"The {pname.replace('_', ' ')} value"
                                                         }
+                                                        required_params.append(pname)
                                                 else:
                                                     # Fallback: allow any parameters
                                                     properties = {
@@ -764,7 +766,7 @@ If the user's question relates to this document, answer based on your analysis a
                                                         "parameters": {
                                                             "type": "object",
                                                             "properties": properties,
-                                                            "additionalProperties": True 
+                                                            "required": required_params if param_names else []
                                                         }
                                                     }
                                                 })

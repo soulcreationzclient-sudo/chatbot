@@ -1201,7 +1201,19 @@ def chatgpt_respond(request):
 
             openai_tools = []
             if db_tools and (hasattr(db_tools, 'exists') and db_tools.exists() or len(db_tools) > 0):
+                import re
                 for tool in db_tools:
+                    # Extract {param} placeholders from URL to build proper parameters schema
+                    url_params = re.findall(r'\{(\w+)\}', tool.url)
+                    properties = {}
+                    required = []
+                    for param in url_params:
+                        properties[param] = {"type": "string", "description": f"The {param.replace('_', ' ')} value"}
+                        required.append(param)
+                    
+                    if not properties:
+                        properties = {"input": {"type": "string", "description": "Input value"}}
+                    
                     openai_tools.append({
                         "type": "function",
                         "function": {
@@ -1209,10 +1221,8 @@ def chatgpt_respond(request):
                             "description": tool.description,
                             "parameters": {
                                 "type": "object",
-                                "properties": {
-                                    "param_name": {"type": "string", "description": "Parameter value"} 
-                                },
-                                "additionalProperties": True
+                                "properties": properties,
+                                "required": required
                             }
                         }
                     })
@@ -1512,7 +1522,20 @@ def get_message_chatgpt(request):
 
         openai_tools = []
         if db_tools.exists():
+            import re
             for tool in db_tools:
+                # Extract {param} placeholders from URL to build proper parameters schema
+                url_params = re.findall(r'\{(\w+)\}', tool.url)
+                properties = {}
+                required = []
+                for param in url_params:
+                    properties[param] = {"type": "string", "description": f"The {param.replace('_', ' ')} value"}
+                    required.append(param)
+                
+                # If no URL params found, add a generic one
+                if not properties:
+                    properties = {"input": {"type": "string", "description": "Input value"}}
+                
                 openai_tools.append({
                     "type": "function",
                     "function": {
@@ -1520,10 +1543,8 @@ def get_message_chatgpt(request):
                         "description": tool.description,
                         "parameters": {
                             "type": "object",
-                            "properties": {
-                                "param_name": {"type": "string", "description": "Parameter value"} 
-                            },
-                            "additionalProperties": True
+                            "properties": properties,
+                            "required": required
                         }
                     }
                 })

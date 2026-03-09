@@ -272,16 +272,17 @@ def execute_tool(tool_name, arguments, admin):
         target_payload = tool_config.payload or {}
         target_headers = tool_config.headers or {}
 
-        # Replace in URL
+        # Replace in URL - handle both {key} and {{key}} formats
         for key, value in arguments.items():
-            placeholder = "{{" + key + "}}"
-            target_url = target_url.replace(placeholder, str(value))
+            target_url = target_url.replace("{" + key + "}", str(value))
+            target_url = target_url.replace("{{" + key + "}}", str(value))
 
-        # Replace in Payload
+        # Replace in Payload - handle both formats
         payload_str = json.dumps(target_payload)
         for key, value in arguments.items():
-            placeholder = "{{" + key + "}}"
-            payload_str = payload_str.replace(placeholder, str(value))
+            payload_str = payload_str.replace("{" + key + "}", str(value))
+            payload_str = payload_str.replace("{{" + key + "}}", str(value))
+            payload_str = payload_str.replace("{{custom_field:" + key + ":value}}", str(value))
             
         final_payload = json.loads(payload_str)
 
