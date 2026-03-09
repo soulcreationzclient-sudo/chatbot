@@ -313,54 +313,7 @@
   const goToAIpageBtn = document.getElementById('goToAIpage');
   if (goToAIpageBtn) goToAIpageBtn.addEventListener('click', async () => { await updateChatGPTMode('ai_agent'); window.location.href = '/ai_agent/upload/'; });
 
-  // Calendly modal handlers
-  const calendlyModalEl = document.getElementById('calendlyModal');
-  const calendlyModal = new bootstrap.Modal(calendlyModalEl);
 
-  const calendlyConnectLink = document.getElementById('calendlyConnectLink');
-  if (calendlyConnectLink) calendlyConnectLink.addEventListener('click', (e) => { e.preventDefault(); calendlyModal.show(); });
-
-  const calendlyDisconnectLink = document.getElementById('calendlyDisconnectLink');
-  if (calendlyDisconnectLink) calendlyDisconnectLink.addEventListener('click', (e) => { e.preventDefault(); calendlyModal.show(); });
-
-  const followupDelayRange = document.getElementById('followupDelayRange');
-  const followupDelayValue = document.getElementById('followupDelayValue');
-  if (followupDelayRange && followupDelayValue) {
-    followupDelayRange.addEventListener('input', () => { followupDelayValue.textContent = followupDelayRange.value; });
-  }
-
-  const confirmCalendlyConnectBtn = document.getElementById('confirmCalendlyConnect');
-  if (confirmCalendlyConnectBtn) {
-    confirmCalendlyConnectBtn.addEventListener('click', async () => {
-      clearAlert('calendlyAlert');
-      const token = document.getElementById('calendlyToken').value.trim();
-      const url = document.getElementById('calendlySchedulingUrl').value.trim();
-      if (!token || !url) { showAlert('Please enter both token and scheduling URL.', 'warning', 'calendlyAlert'); return; }
-      try {
-        const res = await fetch('/connect_calendly/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-          body: JSON.stringify({ calendly_token: token, scheduling_url: url })
-        });
-        const data = await res.json();
-        if (data.success) { showAlert(data.msg || 'Connected!', 'success', 'calendlyAlert'); setTimeout(() => window.location.reload(), 600); }
-        else showAlert(data.error || 'Failed to connect', 'danger', 'calendlyAlert');
-      } catch (err) { showAlert('Failed to connect. ' + err.message, 'danger', 'calendlyAlert'); }
-    });
-  }
-
-  const confirmCalendlyDisconnectBtn = document.getElementById('confirmCalendlyDisconnect');
-  if (confirmCalendlyDisconnectBtn) {
-    confirmCalendlyDisconnectBtn.addEventListener('click', async () => {
-      clearAlert('calendlyAlert');
-      try {
-        const res = await fetch('/disconnect_calendly/', { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } });
-        const data = await res.json();
-        if (data.success) { showAlert(data.msg || 'Disconnected!', 'success', 'calendlyAlert'); setTimeout(() => window.location.reload(), 600); }
-        else showAlert(data.error || 'Failed to disconnect', 'danger', 'calendlyAlert');
-      } catch (err) { showAlert('Failed to disconnect. ' + err.message, 'danger', 'calendlyAlert'); }
-    });
-  }
 
 
 </script>
@@ -438,35 +391,7 @@
           </div>
         </a>
 
-        <!-- Calendly Card -->
-        {% if calendly_connected %}
-        <a href="javascript:void(0)" class="text-decoration-none text-reset" id="calendlyDisconnectLink">
-          {% else %}
-          <a href="javascript:void(0)" class="text-decoration-none text-reset" id="calendlyConnectLink">
-            {% endif %}
-            <div class="channel-card">
-              <div class="d-flex align-items-center gap-3">
-                <div class="icon-box" style="background:#fef3c7;">
-                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
-                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="#f59e0b" stroke-width="2" />
-                    <path d="M16 2v4M8 2v4M3 10h18" stroke="#f59e0b" stroke-width="2" />
-                  </svg>
-                </div>
-                <div class="fw-semibold">Calendly</div>
-                {% if calendly_connected %}
 
-                {% endif %}
-              </div>
-              <div class="d-flex align-items-center gap-3">
-                {% if calendly_connected %}
-                <i class="fa-solid fa-circle-check text-success" title="connected" aria-label="connected"></i>
-                {% else %}
-                <i class="fa-solid fa-circle-xmark text-danger" title="not connected" aria-label="not connected"></i>
-                {% endif %}
-                <span class="text-muted fs-5">&rsaquo;</span>
-              </div>
-            </div>
-          </a>
   </div>
 </div>
 
@@ -575,51 +500,5 @@
   </div>
 </div>
 
-<!-- Calendly Modal -->
-<div class="modal fade" id="calendlyModal" tabindex="-1" aria-labelledby="calendlyModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="calendlyModalLabel">Calendly Integration</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        {% if calendly_connected %}
-        <p>Calendly is currently <b>connected</b>.</p>
-        <div class="mb-3">
-          <label class="form-label">Scheduling URL</label>
-          <input type="text" class="form-control"
-            value="{% if org %}{{ org.calendly_scheduling_url }}{% else %}{{ admin.calendly_scheduling_url }}{% endif %}"
-            disabled>
-        </div>
-        <hr>
 
-        {% else %}
-        <div class="mb-3">
-          <label for="calendlyToken" class="form-label">Calendly Personal Access Token</label>
-          <input type="password" id="calendlyToken" class="form-control" placeholder="Enter your Calendly PAT">
-          <div class="form-text">Get your token from <a href="https://calendly.com/integrations/api_webhooks"
-              target="_blank">Calendly API Settings</a></div>
-        </div>
-        <div class="mb-3">
-          <label for="calendlySchedulingUrl" class="form-label">Scheduling URL</label>
-          <input type="text" id="calendlySchedulingUrl" class="form-control"
-            placeholder="https://calendly.com/your-name/30min">
-          <div class="form-text">The booking link to share with users</div>
-        </div>
-        {% endif %}
-        <div id="calendlyAlert" class="alert d-none" role="alert"></div>
-      </div>
-      <div class="modal-footer">
-        {% if calendly_connected %}
-
-        <button type="button" class="btn btn-danger" id="confirmCalendlyDisconnect">Disconnect</button>
-        {% else %}
-        <button type="button" class="btn btn-success" id="confirmCalendlyConnect">Connect</button>
-        {% endif %}
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-      </div>
-    </div>
-  </div>
-</div>
 {% endblock %}
