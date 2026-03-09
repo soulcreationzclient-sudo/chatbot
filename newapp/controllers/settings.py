@@ -273,6 +273,7 @@ class Settingcontroller :
         from ..models import ExternalAPI
         import requests
         import json
+        import re
         
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -303,22 +304,49 @@ class Settingcontroller :
             return JsonResponse({'error': 'API not found'}, status=404)
         
         try:
+            # Get test parameters from request body
+            test_params = {}
+            try:
+                body = json.loads(request.body)
+                test_params = body.get('test_params', {})
+            except:
+                pass
+            
+            # If no test params provided, extract {param} placeholders from URL and use sample values
+            if not test_params:
+                placeholders = re.findall(r'\{(\w+)\}', api.url)
+                for p in placeholders:
+                    test_params[p] = f'1'  # Default test value
+            
             headers = api.headers if isinstance(api.headers, dict) else {}
             payload = api.payload if isinstance(api.payload, dict) else {}
             
+            # Substitute {param} placeholders in URL with test values
+            url = api.url
+            for key, value in test_params.items():
+                url = url.replace('{' + key + '}', str(value))
+            
+            # Also substitute in payload values
+            if payload:
+                payload_str = json.dumps(payload)
+                for key, value in test_params.items():
+                    payload_str = payload_str.replace('{' + key + '}', str(value))
+                    payload_str = payload_str.replace('{{custom_field:' + key + ':value}}', str(value))
+                payload = json.loads(payload_str)
+            
             if api.method == 'GET':
-                response = requests.get(api.url, headers=headers, params=payload, timeout=30)
+                response = requests.get(url, headers=headers, params=payload, timeout=30)
             elif api.method == 'POST':
                 if api.body_type == 'json':
-                    response = requests.post(api.url, headers=headers, json=payload, timeout=30)
+                    response = requests.post(url, headers=headers, json=payload, timeout=30)
                 else:
-                    response = requests.post(api.url, headers=headers, data=payload, timeout=30)
+                    response = requests.post(url, headers=headers, data=payload, timeout=30)
             elif api.method == 'PUT':
-                response = requests.put(api.url, headers=headers, json=payload, timeout=30)
+                response = requests.put(url, headers=headers, json=payload, timeout=30)
             elif api.method == 'PATCH':
-                response = requests.patch(api.url, headers=headers, json=payload, timeout=30)
+                response = requests.patch(url, headers=headers, json=payload, timeout=30)
             elif api.method == 'DELETE':
-                response = requests.delete(api.url, headers=headers, timeout=30)
+                response = requests.delete(url, headers=headers, timeout=30)
             else:
                 return JsonResponse({'error': f'Unsupported method: {api.method}'}, status=400)
             
@@ -331,6 +359,7 @@ class Settingcontroller :
                 'success': True,
                 'status_code': response.status_code,
                 'response': response_data,
+                'url_called': url,
             })
         except requests.exceptions.Timeout:
             return JsonResponse({'error': 'Request timed out'}, status=408)
