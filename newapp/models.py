@@ -431,6 +431,8 @@ class CalendlyLink(models.Model):
     name = models.CharField(max_length=100, help_text="Tag name used in prompt (e.g., quick_call)")
     description = models.TextField(blank=True, help_text="Description (e.g., 30 minute consultation)")
     url = models.URLField(max_length=500, help_text="Calendly scheduling URL")
+    custom_field_name = models.CharField(max_length=100, blank=True, default='', help_text="Custom field to update when booking is confirmed (e.g., appointment_status)")
+    booking_message = models.TextField(blank=True, default='', help_text="Custom message to send when booking is confirmed")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

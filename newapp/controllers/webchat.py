@@ -294,6 +294,19 @@ session=session,
                 except Exception as img_error:
                     logger.error(f"Image tag processing error: {str(img_error)}")
             
+            # Process action tags ({{calendly:name}}, {{tag:...}}, {{api:...}})
+            if bot_response_text:
+                try:
+                    from ..action_tag_processor import process_response_actions
+                    bot_response_text = process_response_actions(
+                        bot_response_text,
+                        user_id=session.user_id,
+                        admin_id=session.admin_id,
+                        organization_id=session.organization_id
+                    )
+                except Exception as tag_error:
+                    logger.error(f"Action tag processing error: {str(tag_error)}")
+            
             # Create bot message
             bot_message = WebChatMessage.objects.create(
                 session=session,

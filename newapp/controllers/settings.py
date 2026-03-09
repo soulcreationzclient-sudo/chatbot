@@ -1185,15 +1185,27 @@ class Settingcontroller :
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         links = []
+        calendly_connected = False
+        calendly_url = ''
         
         if org_id:
             links = CalendlyLink.objects.filter(organization_id=org_id).order_by('-created_at')
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                calendly_connected = bool(getattr(org, 'calendly_token', ''))
+                calendly_url = getattr(org, 'calendly_scheduling_url', '') or ''
         elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 links = CalendlyLink.objects.filter(admin=admin).order_by('-created_at')
+                calendly_connected = bool(getattr(admin, 'calendly_token', ''))
+                calendly_url = getattr(admin, 'calendly_scheduling_url', '') or ''
         
-        return render(request, 'set/calendly_links.html', {'links': links})
+        return render(request, 'set/calendly_links.html', {
+            'links': links,
+            'calendly_connected': calendly_connected,
+            'calendly_url': calendly_url,
+        })
 
     @staticmethod
     @csrf_exempt
@@ -1221,6 +1233,8 @@ class Settingcontroller :
             name = data.get('name', '').strip()
             description = data.get('description', '').strip()
             url = data.get('url', '').strip()
+            custom_field_name = data.get('custom_field_name', '').strip()
+            booking_message = data.get('booking_message', '').strip()
             
             if not name or not url:
                 return JsonResponse({'error': 'Name and URL are required'}, status=400)
@@ -1231,6 +1245,8 @@ class Settingcontroller :
                 name=name,
                 description=description,
                 url=url,
+                custom_field_name=custom_field_name,
+                booking_message=booking_message,
             )
             
             return JsonResponse({
@@ -1267,6 +1283,8 @@ class Settingcontroller :
             link.name = data.get('name', link.name).strip()
             link.description = data.get('description', link.description).strip()
             link.url = data.get('url', link.url).strip()
+            link.custom_field_name = data.get('custom_field_name', link.custom_field_name).strip()
+            link.booking_message = data.get('booking_message', link.booking_message).strip()
             link.save()
             
             return JsonResponse({'success': True, 'msg': 'Link updated!'})

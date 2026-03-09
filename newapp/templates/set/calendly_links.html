@@ -16,6 +16,7 @@
             --text-muted: #64748b;
             --accent: #3b82f6;
             --danger: #ef4444;
+            --success: #22c55e;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -53,6 +54,8 @@
         .btn-outline:hover { background: #f1f5f9; }
         .btn-danger { background: var(--danger); }
         .btn-danger:hover { background: #dc2626; }
+        .btn-success { background: var(--success); }
+        .btn-sm { padding: 6px 14px; font-size: 13px; }
 
         .back-link {
             display: inline-flex;
@@ -64,6 +67,35 @@
             margin-bottom: 16px;
         }
         .back-link:hover { color: var(--accent); }
+
+        /* Connection Section */
+        .connection-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .connection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .connection-title { font-size: 16px; font-weight: 700; color: var(--text-main); }
+        .connection-status {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .status-connected { background: #dcfce7; color: #166534; }
+        .status-disconnected { background: #fee2e2; color: #991b1b; }
+
+        .connection-form { display: flex; flex-direction: column; gap: 12px; }
+        .connection-row { display: flex; gap: 12px; align-items: flex-end; }
+        .connection-row .form-group { flex: 1; margin-bottom: 0; }
+        .connection-hint { font-size: 12px; color: var(--text-muted); }
 
         .usage-hint {
             background: #f0f9ff;
@@ -112,11 +144,24 @@
             font-size: 13px;
             color: var(--accent);
             word-break: break-all;
+            margin-bottom: 8px;
+        }
+
+        .link-meta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
             margin-bottom: 12px;
+        }
+        .link-meta-item {
+            font-size: 12px;
+            color: var(--text-muted);
+            background: #f1f5f9;
+            padding: 3px 8px;
+            border-radius: 4px;
         }
 
         .link-actions { display: flex; gap: 8px; }
-        .link-actions .btn { padding: 6px 14px; font-size: 13px; }
 
         .empty-state {
             text-align: center;
@@ -146,8 +191,10 @@
             background: white;
             border-radius: 16px;
             width: 90%;
-            max-width: 500px;
+            max-width: 540px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .modal-header {
@@ -178,6 +225,20 @@
             border-top: 1px solid var(--border);
         }
 
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 16px 0;
+        }
+        .section-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
         .form-group { margin-bottom: 16px; }
         .form-group label {
             display: block;
@@ -187,7 +248,8 @@
             margin-bottom: 6px;
         }
         .form-group input,
-        .form-group textarea {
+        .form-group textarea,
+        .form-group select {
             width: 100%;
             padding: 10px 14px;
             border: 1px solid var(--border);
@@ -197,7 +259,8 @@
             font-family: inherit;
         }
         .form-group input:focus,
-        .form-group textarea:focus {
+        .form-group textarea:focus,
+        .form-group select:focus {
             outline: none;
             border-color: var(--accent);
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -208,6 +271,7 @@
         @media (max-width: 768px) {
             .main { margin-left: 0; padding: 16px; padding-top: 80px; }
             .modal { width: 95%; }
+            .connection-row { flex-direction: column; }
         }
     </style>
 </head>
@@ -223,8 +287,39 @@
             <button class="btn" onclick="openAddModal()">+ Add Link</button>
         </div>
 
+        <!-- Calendly Connection -->
+        <div class="connection-card">
+            <div class="connection-header">
+                <span class="connection-title">Calendly Connection</span>
+                {% if calendly_connected %}
+                <span class="connection-status status-connected">Connected</span>
+                {% else %}
+                <span class="connection-status status-disconnected">Not Connected</span>
+                {% endif %}
+            </div>
+            <div class="connection-form">
+                <div class="connection-row">
+                    <div class="form-group">
+                        <label>Personal Access Token</label>
+                        <input type="password" id="calendlyToken" placeholder="Paste your Calendly access token" value="{% if calendly_connected %}••••••••{% endif %}">
+                    </div>
+                </div>
+                <div class="connection-row">
+                    <div class="form-group">
+                        <label>Default Scheduling URL</label>
+                        <input type="url" id="calendlyUrl" placeholder="https://calendly.com/your-name/30min" value="{{ calendly_url }}">
+                    </div>
+                    <button class="btn btn-sm" onclick="connectCalendly()" style="margin-bottom:0; white-space:nowrap;">{% if calendly_connected %}Update{% else %}Connect{% endif %}</button>
+                </div>
+                <div class="connection-hint">
+                    Get your token from <a href="https://calendly.com/integrations/api_webhooks" target="_blank">Calendly API Settings</a>.
+                    The webhook will notify when someone books through any of your links below.
+                </div>
+            </div>
+        </div>
+
         <div class="usage-hint">
-            💡 <strong>Usage:</strong> Add your Calendly booking URLs here, then reference them in your AI prompt using
+            <strong>Usage:</strong> Add your Calendly booking URLs here, then reference them in your AI prompt using
             <code>{% templatetag openvariable %}calendly:link_name{% templatetag closevariable %}</code> syntax.
             The tag will be replaced with the actual booking URL when sent to the user.
             <br><br>
@@ -243,10 +338,18 @@
             {% if link.description %}
             <p class="link-desc">{{ link.description }}</p>
             {% endif %}
-            <div class="link-url">🔗 {{ link.url }}</div>
+            <div class="link-url">{{ link.url }}</div>
+            <div class="link-meta">
+                {% if link.custom_field_name %}
+                <span class="link-meta-item">Field: {{ link.custom_field_name }}</span>
+                {% endif %}
+                {% if link.booking_message %}
+                <span class="link-meta-item">Has confirmation message</span>
+                {% endif %}
+            </div>
             <div class="link-actions">
-                <button class="btn btn-outline" onclick="openEditModal({{ link.id }}, '{{ link.name|escapejs }}', '{{ link.description|escapejs }}', '{{ link.url|escapejs }}')">Edit</button>
-                <button class="btn btn-outline" style="color: var(--danger);" onclick="deleteLink({{ link.id }})">Delete</button>
+                <button class="btn btn-outline btn-sm" onclick="openEditModal({{ link.id }}, '{{ link.name|escapejs }}', '{{ link.description|escapejs }}', '{{ link.url|escapejs }}', '{{ link.custom_field_name|escapejs }}', '{{ link.booking_message|escapejs }}')">Edit</button>
+                <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteLink({{ link.id }})">Delete</button>
             </div>
         </div>
         {% endfor %}
@@ -259,7 +362,7 @@
         {% endif %}
     </main>
 
-    <!-- Modal -->
+    <!-- Add/Edit Modal -->
     <div class="modal-overlay" id="linkModal">
         <div class="modal">
             <div class="modal-header">
@@ -284,6 +387,21 @@
                     <label>Calendly URL</label>
                     <input type="url" id="linkUrl" placeholder="https://calendly.com/your-name/30min">
                 </div>
+
+                <hr class="section-divider">
+                <div class="section-label">On Booking Confirmation (Optional)</div>
+
+                <div class="form-group">
+                    <label>Update Custom Field</label>
+                    <input type="text" id="linkCustomField" placeholder="e.g., appointment_status">
+                    <div class="hint">When someone books via this link, this custom field will be updated to "Booked" for that contact.</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Confirmation Message</label>
+                    <textarea id="linkBookingMessage" placeholder="e.g., Your appointment has been confirmed! We look forward to seeing you." rows="3"></textarea>
+                    <div class="hint">Custom WhatsApp message sent to the user when their booking is confirmed via Calendly webhook.</div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
@@ -299,15 +417,19 @@
             document.getElementById('linkName').value = '';
             document.getElementById('linkDescription').value = '';
             document.getElementById('linkUrl').value = '';
+            document.getElementById('linkCustomField').value = '';
+            document.getElementById('linkBookingMessage').value = '';
             document.getElementById('linkModal').classList.add('active');
         }
 
-        function openEditModal(id, name, description, url) {
+        function openEditModal(id, name, description, url, customField, bookingMessage) {
             document.getElementById('modalTitle').textContent = 'Edit Booking Link';
             document.getElementById('linkId').value = id;
             document.getElementById('linkName').value = name;
             document.getElementById('linkDescription').value = description;
             document.getElementById('linkUrl').value = url;
+            document.getElementById('linkCustomField').value = customField || '';
+            document.getElementById('linkBookingMessage').value = bookingMessage || '';
             document.getElementById('linkModal').classList.add('active');
         }
 
@@ -320,7 +442,9 @@
             const data = {
                 name: document.getElementById('linkName').value.trim(),
                 description: document.getElementById('linkDescription').value.trim(),
-                url: document.getElementById('linkUrl').value.trim()
+                url: document.getElementById('linkUrl').value.trim(),
+                custom_field_name: document.getElementById('linkCustomField').value.trim(),
+                booking_message: document.getElementById('linkBookingMessage').value.trim()
             };
 
             if (!data.name) { alert('Please enter a link name'); return; }
@@ -366,6 +490,38 @@
                     location.reload();
                 } else {
                     alert('Error: ' + (result.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Error: ' + err.message));
+        }
+
+        function connectCalendly() {
+            const token = document.getElementById('calendlyToken').value.trim();
+            const url = document.getElementById('calendlyUrl').value.trim();
+
+            if (!token || token === '••••••••') {
+                alert('Please enter your Calendly access token');
+                return;
+            }
+
+            fetch('/connect_calendly/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    calendly_token: token,
+                    scheduling_url: url || 'https://calendly.com'
+                })
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Calendly connected successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to connect'));
                 }
             })
             .catch(err => alert('Error: ' + err.message));
