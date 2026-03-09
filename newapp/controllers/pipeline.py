@@ -342,8 +342,6 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
     automation rule matches and auto-move the opportunity.
     Auto-creates an opportunity if none exists but a matching rule is found.
     """
-    from .models import Opportunity
-    
     opps = Opportunity.objects.filter(user_id=user_id, status='open')
     
     # Build the matching rules query
