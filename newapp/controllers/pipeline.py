@@ -340,28 +340,53 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
     """
     Called from tag/custom-field update views to check if any
     automation rule matches and auto-move the opportunity.
+    Auto-creates an opportunity if none exists but a matching rule is found.
     """
+    from .models import Opportunity
+    
     opps = Opportunity.objects.filter(user_id=user_id, status='open')
-    if not opps.exists():
+    
+    # Build the matching rules query
+    all_rules = PipelineAutomation.objects.filter(
+        trigger_type=trigger_type,
+        is_active=True,
+    )
+    
+    if trigger_type in ('tag_applied', 'tag_removed') and tag_id:
+        all_rules = all_rules.filter(trigger_tag_id=tag_id)
+    elif trigger_type == 'custom_field_changed' and field_name:
+        all_rules = all_rules.filter(trigger_field_name__iexact=field_name)
+        if field_value:
+            all_rules = all_rules.filter(
+                models_Q(trigger_field_value='') | models_Q(trigger_field_value=field_value)
+            )
+    
+    if not all_rules.exists():
         return
-
-    for opp in opps:
-        rules = PipelineAutomation.objects.filter(
-            pipeline=opp.pipeline,
-            trigger_type=trigger_type,
-            is_active=True,
-        )
-
-        if trigger_type in ('tag_applied', 'tag_removed') and tag_id:
-            rules = rules.filter(trigger_tag_id=tag_id)
-        elif trigger_type == 'custom_field_changed' and field_name:
-            rules = rules.filter(trigger_field_name=field_name)
-            if field_value:
-                rules = rules.filter(
-                    models_Q(trigger_field_value='') | models_Q(trigger_field_value=field_value)
+    
+    if opps.exists():
+        # Move existing opportunities
+        for opp in opps:
+            rules = all_rules.filter(pipeline=opp.pipeline)
+            for rule in rules:
+                opp.stage = rule.target_stage
+                opp.save()
+                print(f"[Automation] Moved opp {opp.id} to stage '{rule.target_stage.name}'")
+                break
+    else:
+        # Auto-create opportunity in matching pipeline
+        for rule in all_rules:
+            try:
+                user = User.objects.get(id=user_id)
+                display_name = getattr(user, 'name', '') or user.phone_no
+                opp = Opportunity.objects.create(
+                    pipeline=rule.pipeline,
+                    stage=rule.target_stage,
+                    user=user,
+                    name=f"{display_name}",
+                    status='open'
                 )
-
-        for rule in rules:
-            opp.stage = rule.target_stage
-            opp.save()
-            break  # Only apply first matching rule per opportunity
+                print(f"[Automation] Created opp {opp.id} for user {user_id} in stage '{rule.target_stage.name}'")
+                break  # Only create one opportunity
+            except Exception as e:
+                print(f"[Automation] Error creating opportunity: {e}")

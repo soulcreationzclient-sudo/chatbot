@@ -182,6 +182,19 @@ def apply_custom_field_value(field_name, field_value, admin, phone=None):
 
     action = "Set" if created else "Updated"
     print(f"[CustomField] {action} '{field_name}' to '{field_value}' for user {user_phone}")
+    
+    # Trigger pipeline automations on custom field change
+    try:
+        from .controllers.pipeline import run_pipeline_automations
+        run_pipeline_automations(
+            user.id,
+            'custom_field_changed',
+            field_name=field_name,
+            field_value=field_value.strip()
+        )
+    except Exception as e:
+        print(f"[CustomField] Pipeline automation error: {e}")
+    
     return f"Success: {action} custom field '{field_name}' to '{field_value}'"
 
 
