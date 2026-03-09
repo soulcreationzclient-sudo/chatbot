@@ -258,14 +258,16 @@ def execute_tool(tool_name, arguments, admin):
             field_value = arguments.get("field_value", "")
             return apply_custom_field_value(field_name, field_value, admin)
         
-        # Find the tool config from ExternalAPI
-        tool_config = ExternalAPI.objects.filter(admin=admin, name=tool_name).first()
+        # Find the tool config from ExternalAPI - check org first, then admin
+        tool_config = None
+        if _current_org:
+            tool_config = ExternalAPI.objects.filter(organization=_current_org, name=tool_name).first()
+        if not tool_config and admin:
+            tool_config = ExternalAPI.objects.filter(admin=admin, name=tool_name).first()
         if not tool_config:
             return f"Error: Tool '{tool_name}' not configured."
 
         # Prepare URL and Payload with variable substitution
-        # We use simple string replacement for {{variable}} style placeholders
-        
         target_url = tool_config.url
         target_payload = tool_config.payload or {}
         target_headers = tool_config.headers or {}
@@ -275,8 +277,7 @@ def execute_tool(tool_name, arguments, admin):
             placeholder = "{{" + key + "}}"
             target_url = target_url.replace(placeholder, str(value))
 
-        # Replace in Payload (recursively if needed, but let's stick to simple string dump for now)
-        # Convert payload to string, replace, then parse back to JSON could be unsafe but easiest for flexible schemas
+        # Replace in Payload
         payload_str = json.dumps(target_payload)
         for key, value in arguments.items():
             placeholder = "{{" + key + "}}"
@@ -288,11 +289,30 @@ def execute_tool(tool_name, arguments, admin):
         method = tool_config.method.upper()
         
         if method == 'GET':
-            response = requests.get(target_url, headers=target_headers, params=final_payload)
+            response = requests.get(target_url, headers=target_headers, params=final_payload, timeout=30)
         elif method == 'POST':
-            response = requests.post(target_url, headers=target_headers, json=final_payload)
+            if tool_config.body_type == 'form':
+                response = requests.post(target_url, headers=target_headers, data=final_payload, timeout=30)
+            else:
+                response = requests.post(target_url, headers=target_headers, json=final_payload, timeout=30)
+        elif method == 'PUT':
+            response = requests.put(target_url, headers=target_headers, json=final_payload, timeout=30)
+        elif method == 'PATCH':
+            response = requests.patch(target_url, headers=target_headers, json=final_payload, timeout=30)
+        elif method == 'DELETE':
+            response = requests.delete(target_url, headers=target_headers, timeout=30)
         else:
             return f"Error: Unsupported method {method}"
+
+        # Process response mapping - save fields to custom fields
+        response_data = None
+        try:
+            response_data = response.json()
+        except:
+            pass
+        
+        if response_data and tool_config.response_mapping:
+            _process_response_mapping(tool_config.response_mapping, response_data, admin)
 
         # Return results
         try:
@@ -302,4 +322,39 @@ def execute_tool(tool_name, arguments, admin):
 
     except Exception as e:
         return f"Error executing tool {tool_name}: {str(e)}"
+
+
+def _process_response_mapping(mappings, response_data, admin):
+    """
+    Process response mapping: extract fields from API response and save to custom fields.
+    
+    Args:
+        mappings: List of {"jsonpath": "field.path", "custom_field": "field_name"} dicts
+        response_data: The API response data (dict or list)
+        admin: Admin instance
+    """
+    for mapping in mappings:
+        jsonpath = mapping.get('jsonpath', '').strip()
+        field_name = mapping.get('custom_field', '').strip()
+        
+        if not jsonpath or not field_name:
+            continue
+        
+        # Simple dot-path traversal (e.g., "data.balance" or "result.name")
+        try:
+            value = response_data
+            for key in jsonpath.split('.'):
+                if isinstance(value, dict):
+                    value = value.get(key)
+                elif isinstance(value, list) and key.isdigit():
+                    value = value[int(key)]
+                else:
+                    value = None
+                    break
+            
+            if value is not None:
+                apply_custom_field_value(field_name, str(value), admin)
+                print(f"[ResponseMapping] Saved '{jsonpath}' → '{field_name}' = '{value}'")
+        except Exception as e:
+            print(f"[ResponseMapping] Error mapping '{jsonpath}' → '{field_name}': {e}")
 

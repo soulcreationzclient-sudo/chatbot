@@ -60,6 +60,15 @@ def parse_action_tags(text):
             'name': match.group(1).strip(),
             'full_tag': match.group(0)
         })
+    
+    # 4. Calendly Link: {{calendly:name}}
+    calendly_matches = re.finditer(r'\{\{calendly:([a-zA-Z0-9_\-\s]+)\}\}', text)
+    for match in calendly_matches:
+        actions.append({
+            'type': 'calendly_link',
+            'name': match.group(1).strip(),
+            'full_tag': match.group(0)
+        })
         
     return actions
 
@@ -107,8 +116,27 @@ def process_response_actions(text, admin, phone, organization=None):
         action_type = action['type']
         name = action['name']
         
-        # Remove tag from text
-        replacement_text = replacement_text.replace(tag, "").strip()
+        # For calendly links, replace tag with URL inline
+        # For other tags, remove the tag from text
+        if action_type == 'calendly_link':
+            # Look up the CalendlyLink record
+            from .models import CalendlyLink
+            link = None
+            if organization:
+                link = CalendlyLink.objects.filter(organization=organization, name__iexact=name).first()
+            if not link and admin:
+                link = CalendlyLink.objects.filter(admin=admin, name__iexact=name).first()
+            
+            if link:
+                replacement_text = replacement_text.replace(tag, link.url)
+                outcome = f"Calendly link '{name}' inserted: {link.url}"
+            else:
+                replacement_text = replacement_text.replace(tag, "").strip()
+                outcome = f"Warning: Calendly link '{name}' not found"
+                print(f"[ActionTag] {outcome}")
+        else:
+            # Remove tag from text
+            replacement_text = replacement_text.replace(tag, "").strip()
         
         outcome = ""
         
@@ -121,47 +149,28 @@ def process_response_actions(text, admin, phone, organization=None):
                 
             elif action_type == 'api_call':
                 # Execute API
-                # Pass phone/name as context args if needed by substitution
-                # logic.execute_tool uses `arguments` to substitute properties
-                # We'll provide standard context variables
                 context_args = {
                     "phone": phone,
                     "phone_no": phone
-                    # "name": user.name # We'd need to fetch user object to get name, logic.py does that internally
                 }
                 
                 api_response = logic.execute_tool(name, context_args, admin)
-                
-                # For API calls, we might want to return the result text to the user?
-                # The user request said: "so whenever some one wants to ... external api ... they just mention this type"
-                # It usually implies the bot should 'see' the result or the user should see it.
-                # If the bot outputs {{api:chk_bal}}, it likely expects the system to fetch balance.
-                # If we just suppress the tag, the user sees nothing.
-                # We should probably append the API result to the message or send it as a follow-up.
-                # Let's append meaningful text results.
                 
                 outcome = f"API '{name}' executed."
                 
                 # Check if response looks like JSON or plain text
                 try:
                     json_res = json.loads(api_response)
-                    # If it's a simple dict/list, dump it. If complex, maybe just success?
-                    # For now, let's treat the api response as text to show the user.
-                    # Or maybe the prompt was "Check balance {{api:bal}}". 
-                    # If we remove tag, it becomes "Check balance ". 
-                    # Then we append "Balance is $10".
-                    
-                    # If the API reponse is a JSON string, we might want to format it?
-                    # Let's just store the string raw for now.
                     if isinstance(json_res, dict) and 'text' in json_res:
-                         # Common pattern: API returns {"text": "..."}
                          result['api_responses'].append(json_res['text'])
                     else:
                          result['api_responses'].append(str(json_res))
                          
                 except ValueError:
-                    # Not JSON, plain text
                     result['api_responses'].append(api_response)
+            
+            elif action_type == 'calendly_link':
+                pass  # Already handled above
                     
         except Exception as e:
             outcome = f"Error processing {tag}: {str(e)}"

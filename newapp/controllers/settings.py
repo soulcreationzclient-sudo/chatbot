@@ -1,7 +1,9 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render,redirect
 from django.views.decorators.csrf import csrf_exempt
 from ..models import Admin
+import json
+import requests
 
 class Settingcontroller :
     def dashboard(request):
@@ -74,20 +76,26 @@ class Settingcontroller :
         })
     
     def external_apis(request):
-        from ..models import ExternalAPI
+        from ..models import ExternalAPI, CustomField, Organization
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         apis = []
+        custom_fields = []
         
         if org_id:
             # Organization user - filter by organization
             apis = ExternalAPI.objects.filter(organization_id=org_id)
+            custom_fields = CustomField.objects.filter(organization_id=org_id).order_by('name')
         elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 apis = ExternalAPI.objects.filter(admin=admin)
+                custom_fields = CustomField.objects.filter(admin=admin).order_by('name')
         
-        return render(request, 'set/external_apis.html', {'apis': apis})
+        return render(request, 'set/external_apis.html', {
+            'apis': apis,
+            'custom_fields': custom_fields,
+        })
     
     @staticmethod
     def external_api_detail(request, api_id):
@@ -95,14 +103,27 @@ class Settingcontroller :
         from ..models import ExternalAPI
         
         admin_id = request.session.get('admin_id')
-        if not admin_id:
+        org_id = request.session.get('organization_id')
+        admin = None
+        org = None
+        
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
+        
+        if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
         
-        admin = Admin.objects.filter(id=admin_id).first()
-        if not admin:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
-        
-        api = ExternalAPI.objects.filter(id=api_id, admin=admin).first()
+        if org:
+            api = ExternalAPI.objects.filter(id=api_id, organization_id=org_id).first()
+        elif admin:
+            api = ExternalAPI.objects.filter(id=api_id, admin=admin).first()
+        else:
+            api = None
         if not api:
             return JsonResponse({'error': 'API not found'}, status=404)
         
@@ -128,17 +149,26 @@ class Settingcontroller :
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
+        admin = None
+        org = None
         
-        admin = Admin.objects.filter(id=admin_id).first()
-        if not admin:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
+        
+        if not admin and not org:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
         
         try:
             data = json.loads(request.body)
             api = ExternalAPI.objects.create(
                 admin=admin,
+                organization_id=org_id if org_id else None,
                 name=data.get('name', ''),
                 description=data.get('description', ''),
                 url=data.get('url', ''),
@@ -162,14 +192,27 @@ class Settingcontroller :
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
         admin_id = request.session.get('admin_id')
-        if not admin_id:
+        org_id = request.session.get('organization_id')
+        admin = None
+        org = None
+        
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
+        
+        if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
         
-        admin = Admin.objects.filter(id=admin_id).first()
-        if not admin:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
-        
-        api = ExternalAPI.objects.filter(id=api_id, admin=admin).first()
+        if org:
+            api = ExternalAPI.objects.filter(id=api_id, organization_id=org_id).first()
+        elif admin:
+            api = ExternalAPI.objects.filter(id=api_id, admin=admin).first()
+        else:
+            api = None
         if not api:
             return JsonResponse({'error': 'API not found'}, status=404)
         
@@ -197,14 +240,27 @@ class Settingcontroller :
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
         admin_id = request.session.get('admin_id')
-        if not admin_id:
+        org_id = request.session.get('organization_id')
+        admin = None
+        org = None
+        
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
+        
+        if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
         
-        admin = Admin.objects.filter(id=admin_id).first()
-        if not admin:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
-        
-        api = ExternalAPI.objects.filter(id=api_id, admin=admin).first()
+        if org:
+            api = ExternalAPI.objects.filter(id=api_id, organization_id=org_id).first()
+        elif admin:
+            api = ExternalAPI.objects.filter(id=api_id, admin=admin).first()
+        else:
+            api = None
         if not api:
             return JsonResponse({'error': 'API not found'}, status=404)
         
@@ -222,14 +278,27 @@ class Settingcontroller :
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         
         admin_id = request.session.get('admin_id')
-        if not admin_id:
+        org_id = request.session.get('organization_id')
+        admin = None
+        org = None
+        
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            from ..models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
+        
+        if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
         
-        admin = Admin.objects.filter(id=admin_id).first()
-        if not admin:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
-        
-        api = ExternalAPI.objects.filter(id=api_id, admin=admin).first()
+        if org:
+            api = ExternalAPI.objects.filter(id=api_id, organization_id=org_id).first()
+        elif admin:
+            api = ExternalAPI.objects.filter(id=api_id, admin=admin).first()
+        else:
+            api = None
         if not api:
             return JsonResponse({'error': 'API not found'}, status=404)
         
@@ -1107,3 +1176,123 @@ class Settingcontroller :
             return JsonResponse({'success': True, 'custom_fields': fields_data})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
+
+    # ==================== CALENDLY LINKS ====================
+
+    @staticmethod
+    def calendly_links(request):
+        from ..models import CalendlyLink, Organization
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        links = []
+        
+        if org_id:
+            links = CalendlyLink.objects.filter(organization_id=org_id).order_by('-created_at')
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                links = CalendlyLink.objects.filter(admin=admin).order_by('-created_at')
+        
+        return render(request, 'set/calendly_links.html', {'links': links})
+
+    @staticmethod
+    @csrf_exempt
+    def calendly_link_create(request):
+        from ..models import CalendlyLink, Organization
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        admin = None
+        
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
+        
+        if not admin and not org_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        try:
+            data = json.loads(request.body)
+            name = data.get('name', '').strip()
+            description = data.get('description', '').strip()
+            url = data.get('url', '').strip()
+            
+            if not name or not url:
+                return JsonResponse({'error': 'Name and URL are required'}, status=400)
+            
+            link = CalendlyLink.objects.create(
+                admin=admin,
+                organization_id=org_id if org_id else None,
+                name=name,
+                description=description,
+                url=url,
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'id': link.id,
+                'msg': f'Calendly link "{name}" created!'
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    @staticmethod
+    @csrf_exempt
+    def calendly_link_update(request, link_id):
+        from ..models import CalendlyLink, Organization
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        link = None
+        if org_id:
+            link = CalendlyLink.objects.filter(id=link_id, organization_id=org_id).first()
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                link = CalendlyLink.objects.filter(id=link_id, admin=admin).first()
+        
+        if not link:
+            return JsonResponse({'error': 'Link not found'}, status=404)
+        
+        try:
+            data = json.loads(request.body)
+            link.name = data.get('name', link.name).strip()
+            link.description = data.get('description', link.description).strip()
+            link.url = data.get('url', link.url).strip()
+            link.save()
+            
+            return JsonResponse({'success': True, 'msg': 'Link updated!'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    @staticmethod
+    @csrf_exempt
+    def calendly_link_delete(request, link_id):
+        from ..models import CalendlyLink, Organization
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        link = None
+        if org_id:
+            link = CalendlyLink.objects.filter(id=link_id, organization_id=org_id).first()
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                link = CalendlyLink.objects.filter(id=link_id, admin=admin).first()
+        
+        if not link:
+            return JsonResponse({'error': 'Link not found'}, status=404)
+        
+        link.delete()
+        return JsonResponse({'success': True, 'msg': 'Link deleted!'})

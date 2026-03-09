@@ -223,6 +223,12 @@ urlpatterns = [
     path('disconnect_calendly/', calendly_integration_views.disconnect_calendly, name='disconnect_calendly'),
     path('update_followup_settings/', calendly_integration_views.update_followup_settings, name='update_followup_settings'),
     
+    # Calendly Booking Links (Tag-based)
+    path('setting/calendly_links', Settingcontroller.calendly_links, name='calendly_links_view'),
+    path('api/calendly-link/create/', Settingcontroller.calendly_link_create, name='calendly_link_create'),
+    path('api/calendly-link/<int:link_id>/update/', Settingcontroller.calendly_link_update, name='calendly_link_update'),
+    path('api/calendly-link/<int:link_id>/delete/', Settingcontroller.calendly_link_delete, name='calendly_link_delete'),
+    
     # ==================== BROADCAST SYSTEM ====================
     path('api/broadcast/templates/sync/', broadcast_views.BroadcastController.sync_templates, name='broadcast_sync_templates'),
     path('api/broadcast/templates/', broadcast_views.BroadcastController.list_templates, name='broadcast_list_templates'),

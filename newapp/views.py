@@ -1486,93 +1486,90 @@ def get_message_chatgpt(request):
             who='human'
         )
 
-        # ==================== CALENDLY INTEGRATION ====================
-        # Check for booking/cancellation intent BEFORE calling OpenAI
-        user_text_lower = user_text.lower() if user_text else ""
-        
-        # Booking intent keywords
-        booking_keywords = ['book', 'schedule', 'appointment', 'meeting', 'book appointment', 
-                           'schedule a call', 'set up a meeting', 'book a call', 'schedule meeting']
-        
-        # Cancellation intent keywords  
-        cancel_keywords = ['cancel', 'cancel appointment', 'cancel meeting', 'remove booking',
-                          'delete appointment', 'cancel my appointment']
-        
-        # Check if user wants to book
-        is_booking_intent = any(kw in user_text_lower for kw in booking_keywords)
-        is_cancel_intent = any(kw in user_text_lower for kw in cancel_keywords)
-        
-        if is_booking_intent and not is_cancel_intent:
-            # User wants to book - return Calendly booking link
-            try:
-                from .calendly_service import CalendlyService
-                from .calendly_views import CALENDLY_ACCESS_TOKEN
-                
-                service = CalendlyService(access_token=CALENDLY_ACCESS_TOKEN)
-                event_types = service.get_event_types()
-                
-                if event_types:
-                    event_type = event_types[0]  # Get first event type
-                    booking_url = event_type.get('scheduling_url')
-                    event_name = event_type.get('name')
-                    duration = event_type.get('duration')
-                    
-                    reply = f"Great! I can help you book an appointment. 📅\n\n"
-                    reply += f"*{event_name}* ({duration} minutes)\n\n"
-                    reply += f"👉 Click here to book: {booking_url}\n\n"
-                    reply += "Choose a time that works best for you!"
-                else:
-                    reply = "I'd love to help you book an appointment, but no appointment slots are currently available. Please try again later or contact us directly."
-                    
-            except Exception as e:
-                print(f"Calendly booking error: {e}")
-                reply = "I'd love to help you book an appointment! Please visit our scheduling page or contact us directly to book."
-        
-        elif is_cancel_intent:
-            # User wants to cancel - provide cancellation info
-            try:
-                from .calendly_service import CalendlyService
-                from .calendly_views import CALENDLY_ACCESS_TOKEN
-                
-                service = CalendlyService(access_token=CALENDLY_ACCESS_TOKEN)
-                events = service.get_scheduled_events(status='active')
-                
-                if events:
-                    reply = "To cancel your appointment, please use the cancellation link in your confirmation email, or contact us directly with your appointment details."
-                else:
-                    reply = "I don't see any upcoming appointments. If you need to cancel an appointment, please contact us with your booking details."
-                    
-            except Exception as e:
-                print(f"Calendly cancel error: {e}")
-                reply = "To cancel your appointment, please use the cancellation link in your confirmation email, or contact us directly."
-        
+        # Get system prompt for this org/admin
+        if org:
+            prompt_obj = ChatGPTPrompt.objects.filter(organization=org).order_by('-updated_at').first()
+        elif admin:
+            prompt_obj = ChatGPTPrompt.objects.filter(admin=admin).order_by('-updated_at').first()
         else:
-            # No booking/cancel intent - use regular ChatGPT response
-            if org:
-                prompt_obj = ChatGPTPrompt.objects.filter(organization=org).order_by('-updated_at').first()
-            elif admin:
-                prompt_obj = ChatGPTPrompt.objects.filter(admin=admin).order_by('-updated_at').first()
-            else:
-                prompt_obj = None
-            common_prompt = prompt_obj.prompt_text if prompt_obj else ""
-            
-            # Add Calendly context to the system prompt
-            calendly_context = """
-You are also able to help users book and cancel appointments. 
-- If a user wants to book an appointment, tell them you can help and ask them to say "book appointment".
-- If a user wants to cancel, tell them to say "cancel appointment" or use the cancellation link in their email.
-"""
-            
-            chatgpt_input = f"{common_prompt}\n{calendly_context}\n\nUser: {user_text}" if common_prompt else f"{calendly_context}\n\nUser: {user_text}"
+            prompt_obj = None
+        system_prompt = prompt_obj.prompt_text if prompt_obj else "You are a helpful assistant."
 
-            # Call OpenAI API
-            openai.api_key = openai_key
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[{"role": "user", "content": chatgpt_input}],
-            )
-            reply = response.choices[0].message.content
-        # ==================== END CALENDLY INTEGRATION ====================
+        # Load External Tools for OpenAI function calling
+        from .models import ExternalAPI
+        from .logic import execute_tool, set_current_context
+        from openai import OpenAI
+        
+        client = OpenAI(api_key=openai_key)
+        set_current_context(phone, admin, org)
+        
+        # Get tools for admin or organization
+        db_tools = []
+        if org:
+            db_tools = ExternalAPI.objects.filter(organization=org)
+        elif admin:
+            db_tools = ExternalAPI.objects.filter(admin=admin)
+
+        openai_tools = []
+        if db_tools.exists():
+            for tool in db_tools:
+                openai_tools.append({
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "param_name": {"type": "string", "description": "Parameter value"} 
+                            },
+                            "additionalProperties": True
+                        }
+                    }
+                })
+
+        # Call OpenAI API with tools
+        api_params = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_text}
+            ],
+        }
+        if openai_tools:
+            api_params["tools"] = openai_tools
+            api_params["tool_choice"] = "auto"
+
+        response = client.chat.completions.create(**api_params)
+        response_message = response.choices[0].message
+
+        # Handle Tool Calls
+        if response_message.tool_calls:
+            api_params["messages"].append(response_message)
+            
+            for tool_call in response_message.tool_calls:
+                function_name = tool_call.function.name
+                arguments = json.loads(tool_call.function.arguments)
+                
+                tool_result = execute_tool(function_name, arguments, admin)
+                
+                api_params["messages"].append({
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "name": function_name,
+                    "content": tool_result,
+                })
+            
+            second_response = client.chat.completions.create(**api_params)
+            reply = second_response.choices[0].message.content
+        else:
+            reply = response_message.content
+
+        # Process action tags in the AI response: {{calendly:name}}, {{tag:add:x}}, {{api:name}}
+        from .action_tag_processor import process_response_actions
+        tag_result = process_response_actions(reply, admin, phone, organization=org)
+        reply = tag_result['final_text']
+        # ==================== END TEXT HANDLING ====================
 
         # Save reply
         Message.objects.create(

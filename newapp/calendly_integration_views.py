@@ -20,12 +20,19 @@ def connect_calendly(request):
     """
     try:
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
+        admin = None
         
-        admin = Admin.objects.filter(id=admin_id).first()
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            from .models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
+        
         if not admin:
-            return JsonResponse({'success': False, 'error': 'Admin not found'}, status=404)
+            return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
         
         data = json.loads(request.body)
         calendly_token = data.get('calendly_token', '').strip()
@@ -75,12 +82,19 @@ def disconnect_calendly(request):
     """
     try:
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
+        admin = None
         
-        admin = Admin.objects.filter(id=admin_id).first()
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            from .models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
+        
         if not admin:
-            return JsonResponse({'success': False, 'error': 'Admin not found'}, status=404)
+            return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
         
         admin.calendly_token = None
         admin.calendly_scheduling_url = None
@@ -103,12 +117,19 @@ def update_followup_settings(request):
     """
     try:
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
+        admin = None
         
-        admin = Admin.objects.filter(id=admin_id).first()
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            from .models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
+        
         if not admin:
-            return JsonResponse({'success': False, 'error': 'Admin not found'}, status=404)
+            return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
         
         data = json.loads(request.body)
         

@@ -420,6 +420,25 @@ class ExternalAPI(models.Model):
         db_table = 'external_apis'
 
 
+class CalendlyLink(models.Model):
+    """
+    Named Calendly booking links that can be referenced in AI prompts
+    using the {{calendly:link_name}} tag syntax.
+    """
+    id = models.AutoField(primary_key=True)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True, related_name='calendly_links')
+    name = models.CharField(max_length=100, help_text="Tag name used in prompt (e.g., quick_call)")
+    description = models.TextField(blank=True, help_text="Description (e.g., 30 minute consultation)")
+    url = models.URLField(max_length=500, help_text="Calendly scheduling URL")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} → {self.url}"
+
+    class Meta:
+        db_table = 'calendly_links'
+
 class ImageAsset(models.Model):
     """
     Store images with custom names that can be referenced in AI prompts.

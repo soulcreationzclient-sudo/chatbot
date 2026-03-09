@@ -630,7 +630,12 @@
                     <div id="mappingContainer">
                         <div class="mapping-row">
                             <input type="text" placeholder="JSONPath (e.g., check_in_date)" class="mapping-jsonpath">
-                            <input type="text" placeholder="Save to custom field" class="mapping-field">
+                            <select class="mapping-field">
+                                <option value="">Select custom field</option>
+                                {% for cf in custom_fields %}
+                                <option value="{{ cf.name }}">{{ cf.name }}</option>
+                                {% endfor %}
+                            </select>
                             <button class="kv-remove" onclick="removeRow(this)">&times;</button>
                         </div>
                     </div>
@@ -654,6 +659,15 @@
     </div>
 
     <script>
+        // Custom fields for response mapping dropdown
+        const customFieldsList = [
+            {% for cf in custom_fields %}'{{ cf.name|escapejs }}',{% endfor %}
+        ];
+        let customFieldOptions = '<option value="">Select custom field</option>';
+        customFieldsList.forEach(cf => {
+            customFieldOptions += `<option value="${cf}">${cf}</option>`;
+        });
+
         // Tab switching
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', function () {
@@ -688,7 +702,10 @@
             document.getElementById('mappingContainer').innerHTML = `
                 <div class="mapping-row">
                     <input type="text" placeholder="JSONPath (e.g., check_in_date)" class="mapping-jsonpath">
-                    <input type="text" placeholder="Save to custom field" class="mapping-field">
+                    <select class="mapping-field">
+                        <option value="">Select custom field</option>
+                        ${customFieldOptions}
+                    </select>
                     <button class="kv-remove" onclick="removeRow(this)">&times;</button>
                 </div>
             `;
@@ -758,10 +775,20 @@
                         addMappingRow();
                     } else {
                         mappings.forEach(m => {
+                            const selectedVal = escapeHtml(m.custom_field || '');
+                            let optionsHtml = '<option value="">Select custom field</option>';
+                            customFieldsList.forEach(cf => {
+                                const sel = (cf === selectedVal) ? ' selected' : '';
+                                optionsHtml += `<option value="${cf}"${sel}>${cf}</option>`;
+                            });
+                            // If selectedVal is not in list, add it as extra option
+                            if (selectedVal && !customFieldsList.includes(selectedVal)) {
+                                optionsHtml += `<option value="${selectedVal}" selected>${selectedVal}</option>`;
+                            }
                             mappingContainer.innerHTML += `
                                 <div class="mapping-row">
                                     <input type="text" placeholder="JSONPath" class="mapping-jsonpath" value="${escapeHtml(m.jsonpath || '')}">
-                                    <input type="text" placeholder="Custom field" class="mapping-field" value="${escapeHtml(m.custom_field || '')}">
+                                    <select class="mapping-field">${optionsHtml}</select>
                                     <button class="kv-remove" onclick="removeRow(this)">&times;</button>
                                 </div>
                             `;
@@ -810,7 +837,10 @@
             container.innerHTML += `
                 <div class="mapping-row">
                     <input type="text" placeholder="JSONPath (e.g., check_in_date)" class="mapping-jsonpath">
-                    <input type="text" placeholder="Save to custom field" class="mapping-field">
+                    <select class="mapping-field">
+                        <option value="">Select custom field</option>
+                        ${customFieldOptions}
+                    </select>
                     <button class="kv-remove" onclick="removeRow(this)">&times;</button>
                 </div>
             `;
