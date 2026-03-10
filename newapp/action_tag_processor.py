@@ -256,11 +256,11 @@ def process_response_actions(text, admin, phone, organization=None):
                     json_res = json.loads(api_response)
                     if isinstance(json_res, dict) and 'text' in json_res:
                          result['api_responses'].append(json_res['text'])
-                    else:
-                         result['api_responses'].append(str(json_res))
-                         
+                    # else: skip raw JSON — don't send ugly dumps to user
                 except ValueError:
-                    result['api_responses'].append(api_response)
+                    # Plain text response — only send if non-empty
+                    if api_response and api_response.strip():
+                        result['api_responses'].append(api_response)
             
             elif action_type == 'calendly_link':
                 pass  # Already handled above
