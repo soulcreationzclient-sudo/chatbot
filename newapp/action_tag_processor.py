@@ -73,6 +73,53 @@ def parse_action_tags(text):
     return actions
 
 
+def _replace_raw_calendly_urls(text, phone, admin, organization):
+    """
+    Safety filter: catch any raw calendly.com URLs the AI generated
+    and replace them with our /book/<token>/ redirect URLs.
+    """
+    import re as _re
+    import uuid
+    calendly_pattern = _re.compile(r'https?://calendly\.com/[\w\-]+/[\w\-]+/?')
+    matches = calendly_pattern.findall(text)
+    if not matches:
+        return text
+    
+    for raw_url in matches:
+        try:
+            from .models import CalendlyLink, CalendlyBookingTracker, User as UserModel
+            # Try to find a matching CalendlyLink by URL
+            link = None
+            if organization:
+                link = CalendlyLink.objects.filter(organization=organization).first()
+            if not link and admin:
+                link = CalendlyLink.objects.filter(admin=admin).first()
+            
+            if link:
+                booking_token = uuid.uuid4().hex[:16]
+                redirect_url = f"https://chatbotad.io/book/{booking_token}/"
+                text = text.replace(raw_url, redirect_url)
+                
+                # Track the booking
+                user_obj = UserModel.objects.filter(phone_no=phone).first()
+                if user_obj:
+                    CalendlyBookingTracker.objects.create(
+                        user=user_obj,
+                        calendly_link=link,
+                        booking_token=booking_token,
+                        status='link_sent'
+                    )
+                print(f"[ActionTag] SAFETY: Replaced raw Calendly URL with redirect: {redirect_url}")
+            else:
+                # No CalendlyLink found, just remove the raw URL
+                text = text.replace(raw_url, '[booking link unavailable]')
+                print(f"[ActionTag] SAFETY: Removed raw Calendly URL (no link configured)")
+        except Exception as e:
+            print(f"[ActionTag] SAFETY: Error replacing raw URL: {e}")
+    
+    return text
+
+
 def process_response_actions(text, admin, phone, organization=None):
     """
     Process an AI response, extracting and executing action tags.
@@ -102,6 +149,8 @@ def process_response_actions(text, admin, phone, organization=None):
     actions = parse_action_tags(text)
     
     if not actions:
+        # Even without tags, check for raw Calendly URLs the AI might have generated
+        result['final_text'] = _replace_raw_calendly_urls(text, phone, admin, organization)
         return result
         
     print(f"[ActionTag] Found {len(actions)} action(s) in response")
@@ -215,6 +264,8 @@ def process_response_actions(text, admin, phone, organization=None):
         
     # Clean up whitespace
     replacement_text = re.sub(r'\n\s*\n', '\n\n', replacement_text).strip()
+    # Safety filter: catch any remaining raw calendly.com URLs
+    replacement_text = _replace_raw_calendly_urls(replacement_text, phone, admin, organization)
     result['final_text'] = replacement_text
     
     return result
