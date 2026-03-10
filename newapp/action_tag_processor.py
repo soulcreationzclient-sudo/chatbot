@@ -256,11 +256,18 @@ def process_response_actions(text, admin, phone, organization=None):
                     json_res = json.loads(api_response)
                     if isinstance(json_res, dict) and 'text' in json_res:
                          result['api_responses'].append(json_res['text'])
+                    elif isinstance(json_res, dict) and not json_res:
+                         # Empty dict — no data found
+                         result['api_responses'].append("Sorry, no data found for that request.")
+                    elif isinstance(json_res, dict) and 'error' in json_res:
+                         result['api_responses'].append(f"Sorry, an error occurred: {json_res['error']}")
                     # else: skip raw JSON — don't send ugly dumps to user
                 except ValueError:
                     # Plain text response — only send if non-empty
                     if api_response and api_response.strip():
                         result['api_responses'].append(api_response)
+                    else:
+                        result['api_responses'].append("Sorry, no data found for that request.")
             
             elif action_type == 'calendly_link':
                 pass  # Already handled above
