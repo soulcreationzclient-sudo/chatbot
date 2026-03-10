@@ -393,7 +393,12 @@
 
                 <div class="form-group">
                     <label>Update Custom Field</label>
-                    <input type="text" id="linkCustomField" placeholder="e.g., appointment_status">
+                    <select id="linkCustomField" style="width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; background:#fff;">
+                        <option value="">-- None --</option>
+                        {% for field in custom_fields %}
+                        <option value="{{ field.name }}">{{ field.name }} ({{ field.field_type }})</option>
+                        {% endfor %}
+                    </select>
                     <div class="hint">When someone books via this link, this custom field will be updated to "Booked" for that contact.</div>
                 </div>
 

@@ -1210,12 +1210,13 @@ class Settingcontroller :
 
     @staticmethod
     def calendly_links(request):
-        from ..models import CalendlyLink, Organization
+        from ..models import CalendlyLink, CustomField, Organization
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         links = []
         calendly_connected = False
         calendly_url = ''
+        custom_fields = []
         
         if org_id:
             links = CalendlyLink.objects.filter(organization_id=org_id).order_by('-created_at')
@@ -1223,17 +1224,20 @@ class Settingcontroller :
             if org:
                 calendly_connected = bool(getattr(org, 'calendly_token', ''))
                 calendly_url = getattr(org, 'calendly_scheduling_url', '') or ''
+            custom_fields = CustomField.objects.filter(organization_id=org_id, is_active=True).order_by('name')
         elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 links = CalendlyLink.objects.filter(admin=admin).order_by('-created_at')
                 calendly_connected = bool(getattr(admin, 'calendly_token', ''))
                 calendly_url = getattr(admin, 'calendly_scheduling_url', '') or ''
+            custom_fields = CustomField.objects.filter(admin_id=admin_id, is_active=True).order_by('name')
         
         return render(request, 'set/calendly_links.html', {
             'links': links,
             'calendly_connected': calendly_connected,
             'calendly_url': calendly_url,
+            'custom_fields': custom_fields,
         })
 
     @staticmethod
