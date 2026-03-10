@@ -455,7 +455,7 @@ def calendly_webhook(request):
             
             # Try to match booking to a CalendlyLink and process custom field + message
             try:
-                from newapp.models import Admin, Organization, CalendlyLink, User, CustomField, CustomFieldValue
+                from newapp.models import Admin, Organization, CalendlyLink, User, CustomField, CustomFieldValue, CalendlyBookingTracker
                 import requests
                 
                 # Find matching CalendlyLink by URL
@@ -489,12 +489,60 @@ def calendly_webhook(request):
                 if matched_link:
                     print(f"[Calendly Webhook] Matched CalendlyLink: {matched_link.name}")
                     
-                    # Find the user by email or name
+                    # ==================== IMPROVED USER MATCHING ====================
+                    # Priority 1: Use CalendlyBookingTracker (most reliable - tracks who received the link)
                     user_obj = None
-                    if invitee_email and invitee_email != 'Unknown':
-                        user_obj = User.objects.filter(email=invitee_email).first()
+                    try:
+                        tracker = CalendlyBookingTracker.objects.filter(
+                            calendly_link=matched_link,
+                            status='link_sent'
+                        ).order_by('-created_at').first()
+                        if tracker:
+                            user_obj = tracker.user
+                            tracker.status = 'booked'
+                            tracker.save(update_fields=['status', 'updated_at'])
+                            print(f"[Calendly Webhook] Matched user via tracker: {user_obj.phone_no}")
+                    except Exception as tracker_err:
+                        print(f"[Calendly Webhook] Tracker lookup error: {tracker_err}")
+                    
+                    # Priority 2: Try phone number from Calendly questions/answers
+                    if not user_obj:
+                        try:
+                            questions = payload.get('questions_and_answers', [])
+                            for qa in questions:
+                                answer = qa.get('answer', '')
+                                # Check if answer looks like a phone number
+                                clean_phone = answer.replace('+', '').replace(' ', '').replace('-', '')
+                                if clean_phone.isdigit() and len(clean_phone) >= 10:
+                                    user_obj = User.objects.filter(phone_no__endswith=clean_phone[-10:]).first()
+                                    if user_obj:
+                                        print(f"[Calendly Webhook] Matched user via Q&A phone: {user_obj.phone_no}")
+                                        break
+                        except Exception as qa_err:
+                            print(f"[Calendly Webhook] Q&A phone lookup error: {qa_err}")
+                    
+                    # Priority 3: Try matching by email in CustomFieldValues
+                    if not user_obj and invitee_email and invitee_email != 'Unknown':
+                        try:
+                            cfv = CustomFieldValue.objects.filter(
+                                value__iexact=invitee_email,
+                                custom_field__name__icontains='email'
+                            ).first()
+                            if cfv:
+                                user_obj = cfv.user
+                                print(f"[Calendly Webhook] Matched user via custom field email: {user_obj.phone_no}")
+                        except Exception as cf_email_err:
+                            print(f"[Calendly Webhook] Custom field email lookup error: {cf_email_err}")
+                    
+                    # Priority 4: Fallback to name matching (least reliable)
                     if not user_obj and invitee_name and invitee_name != 'Unknown':
-                        user_obj = User.objects.filter(name__icontains=invitee_name).first()
+                        user_obj = User.objects.filter(name__iexact=invitee_name).first()
+                        if user_obj:
+                            print(f"[Calendly Webhook] Matched user via name: {user_obj.phone_no}")
+                    
+                    if not user_obj:
+                        print(f"[Calendly Webhook] WARNING: Could not match booking to any user. Name={invitee_name}, Email={invitee_email}")
+                    # ==================== END USER MATCHING ====================
                     
                     # Update custom field if configured
                     if matched_link.custom_field_name and user_obj:
@@ -513,6 +561,8 @@ def calendly_webhook(request):
                                     defaults={'value': f'Booked - {event_name} on {formatted_time}'}
                                 )
                                 print(f"[Calendly Webhook] Updated custom field '{matched_link.custom_field_name}' for user {user_obj.phone_no}")
+                            else:
+                                print(f"[Calendly Webhook] Custom field '{matched_link.custom_field_name}' not found in DB")
                         except Exception as cf_err:
                             print(f"[Calendly Webhook] Custom field error: {cf_err}")
                     
@@ -552,8 +602,22 @@ def calendly_webhook(request):
                                 }
                                 r = requests.post(whatsapp_url, json=payload_wa, headers=headers_wa)
                                 print(f"[Calendly Webhook] Sent confirmation to {user_obj.phone_no}: {r.status_code}")
+                            else:
+                                print(f"[Calendly Webhook] No WhatsApp credentials found for confirmation message")
                         except Exception as msg_err:
                             print(f"[Calendly Webhook] Confirmation message error: {msg_err}")
+                    
+                    # Cancel any pending follow-ups for this user after booking
+                    if user_obj:
+                        try:
+                            from newapp.models import ScheduledFollowUp
+                            cancelled = ScheduledFollowUp.objects.filter(
+                                user=user_obj, status='pending'
+                            ).update(status='cancelled')
+                            if cancelled:
+                                print(f"[Calendly Webhook] Cancelled {cancelled} pending follow-ups for {user_obj.phone_no} (booking confirmed)")
+                        except Exception as fu_err:
+                            print(f"[Calendly Webhook] Follow-up cancel error: {fu_err}")
                 
                 # Notify admins about the booking
                 admins_notified = []

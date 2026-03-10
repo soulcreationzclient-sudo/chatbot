@@ -441,6 +441,38 @@ class CalendlyLink(models.Model):
     class Meta:
         db_table = 'calendly_links'
 
+
+class CalendlyBookingTracker(models.Model):
+    """
+    Tracks which Calendly link was sent to which WhatsApp user.
+    This allows the Calendly webhook to match a booking back to the
+    correct WhatsApp contact (since Calendly only provides email/name).
+    """
+    STATUS_CHOICES = [
+        ('link_sent', 'Link Sent'),
+        ('booked', 'Booked'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='calendly_bookings')
+    calendly_link = models.ForeignKey(CalendlyLink, on_delete=models.CASCADE, related_name='bookings')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='link_sent')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.phone_no} → {self.calendly_link.name} ({self.status})"
+
+    class Meta:
+        db_table = 'calendly_booking_tracker'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['calendly_link', 'status']),
+        ]
+
+
 class ImageAsset(models.Model):
     """
     Store images with custom names that can be referenced in AI prompts.

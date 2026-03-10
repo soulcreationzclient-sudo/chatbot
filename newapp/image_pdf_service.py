@@ -287,7 +287,8 @@ def analyze_media_message(
     admin,  # Admin model instance
     mime_type: str = None,
     openai_key: str = None,
-    whatsapp_token: str = None
+    whatsapp_token: str = None,
+    organization=None  # Organization model instance
 ) -> str:
     """
     Main function to analyze media (image or PDF) from WhatsApp.
@@ -300,13 +301,21 @@ def analyze_media_message(
         mime_type: MIME type of the document (for PDFs)
         openai_key: Optional OpenAI API key (preferred over admin's key)
         whatsapp_token: Optional WhatsApp token (preferred over admin's token)
+        organization: Optional Organization model instance
         
     Returns:
         Analysis response string
     """
-    # Get API keys - prefer passed-in keys (from org/creds), fall back to admin
-    api_key = openai_key or (getattr(admin, 'openai_api_key', None) if admin else None)
-    wa_token = whatsapp_token or (getattr(admin, 'whatsapp_token', None) if admin else None)
+    # Get API keys - prefer passed-in keys (from org/creds), fall back to org, then admin
+    api_key = openai_key
+    wa_token = whatsapp_token
+    
+    if not api_key and organization:
+        api_key = getattr(organization, 'openai_api_key', None)
+        wa_token = wa_token or getattr(organization, 'whatsapp_token', None)
+    if not api_key and admin:
+        api_key = getattr(admin, 'openai_api_key', None)
+        wa_token = wa_token or getattr(admin, 'whatsapp_token', None)
     
     if not api_key:
         return "Sorry, I cannot analyze images right now. The AI service is not configured."
@@ -372,16 +381,22 @@ def analyze_media_message(
     if not base64_images:
         return "Sorry, I couldn't extract any images to analyze."
     
-    # Get system prompt if available
+    # Get system prompt — filter by organization/admin for correct business context
     from .models import ChatGPTPrompt
-    prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
+    prompt_obj = None
+    if organization:
+        prompt_obj = ChatGPTPrompt.objects.filter(organization=organization).order_by('-updated_at').first()
+    if not prompt_obj and admin:
+        prompt_obj = ChatGPTPrompt.objects.filter(admin=admin).order_by('-updated_at').first()
+    if not prompt_obj:
+        prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
     system_prompt = prompt_obj.prompt_text if prompt_obj else ""
     
     # Add context for image analysis
     enhanced_prompt = system_prompt
     if not enhanced_prompt:
         enhanced_prompt = "You are a helpful assistant that analyzes images and documents."
-    enhanced_prompt += "\n\nWhen analyzing images or documents, be specific and detailed. If asked about specific information (like IDs, dates, amounts), extract and provide that exact information."
+    enhanced_prompt += "\n\nWhen analyzing images or documents, respond in the context of the conversation. If the image is a screenshot of a booking confirmation, appointment, or receipt, acknowledge it and extract relevant details. Be specific and detailed. If asked about specific information (like IDs, dates, amounts), extract and provide that exact information."
     
     # Analyze with Vision API
     response = analyze_images_with_vision(

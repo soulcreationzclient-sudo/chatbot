@@ -115,6 +115,7 @@ def process_response_actions(text, admin, phone, organization=None):
         tag = action['full_tag']
         action_type = action['type']
         name = action['name']
+        outcome = ""
         
         # For calendly links, replace tag with URL inline
         # For other tags, remove the tag from text
@@ -130,6 +131,34 @@ def process_response_actions(text, admin, phone, organization=None):
             if link:
                 replacement_text = replacement_text.replace(tag, link.url)
                 outcome = f"Calendly link '{name}' inserted: {link.url}"
+                
+                # Track this Calendly link send for webhook matching
+                try:
+                    from .models import CalendlyBookingTracker
+                    from .models import User as UserModel
+                    user_obj = UserModel.objects.filter(phone_no=phone).first()
+                    if user_obj:
+                        CalendlyBookingTracker.objects.update_or_create(
+                            user=user_obj,
+                            calendly_link=link,
+                            defaults={'status': 'link_sent'}
+                        )
+                        print(f"[ActionTag] Tracked Calendly link send: {phone} → {link.name}")
+                except Exception as track_err:
+                    print(f"[ActionTag] Tracking error (non-fatal): {track_err}")
+                
+                # Cancel any pending follow-ups for this user
+                try:
+                    from .models import ScheduledFollowUp, User as UserModel
+                    user_obj = UserModel.objects.filter(phone_no=phone).first()
+                    if user_obj:
+                        cancelled = ScheduledFollowUp.objects.filter(
+                            user=user_obj, status='pending'
+                        ).update(status='cancelled')
+                        if cancelled:
+                            print(f"[ActionTag] Cancelled {cancelled} pending follow-ups for {phone} (Calendly link sent)")
+                except Exception as fu_err:
+                    print(f"[ActionTag] Follow-up cancel error (non-fatal): {fu_err}")
             else:
                 replacement_text = replacement_text.replace(tag, "").strip()
                 outcome = f"Warning: Calendly link '{name}' not found"
@@ -137,8 +166,6 @@ def process_response_actions(text, admin, phone, organization=None):
         else:
             # Remove tag from text
             replacement_text = replacement_text.replace(tag, "").strip()
-        
-        outcome = ""
         
         try:
             if action_type == 'tag_add':

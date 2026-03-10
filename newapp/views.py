@@ -1393,12 +1393,12 @@ def get_message_chatgpt(request):
             
             image_info = messages_data.get('image', {})
             media_id = image_info.get('id')
-            caption = image_info.get('caption', 'What can you see in this image? Describe it in detail.')
+            caption = image_info.get('caption', 'Please analyze this image and respond based on our conversation context.')
             
             # Save incoming message
             Message.objects.create(
                 user_id=user_obj,
-                messages=f"[Image] {caption}",
+                messages=f"[Image] {caption}" if image_info.get('caption') else "[Image sent]",
                 created_at=timezone.now(),
                 who='human'
             )
@@ -1408,7 +1408,8 @@ def get_message_chatgpt(request):
                 media_id=media_id,
                 media_type='image',
                 user_question=caption,
-                admin=admin
+                admin=admin,
+                organization=org
             )
             
             # Save and send reply
@@ -1458,7 +1459,8 @@ def get_message_chatgpt(request):
                 media_type='document',
                 user_question=caption,
                 admin=admin,
-                mime_type=mime_type
+                mime_type=mime_type,
+                organization=org
             )
             
             # Save and send reply
