@@ -51,14 +51,22 @@ def parse_action_tags(text):
             'full_tag': match.group(0)
         })
         
-    # 3. API Call: {{api:name}}
-    # Matches {{api:name}} or {{api:name:args}} (args support for future, regex keeps it simple for now)
-    api_matches = re.finditer(r'\{\{api:([a-zA-Z0-9_]+)\}\}', text)
+    # 3. API Call: {{api:name}} or {{api:name:key=val,key2=val2}}
+    api_matches = re.finditer(r'\{\{api:([a-zA-Z0-9_]+)(?::([^}]+))?\}\}', text)
     for match in api_matches:
+        params = {}
+        if match.group(2):
+            # Parse key=value pairs separated by commas
+            for pair in match.group(2).split(','):
+                pair = pair.strip()
+                if '=' in pair:
+                    k, v = pair.split('=', 1)
+                    params[k.strip()] = v.strip()
         actions.append({
             'type': 'api_call',
             'name': match.group(1).strip(),
-            'full_tag': match.group(0)
+            'full_tag': match.group(0),
+            'params': params
         })
     
     # 4. Calendly Link: {{calendly:name}}
@@ -229,11 +237,15 @@ def process_response_actions(text, admin, phone, organization=None):
                 outcome = logic.remove_user_tag(name, admin, phone)
                 
             elif action_type == 'api_call':
-                # Execute API
+                # Execute API with context + any inline params
                 context_args = {
                     "phone": phone,
                     "phone_no": phone
                 }
+                # Merge inline params from {{api:name:key=val}} format
+                inline_params = action.get('params', {})
+                if inline_params:
+                    context_args.update(inline_params)
                 
                 api_response = logic.execute_tool(name, context_args, admin)
                 
