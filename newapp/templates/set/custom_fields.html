@@ -207,7 +207,12 @@
         <a href="{% url 'settings' %}">Settings</a> &gt; <b>Custom Fields</b>
     </div>
 
-    <h1 class="page-title">📋 Custom Field Management</h1>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <h1 class="page-title" style="margin-bottom:0;">📋 Custom Field Management</h1>
+        <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addModal">
+            + Add Custom Field
+        </button>
+    </div>
     <p class="page-desc">Create and manage custom fields to capture user details like name, address, phone, etc. through
         AI conversations.</p>
 
@@ -266,12 +271,7 @@
         {% endfor %}
     </div>
 
-    <!-- Add Button -->
-    <div class="mt-4">
-        <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addModal">
-            + Add Custom Field
-        </button>
-    </div>
+
 </div>
 
 <!-- Add/Edit Modal -->
