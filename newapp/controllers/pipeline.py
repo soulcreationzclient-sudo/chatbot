@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from newapp.models import (
     Pipeline, PipelineStage, Opportunity, OpportunityComment,
-    PipelineAutomation, Organization, User, Tag
+    PipelineAutomation, Organization, User, Tag, CustomField
 )
 
 
@@ -78,6 +78,13 @@ def pipeline_board(request, pipeline_id):
         pipeline=pipeline, is_active=True
     ).select_related('trigger_tag', 'target_stage')
 
+    # Custom fields for automation dropdown
+    custom_fields = CustomField.objects.none()
+    if org_id:
+        custom_fields = CustomField.objects.filter(organization_id=org_id, is_active=True)
+    elif admin_id:
+        custom_fields = CustomField.objects.filter(admin_id=admin_id, is_active=True)
+
     return render(request, 'pipeline/board.html', {
         'pipeline': pipeline,
         'stages': stage_data,
@@ -85,6 +92,7 @@ def pipeline_board(request, pipeline_id):
         'search': search,
         'tags': tags,
         'automations': automations,
+        'custom_fields': custom_fields,
     })
 
 
@@ -339,6 +347,37 @@ def automation_delete(request, auto_id):
 
     auto = get_object_or_404(PipelineAutomation, id=auto_id)
     auto.delete()
+    return JsonResponse({'success': True})
+
+
+@csrf_exempt
+def automation_update(request, auto_id):
+    """Update an existing pipeline automation rule."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    data = json.loads(request.body)
+    auto = get_object_or_404(PipelineAutomation, id=auto_id)
+
+    trigger_type = data.get('trigger_type', auto.trigger_type)
+    auto.trigger_type = trigger_type
+
+    target_stage_id = data.get('target_stage_id')
+    if target_stage_id:
+        auto.target_stage = get_object_or_404(PipelineStage, id=target_stage_id)
+
+    if trigger_type in ('tag_applied', 'tag_removed'):
+        tag_id = data.get('trigger_tag_id')
+        if tag_id:
+            auto.trigger_tag_id = tag_id
+        auto.trigger_field_name = ''
+        auto.trigger_field_value = ''
+    else:
+        auto.trigger_field_name = data.get('trigger_field_name', '')
+        auto.trigger_field_value = data.get('trigger_field_value', '')
+        auto.trigger_tag = None
+
+    auto.save()
     return JsonResponse({'success': True})
 
 

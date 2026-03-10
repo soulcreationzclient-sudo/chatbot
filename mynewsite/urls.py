@@ -295,6 +295,7 @@ urlpatterns = [
     path('api/pipeline/stage/<int:stage_id>/rename/', pipeline_views.stage_rename, name='pipeline_stage_rename'),
     path('api/pipeline/automation/create/', pipeline_views.automation_create, name='pipeline_auto_create'),
     path('api/pipeline/automation/delete/<int:auto_id>/', pipeline_views.automation_delete, name='pipeline_auto_delete'),
+    path('api/pipeline/automation/update/<int:auto_id>/', pipeline_views.automation_update, name='pipeline_auto_update'),
     
 ]
 

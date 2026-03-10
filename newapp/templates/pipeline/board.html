@@ -149,8 +149,15 @@
   }
   .auto-rule .arrow { color: var(--accent); font-weight: 600; }
   .auto-rule .del-auto {
-    margin-left: auto; background: none; border: none; cursor: pointer;
-    color: var(--danger); font-size: 14px;
+    background: none; border: none; cursor: pointer;
+    color: var(--danger); font-size: 14px; padding: 2px 6px;
+  }
+  .auto-rule .edit-auto {
+    background: none; border: none; cursor: pointer;
+    color: var(--accent); font-size: 14px; padding: 2px 6px;
+  }
+  .auto-rule .rule-actions {
+    margin-left: auto; display: flex; gap: 4px;
   }
 </style>
 {% endblock %}
@@ -183,7 +190,10 @@
       {% endif %}
       <span class="arrow">→</span>
       <span style="font-weight:600;">{{ rule.target_stage.name }}</span>
-      <button class="del-auto" onclick="deleteAuto({{ rule.id }})" title="Delete">✕</button>
+      <span class="rule-actions">
+        <button class="edit-auto" onclick="editAuto({{ rule.id }}, '{{ rule.trigger_type }}', '{{ rule.trigger_tag_id|default:"" }}', '{{ rule.trigger_field_name|escapejs }}', '{{ rule.trigger_field_value|escapejs }}', '{{ rule.target_stage_id }}')" title="Edit">✏️</button>
+        <button class="del-auto" onclick="deleteAuto({{ rule.id }})" title="Delete">✕</button>
+      </span>
     </div>
     {% empty %}
     <div style="font-size:13px;color:var(--text-muted);padding:8px;">No automation rules yet.</div>
@@ -208,7 +218,12 @@
     </div>
     <div class="form-group" style="margin:0;flex:1;min-width:100;display:none;" id="autoFieldGroup">
       <label>Field Name</label>
-      <input type="text" id="autoFieldName" placeholder="field_name">
+      <select id="autoFieldName">
+        <option value="">-- Select Field --</option>
+        {% for cf in custom_fields %}
+        <option value="{{ cf.name }}">{{ cf.name }}</option>
+        {% endfor %}
+      </select>
     </div>
     <div class="form-group" style="margin:0;flex:1;min-width:100;display:none;" id="autoFieldValueGroup">
       <label>Value</label>
@@ -328,6 +343,55 @@
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeRenameModal()">Cancel</button>
       <button class="btn btn-success" onclick="saveRename()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Automation Modal -->
+<div class="modal-overlay" id="editAutoModal">
+  <div class="modal-box">
+    <h2>Edit Automation Rule</h2>
+    <input type="hidden" id="editAutoId">
+    <div class="form-group">
+      <label>When</label>
+      <select id="editAutoTrigger" onchange="editAutoTriggerChanged()">
+        <option value="tag_applied">Tag is applied</option>
+        <option value="tag_removed">Tag is removed</option>
+        <option value="custom_field_changed">Custom field changes</option>
+      </select>
+    </div>
+    <div class="form-group" id="editAutoTagGroup">
+      <label>Tag</label>
+      <select id="editAutoTag">
+        {% for tag in tags %}
+        <option value="{{ tag.id }}">{{ tag.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" id="editAutoFieldGroup" style="display:none;">
+      <label>Field Name</label>
+      <select id="editAutoFieldName">
+        <option value="">-- Select Field --</option>
+        {% for cf in custom_fields %}
+        <option value="{{ cf.name }}">{{ cf.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" id="editAutoFieldValueGroup" style="display:none;">
+      <label>Value</label>
+      <input type="text" id="editAutoFieldValue" placeholder="value (or empty=any)">
+    </div>
+    <div class="form-group">
+      <label>Move to</label>
+      <select id="editAutoTarget">
+        {% for stage in stages %}
+        <option value="{{ stage.id }}">{{ stage.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeEditAutoModal()">Cancel</button>
+      <button class="btn btn-success" onclick="saveEditAuto()">Save</button>
     </div>
   </div>
 </div>
@@ -477,6 +541,55 @@
     const res = await api(`/api/pipeline/automation/delete/${id}/`);
     if (res.ok) location.reload();
     else alert('Failed to delete');
+  }
+
+  // ====== Edit Automation ======
+  function editAuto(id, triggerType, tagId, fieldName, fieldValue, targetStageId) {
+    document.getElementById('editAutoId').value = id;
+    document.getElementById('editAutoTrigger').value = triggerType;
+    document.getElementById('editAutoTarget').value = targetStageId;
+
+    if (triggerType.startsWith('tag')) {
+      document.getElementById('editAutoTagGroup').style.display = 'block';
+      document.getElementById('editAutoFieldGroup').style.display = 'none';
+      document.getElementById('editAutoFieldValueGroup').style.display = 'none';
+      if (tagId) document.getElementById('editAutoTag').value = tagId;
+    } else {
+      document.getElementById('editAutoTagGroup').style.display = 'none';
+      document.getElementById('editAutoFieldGroup').style.display = 'block';
+      document.getElementById('editAutoFieldValueGroup').style.display = 'block';
+      document.getElementById('editAutoFieldName').value = fieldName;
+      document.getElementById('editAutoFieldValue').value = fieldValue;
+    }
+
+    document.getElementById('editAutoModal').classList.add('active');
+  }
+
+  function editAutoTriggerChanged() {
+    const v = document.getElementById('editAutoTrigger').value;
+    document.getElementById('editAutoTagGroup').style.display = v.startsWith('tag') ? 'block' : 'none';
+    document.getElementById('editAutoFieldGroup').style.display = v === 'custom_field_changed' ? 'block' : 'none';
+    document.getElementById('editAutoFieldValueGroup').style.display = v === 'custom_field_changed' ? 'block' : 'none';
+  }
+
+  function closeEditAutoModal() { document.getElementById('editAutoModal').classList.remove('active'); }
+
+  async function saveEditAuto() {
+    const id = document.getElementById('editAutoId').value;
+    const trigger = document.getElementById('editAutoTrigger').value;
+    const data = {
+      trigger_type: trigger,
+      target_stage_id: document.getElementById('editAutoTarget').value
+    };
+    if (trigger.startsWith('tag')) {
+      data.trigger_tag_id = document.getElementById('editAutoTag').value;
+    } else {
+      data.trigger_field_name = document.getElementById('editAutoFieldName').value;
+      data.trigger_field_value = document.getElementById('editAutoFieldValue').value;
+    }
+    const res = await api(`/api/pipeline/automation/update/${id}/`, data);
+    if (res.ok) location.reload();
+    else alert('Failed to update automation');
   }
 
   // Close modals on overlay click
