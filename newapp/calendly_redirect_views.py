@@ -111,6 +111,19 @@ def booking_confirmed(request, token=None):
                 )
                 custom_field_updated = True
                 print(f"[CalendlyRedirect] Updated custom field '{link.custom_field_name}' to 'Booked' for {user.phone_no}")
+                
+                # Trigger pipeline automation for custom field change
+                try:
+                    from .controllers.pipeline import run_pipeline_automations
+                    run_pipeline_automations(
+                        user.id,
+                        'custom_field_changed',
+                        field_name=link.custom_field_name,
+                        field_value='Booked'
+                    )
+                    print(f"[CalendlyRedirect] Pipeline automation triggered for {user.phone_no}")
+                except Exception as auto_err:
+                    print(f"[CalendlyRedirect] Pipeline automation error (non-fatal): {auto_err}")
         except Exception as e:
             print(f"[CalendlyRedirect] Error updating custom field: {e}")
 

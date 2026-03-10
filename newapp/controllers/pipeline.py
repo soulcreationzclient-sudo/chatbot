@@ -65,7 +65,13 @@ def pipeline_board(request, pipeline_id):
     # Tags for automation UI
     from newapp.models import Tag
     admin_id = request.session.get('admin_id')
-    tags = Tag.objects.filter(admin_id=admin_id) if admin_id else Tag.objects.none()
+    from django.db.models import Q
+    tag_filter = Q()
+    if admin_id:
+        tag_filter |= Q(admin_id=admin_id)
+    if org_id:
+        tag_filter |= Q(organization_id=org_id)
+    tags = Tag.objects.filter(tag_filter) if (admin_id or org_id) else Tag.objects.none()
 
     # Automation rules
     automations = PipelineAutomation.objects.filter(
