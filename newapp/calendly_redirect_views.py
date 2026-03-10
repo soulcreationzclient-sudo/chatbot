@@ -3,9 +3,9 @@ Calendly Redirect Views - Booking detection without paid Calendly plan.
 
 Flow:
 1. AI sends {{calendly:link_name}} which becomes https://chatbotad.io/book/<TOKEN>
-2. User clicks link -> this view redirects to actual Calendly URL
-3. User books on Calendly -> Calendly redirects to /booking-confirmed/<TOKEN>/
-4. This view identifies the user, updates custom field, sends WhatsApp confirmation
+2. User clicks link -> sets a cookie with the token -> redirects to Calendly URL
+3. User books on Calendly -> Calendly redirects to /booking-confirmed/done/
+4. This view reads the cookie to identify the user, updates custom field, sends WhatsApp confirmation
 """
 
 import json
@@ -20,7 +20,7 @@ from .models import CalendlyBookingTracker, CalendlyLink, User, CustomField, Cus
 def book_redirect(request, token):
     """
     Step 1: User clicks the booking link.
-    Looks up the tracker by token, marks as 'clicked', redirects to Calendly URL.
+    Looks up the tracker by token, marks as 'clicked', sets a cookie, redirects to Calendly URL.
     """
     tracker = CalendlyBookingTracker.objects.filter(booking_token=token).select_related('calendly_link').first()
     if not tracker:
@@ -34,18 +34,33 @@ def book_redirect(request, token):
     tracker.status = 'clicked'
     tracker.save(update_fields=['status', 'updated_at'])
 
-    # Redirect to the actual Calendly URL
+    # Redirect to the actual Calendly URL with a cookie storing the token
     calendly_url = tracker.calendly_link.url
-    return redirect(calendly_url)
+    response = redirect(calendly_url)
+    # Set cookie that expires in 2 hours, SameSite=Lax allows it to persist through redirect chain
+    response.set_cookie('booking_token', token, max_age=7200, httponly=True, samesite='Lax', secure=True)
+    print(f"[CalendlyRedirect] User clicked booking link, token={token}, redirecting to {calendly_url}")
+    return response
 
 
 @csrf_exempt
-def booking_confirmed(request, token):
+def booking_confirmed(request, token=None):
     """
     Step 2: Calendly redirects here after user books.
+    Reads the booking_token from the cookie (or URL param as fallback).
     Identifies the user, updates custom field, sends WhatsApp confirmation,
     and renders a thank-you page.
     """
+    # Try token from URL first, then cookie
+    if not token or token == 'done':
+        token = request.COOKIES.get('booking_token')
+    
+    if not token:
+        return render(request, 'booking_confirmed.html', {
+            'success': False,
+            'message': 'Could not identify your booking session. Please check your WhatsApp for confirmation.'
+        })
+
     tracker = CalendlyBookingTracker.objects.filter(booking_token=token).select_related(
         'calendly_link', 'user'
     ).first()
@@ -99,13 +114,16 @@ def booking_confirmed(request, token):
         except Exception as e:
             print(f"[CalendlyRedirect] Error sending WhatsApp confirmation: {e}")
 
-    return render(request, 'booking_confirmed.html', {
+    # Clear the cookie after processing
+    response = render(request, 'booking_confirmed.html', {
         'success': True,
         'user_name': user.name or 'there',
         'link_name': link.description or link.name,
         'confirmation_sent': confirmation_sent,
         'custom_field_updated': custom_field_updated,
     })
+    response.delete_cookie('booking_token')
+    return response
 
 
 def _send_whatsapp_confirmation(user, message, admin, org):
