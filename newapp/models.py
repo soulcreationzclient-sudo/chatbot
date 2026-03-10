@@ -264,6 +264,8 @@ class User(models.Model):
         related_name='contacts',
         db_column='organization_id'
     )
+    contact_id = models.CharField(max_length=20, unique=True, null=True, blank=True,
+                                  help_text='Unique contact ID in SB-XXXX format')
     name = models.CharField(max_length=100)
     phone_no = models.CharField(max_length=20)
     created_at = models.DateTimeField()
@@ -276,6 +278,20 @@ class User(models.Model):
     is_in_inbox = models.BooleanField(default=True)
     archived_at = models.DateTimeField(null=True, blank=True)
 
+    def save(self, *args, **kwargs):
+        if not self.contact_id:
+            # Auto-generate next SB-XXXX contact_id
+            last = User.objects.filter(contact_id__isnull=False).order_by('-contact_id').first()
+            if last and last.contact_id:
+                try:
+                    num = int(last.contact_id.split('-')[1]) + 1
+                except (IndexError, ValueError):
+                    num = 1
+            else:
+                num = 1
+            self.contact_id = f'SB-{num:04d}'
+        super().save(*args, **kwargs)
+
     class Meta:
         db_table = 'users'
         indexes = [
@@ -284,6 +300,7 @@ class User(models.Model):
             models.Index(fields=['is_in_inbox']),
             models.Index(fields=['phone_no']),
             models.Index(fields=['created_at']),
+            models.Index(fields=['contact_id']),
         ]
 
 
@@ -445,11 +462,12 @@ class CalendlyLink(models.Model):
 class CalendlyBookingTracker(models.Model):
     """
     Tracks which Calendly link was sent to which WhatsApp user.
-    This allows the Calendly webhook to match a booking back to the
-    correct WhatsApp contact (since Calendly only provides email/name).
+    Uses booking_token for redirect-based booking detection (no paid Calendly plan required).
+    Flow: User clicks /book/<token>/ -> redirects to Calendly -> books -> redirected to /booking-confirmed/<token>/
     """
     STATUS_CHOICES = [
         ('link_sent', 'Link Sent'),
+        ('clicked', 'Link Clicked'),
         ('booked', 'Booked'),
         ('cancelled', 'Cancelled'),
     ]
@@ -457,12 +475,14 @@ class CalendlyBookingTracker(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='calendly_bookings')
     calendly_link = models.ForeignKey(CalendlyLink, on_delete=models.CASCADE, related_name='bookings')
+    booking_token = models.CharField(max_length=64, unique=True, null=True, blank=True,
+                                     help_text='UUID token for redirect-based booking tracking')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='link_sent')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user.phone_no} → {self.calendly_link.name} ({self.status})"
+        return f"{self.user.phone_no} -> {self.calendly_link.name} ({self.status})"
 
     class Meta:
         db_table = 'calendly_booking_tracker'
@@ -470,6 +490,7 @@ class CalendlyBookingTracker(models.Model):
         indexes = [
             models.Index(fields=['user', 'status']),
             models.Index(fields=['calendly_link', 'status']),
+            models.Index(fields=['booking_token']),
         ]
 
 

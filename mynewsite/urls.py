@@ -17,6 +17,7 @@ from django.conf.urls.static import static
 from newapp.views import delete_pdf
 from newapp import calendly_views
 from newapp import calendly_integration_views
+from newapp import calendly_redirect_views
 
 # Multi-tenant admin imports
 from newapp.controllers import auth_views, superadmin_views, client_views
@@ -228,6 +229,10 @@ urlpatterns = [
     path('api/calendly-link/create/', Settingcontroller.calendly_link_create, name='calendly_link_create'),
     path('api/calendly-link/<int:link_id>/update/', Settingcontroller.calendly_link_update, name='calendly_link_update'),
     path('api/calendly-link/<int:link_id>/delete/', Settingcontroller.calendly_link_delete, name='calendly_link_delete'),
+    
+    # Calendly Redirect Booking Flow (no paid plan required)
+    path('book/<str:token>/', calendly_redirect_views.book_redirect, name='calendly_book_redirect'),
+    path('booking-confirmed/<str:token>/', calendly_redirect_views.booking_confirmed, name='calendly_booking_confirmed'),
     
     # ==================== BROADCAST SYSTEM ====================
     path('api/broadcast/templates/sync/', broadcast_views.BroadcastController.sync_templates, name='broadcast_sync_templates'),

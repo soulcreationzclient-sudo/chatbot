@@ -10,7 +10,7 @@ class AdminAuthMiddleware:
         path = request.path or "/"
 
         # Don't block login, logout, or static/media, or API webhooks, or Super Admin routes
-        allowlist = ("/login", "/logout", "/static/", "/media/",'/get_message','/send_whatsapp_message','/send_trigger','/appointment_date','/create-event','/api/calendly/webhook', '/super-admin/', '/favicon.ico')
+        allowlist = ("/login", "/logout", "/static/", "/media/",'/get_message','/send_whatsapp_message','/send_trigger','/appointment_date','/create-event','/api/calendly/webhook', '/super-admin/', '/favicon.ico', '/book/', '/booking-confirmed/')
 
         # Check if path is protected
         if not path.startswith(allowlist):

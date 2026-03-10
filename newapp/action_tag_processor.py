@@ -117,7 +117,7 @@ def process_response_actions(text, admin, phone, organization=None):
         name = action['name']
         outcome = ""
         
-        # For calendly links, replace tag with URL inline
+        # For calendly links, replace tag with redirect URL (token-based)
         # For other tags, remove the tag from text
         if action_type == 'calendly_link':
             # Look up the CalendlyLink record
@@ -129,21 +129,26 @@ def process_response_actions(text, admin, phone, organization=None):
                 link = CalendlyLink.objects.filter(admin=admin, name__iexact=name).first()
             
             if link:
-                replacement_text = replacement_text.replace(tag, link.url)
-                outcome = f"Calendly link '{name}' inserted: {link.url}"
+                # Generate booking token and create redirect URL
+                import uuid
+                booking_token = uuid.uuid4().hex[:16]
+                redirect_url = f"https://chatbotad.io/book/{booking_token}/"
+                replacement_text = replacement_text.replace(tag, redirect_url)
+                outcome = f"Calendly link '{name}' inserted as redirect: {redirect_url}"
                 
-                # Track this Calendly link send for webhook matching
+                # Track this Calendly link send with booking token
                 try:
                     from .models import CalendlyBookingTracker
                     from .models import User as UserModel
                     user_obj = UserModel.objects.filter(phone_no=phone).first()
                     if user_obj:
-                        CalendlyBookingTracker.objects.update_or_create(
+                        CalendlyBookingTracker.objects.create(
                             user=user_obj,
                             calendly_link=link,
-                            defaults={'status': 'link_sent'}
+                            booking_token=booking_token,
+                            status='link_sent'
                         )
-                        print(f"[ActionTag] Tracked Calendly link send: {phone} → {link.name}")
+                        print(f"[ActionTag] Tracked Calendly link send: {phone} -> {link.name} (token: {booking_token})")
                 except Exception as track_err:
                     print(f"[ActionTag] Tracking error (non-fatal): {track_err}")
                 
