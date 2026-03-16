@@ -29,7 +29,7 @@
       background: #f7f8fb;
     }
 
-    /* Sidebar - fixed position with transform for smooth animation */
+    /* Sidebar */
     .app-sidebar {
       position: fixed;
       top: 0;
@@ -45,10 +45,6 @@
       will-change: transform;
     }
 
-    .sidebar-hidden .app-sidebar {
-      transform: translateX(-100%);
-    }
-
     /* Main content area */
     .app-main {
       margin-left: var(--sidebar-width);
@@ -61,7 +57,12 @@
       will-change: margin-left;
     }
 
-    .sidebar-hidden .app-main {
+    /* Single class controls both sidebar + main */
+    .sidebar-closed .app-sidebar {
+      transform: translateX(-100%);
+    }
+
+    .sidebar-closed .app-main {
       margin-left: 0;
     }
 
@@ -86,8 +87,12 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
-    /* Responsive - hide sidebar by default on mobile */
+    /* Mobile — sidebar closed by default */
     @media (max-width: 991.98px) {
+      .app-shell:not(.sidebar-closed) .app-sidebar {
+        transform: translateX(0);
+      }
+
       .app-sidebar {
         transform: translateX(-100%);
       }
@@ -96,11 +101,7 @@
         margin-left: 0;
       }
 
-      .sidebar-visible .app-sidebar {
-        transform: translateX(0);
-      }
-
-      .sidebar-visible .app-main {
+      .app-shell:not(.sidebar-closed) .app-main {
         margin-left: var(--sidebar-width);
       }
     }
@@ -124,10 +125,19 @@
   </div>
 
   <script>
-    function toggleSidebar() {
+    (function () {
       const shell = document.getElementById('appShell');
-      shell.classList.toggle('sidebar-hidden');
-    }
+      const isMobile = window.innerWidth < 992;
+
+      // On mobile, start closed; on desktop, start open
+      if (isMobile) {
+        shell.classList.add('sidebar-closed');
+      }
+
+      window.toggleSidebar = function () {
+        shell.classList.toggle('sidebar-closed');
+      };
+    })();
   </script>
 
   {% block body_js %}
