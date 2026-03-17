@@ -57,6 +57,7 @@ class Organization(models.Model):
 
     # Organization Logo (shown in topbar)
     logo = models.ImageField(upload_to='org_logos/', blank=True, null=True, help_text="Custom logo for the topbar")
+    hide_logo = models.BooleanField(default=False, help_text="If True, hides the SpeedBots logo in the sidebar for this org")
     # Feature Flag / Canary Deployment
     is_beta_tester = models.BooleanField(
         default=False,

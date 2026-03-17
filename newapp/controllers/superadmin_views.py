@@ -198,6 +198,9 @@ def organization_update(request, pk):
     org.is_beta_tester = request.POST.get('is_beta_tester') == 'on'
     org.app_version = request.POST.get('app_version', org.app_version)
     
+    # Branding settings
+    org.hide_logo = request.POST.get('hide_logo') == 'on'
+    
     org.save()
     
     messages.success(request, f'Organization "{org.name}" updated successfully!')
