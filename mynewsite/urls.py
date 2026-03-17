@@ -47,6 +47,8 @@ from newapp.controllers.webchat_admin import (
     update_widget,
     delete_widget,
     get_widget_embed_code,
+    list_sessions_api,
+    get_session_messages_api,
 )
 
 # Test Chat imports
@@ -274,6 +276,8 @@ urlpatterns = [
     path('api/webchat/widget/<int:widget_id>/update/', update_widget, name='webchat_update_widget'),
     path('api/webchat/widget/<int:widget_id>/delete/', delete_widget, name='webchat_delete_widget'),
     path('api/webchat/widget/<int:widget_id>/embed/', get_widget_embed_code, name='webchat_embed_code'),
+    path('api/webchat/sessions/', list_sessions_api, name='webchat_list_sessions'),
+    path('api/webchat/sessions/<str:session_id>/messages/', get_session_messages_api, name='webchat_session_messages'),
     
     # ==================== TEST CHAT (Prompt Testing) ====================
     path('test/chat/', test_chat, name='test_chat'),

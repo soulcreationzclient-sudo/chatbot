@@ -569,6 +569,14 @@
                 <span class="nav-icon">✨</span>
                 <span>Test Chat</span>
             </div>
+            <div style="border-top: 1px solid #d1d5db; margin: 12px 0;"></div>
+            <div style="padding: 0 8px; margin-bottom: 8px;">
+                <button onclick="startNewChat()" style="width:100%; padding:10px; background:#4169e1; color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">+ New Chat</button>
+            </div>
+            <div style="padding: 0 8px 8px 8px; font-size:11px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Past Chats</div>
+            <div id="session-list" style="flex:1; overflow-y:auto; padding:0 4px;">
+                <div style="text-align:center; padding:20px; color:#94a3b8; font-size:13px;">Loading...</div>
+            </div>
         </div>
 
         <!-- Main Content -->
@@ -732,6 +740,7 @@
         let selectedPromptId = null;
         let allSessionTags = new Set();
         let allSessionFields = {};
+        let currentSessionId = null;
 
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -742,7 +751,7 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(tabName + '-tab').classList.add('active');
 
-            const navItems = document.querySelectorAll('.nav-item');
+            const navItems = document.querySelectorAll('.sidebar > .nav-item');
             navItems.forEach(item => item.classList.remove('active'));
             if (tabName === 'dashboard') navItems[0].classList.add('active');
             else if (tabName === 'test-chat') navItems[1].classList.add('active');
@@ -761,20 +770,25 @@
             input.value = '';
             showTyping();
 
+            const payload = { message: msg, prompt_id: selectedPromptId };
+            if (currentSessionId) payload.session_id = currentSessionId;
+
             fetch('/api/test/chat/send/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken')
                 },
-                body: JSON.stringify({ message: msg, prompt_id: selectedPromptId })
+                body: JSON.stringify(payload)
             })
                 .then(res => res.json())
                 .then(data => {
                     removeTyping();
                     if (data.status === 'success') {
+                        if (data.session_id) currentSessionId = data.session_id;
                         addMessage('bot', data.bot_message.content, data.bot_message.images || []);
                         updateSidebar(data.bot_message.tags || [], data.bot_message.custom_fields || []);
+                        loadSessions(); // Refresh session list
                     } else {
                         addMessage('system', 'Error: ' + data.message);
                     }
@@ -784,6 +798,107 @@
                     addMessage('system', 'Connection error');
                 });
         }
+
+        // --- Session Management ---
+        function loadSessions() {
+            fetch('/api/webchat/sessions/')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        renderSessionList(data.sessions);
+                    }
+                })
+                .catch(() => {});
+        }
+
+        function renderSessionList(sessions) {
+            const container = document.getElementById('session-list');
+            if (!sessions || sessions.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8; font-size:13px;">No chats yet</div>';
+                return;
+            }
+            container.innerHTML = sessions.map(s => `
+                <div class="session-entry" data-sid="${s.session_id}" style="display:flex; align-items:center; padding:10px 8px; margin-bottom:2px; border-radius:8px; cursor:pointer; transition:all 0.2s; ${currentSessionId === s.session_id ? 'background:#e0e7ff;' : ''}" 
+                     onmouseenter="this.style.background='#f0f4ff'" 
+                     onmouseleave="this.style.background='${currentSessionId === s.session_id ? '#e0e7ff' : ''}'">
+                    <div style="flex:1; min-width:0;" onclick="loadSession('${s.session_id}')">
+                        <div style="font-size:13px; font-weight:600; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.visitor_name}</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">${s.started_at} · ${s.message_count} msgs</div>
+                    </div>
+                    <button onclick="event.stopPropagation(); deleteSession('${s.session_id}')" 
+                            style="background:none; border:none; cursor:pointer; color:#94a3b8; font-size:14px; padding:4px; border-radius:4px;" 
+                            onmouseenter="this.style.color='#ef4444'" 
+                            onmouseleave="this.style.color='#94a3b8'" 
+                            title="Delete">🗑</button>
+                </div>
+            `).join('');
+        }
+
+        function loadSession(sessionId) {
+            currentSessionId = sessionId;
+            switchTab('test-chat');
+
+            // Clear chat
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">Loading...</div>';
+
+            fetch(`/api/webchat/sessions/${sessionId}/messages/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        container.innerHTML = '';
+                        data.messages.forEach(m => {
+                            addMessage(m.sender === 'user' ? 'user' : 'bot', m.content);
+                        });
+                        if (data.messages.length === 0) {
+                            container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><h3>Empty session</h3></div>';
+                        }
+                    }
+                })
+                .catch(() => {
+                    container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><h3>Failed to load</h3></div>';
+                });
+
+            // Highlight active session
+            loadSessions();
+        }
+
+        function deleteSession(sessionId) {
+            if (!confirm('Delete this chat session?')) return;
+            fetch('/api/webchat/session/delete/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ session_id: sessionId })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        if (currentSessionId === sessionId) {
+                            currentSessionId = null;
+                            const container = document.getElementById('chat-messages');
+                            container.innerHTML = '<div class="empty-state"><div class="empty-icon">👋</div><h3>Welcome to AI Simulator</h3><p style="max-width: 300px; margin-top: 8px;">Test your AI\'s responses in real-time.</p></div>';
+                        }
+                        loadSessions();
+                    }
+                });
+        }
+
+        function startNewChat() {
+            currentSessionId = null;
+            allSessionTags = new Set();
+            allSessionFields = {};
+            switchTab('test-chat');
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '<div class="empty-state"><div class="empty-icon">👋</div><h3>New Chat Session</h3><p style="max-width: 300px; margin-top: 8px;">Start a fresh conversation to test your AI.</p></div>';
+            // Reset sidebar panels
+            document.getElementById('sidebar-tags').innerHTML = '<span style="font-size: 13px; color: #94a3b8;">No tags detected yet</span>';
+            document.getElementById('sidebar-custom-fields').innerHTML = '<span style="font-size: 13px; color: #94a3b8;">No custom fields detected yet</span>';
+            document.getElementById('sidebar-all-tags').innerHTML = '<span style="font-size: 13px; color: #94a3b8;">—</span>';
+            document.getElementById('sidebar-all-fields').innerHTML = '<span style="font-size: 13px; color: #94a3b8;">—</span>';
+        }
+
+        // Load sessions on page load
+        document.addEventListener('DOMContentLoaded', loadSessions);
 
         function updateSidebar(tags, customFields) {
             // Current response tags

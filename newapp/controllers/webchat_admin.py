@@ -531,6 +531,92 @@ count=Count('id')
         except WebChatWidget.DoesNotExist:
             return JsonResponse({'error': 'Widget not found'}, status=404)
 
+    @staticmethod
+    @csrf_exempt
+    def list_sessions_api(request):
+        """
+        API to list webchat sessions for the current admin/org.
+        Used by the dashboard sidebar to show past chats.
+        """
+        org_id = request.session.get("organization_id")
+        admin_id = request.session.get("admin_id")
+        
+        if not org_id and not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        sessions_query = WebChatSession.objects.all()
+        if org_id:
+            sessions_query = sessions_query.filter(organization_id=org_id)
+        elif admin_id:
+            sessions_query = sessions_query.filter(admin_id=admin_id)
+        
+        sessions = sessions_query.annotate(
+            msg_count=Count('messages')
+        ).order_by('-started_at')[:50]
+        
+        sessions_data = []
+        for s in sessions:
+            sessions_data.append({
+                'id': s.id,
+                'session_id': s.session_id,
+                'visitor_name': s.visitor_name or 'Test Chat',
+                'status': s.status,
+                'message_count': s.msg_count,
+                'started_at': s.started_at.strftime('%b %d, %H:%M'),
+                'last_activity': s.last_activity.strftime('%b %d, %H:%M'),
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'sessions': sessions_data
+        })
+
+    @staticmethod
+    @csrf_exempt
+    def get_session_messages_api(request, session_id):
+        """
+        API to get all messages for a specific session.
+        Used to load past chat history.
+        """
+        org_id = request.session.get("organization_id")
+        admin_id = request.session.get("admin_id")
+        
+        if not org_id and not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
+        try:
+            session = WebChatSession.objects.get(session_id=session_id)
+            
+            # Security check
+            if org_id and session.organization_id != org_id:
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+            if admin_id and session.admin_id != admin_id:
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+            
+            messages_list = WebChatMessage.objects.filter(
+                session=session
+            ).order_by('created_at')
+            
+            messages_data = []
+            for m in messages_list:
+                messages_data.append({
+                    'id': m.id,
+                    'content': m.content,
+                    'sender': m.sender,
+                    'content_type': m.content_type,
+                    'created_at': m.created_at.strftime('%H:%M'),
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'session_id': session_id,
+                'visitor_name': session.visitor_name or 'Test Chat',
+                'messages': messages_data
+            })
+            
+        except WebChatSession.DoesNotExist:
+            return JsonResponse({'error': 'Session not found'}, status=404)
+
 
 # Convenience function for URL patterns
 dashboard = WebChatAdminController.dashboard
@@ -543,3 +629,6 @@ create_widget = WebChatAdminController.create_widget
 update_widget = WebChatAdminController.update_widget
 delete_widget = WebChatAdminController.delete_widget
 get_widget_embed_code = WebChatAdminController.get_widget_embed_code
+list_sessions_api = WebChatAdminController.list_sessions_api
+get_session_messages_api = WebChatAdminController.get_session_messages_api
+

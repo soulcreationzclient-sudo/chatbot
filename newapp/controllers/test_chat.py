@@ -4,7 +4,8 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
 import re
-from newapp.models import ChatGPTPrompt, Admin, Organization
+import uuid
+from newapp.models import ChatGPTPrompt, Admin, Organization, WebChatSession, WebChatMessage
 from datetime import datetime
 
 
@@ -180,11 +181,52 @@ def test_chat_send(request):
         except Exception as img_err:
             pass  # Silently fail if image processing fails
 
+        # --- Persist to DB ---
+        session_id_str = data.get('session_id', None)
+        try:
+            if session_id_str:
+                chat_session = WebChatSession.objects.filter(session_id=session_id_str).first()
+            else:
+                chat_session = None
+            
+            if not chat_session:
+                session_id_str = f"test_{uuid.uuid4().hex[:12]}"
+                chat_session = WebChatSession.objects.create(
+                    session_id=session_id_str,
+                    visitor_name='Test Chat',
+                    status='active',
+                    admin_id=admin_id,
+                    organization_id=org_id,
+                )
+            
+            # Save user message
+            WebChatMessage.objects.create(
+                session=chat_session,
+                content=user_message,
+                sender='user',
+                content_type='text',
+            )
+            
+            # Save bot message
+            WebChatMessage.objects.create(
+                session=chat_session,
+                content=clean_text,
+                sender='bot',
+                content_type='text',
+            )
+            
+            # Update message count
+            chat_session.message_count = WebChatMessage.objects.filter(session=chat_session).count()
+            chat_session.save(update_fields=['message_count', 'last_activity'])
+        except Exception:
+            pass  # Don't break chat if DB save fails
+
         # Return response
         now = datetime.now().isoformat()
         
         return JsonResponse({
             'status': 'success',
+            'session_id': session_id_str,
             'user_message': {
                 'content': user_message,
                 'created_at': now
