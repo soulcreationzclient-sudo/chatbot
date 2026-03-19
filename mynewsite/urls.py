@@ -23,6 +23,7 @@ from newapp import calendly_redirect_views
 from newapp.controllers import auth_views, superadmin_views, client_views
 from newapp.controllers import broadcast as broadcast_views
 from newapp.controllers import pipeline as pipeline_views
+from newapp.controllers import guide_views
 
 # Controller instances
 integration_controller = Integrationcontroller()
@@ -78,6 +79,10 @@ urlpatterns = [
     # ==================== CLIENT PORTAL AUTH ====================
     path('login/', auth_views.client_login, name='login'),
     path('client-logout/', auth_views.client_logout, name='client_logout'),
+    
+    # ==================== TERMS & CONDITIONS + SETUP GUIDE ====================
+    path('terms/', guide_views.terms_and_conditions, name='terms_and_conditions'),
+    path('guide/', guide_views.setup_guide, name='setup_guide'),
     
     # ==================== CLIENT SETTINGS ====================
     path('client/settings/', client_views.client_settings, name='client_settings'),

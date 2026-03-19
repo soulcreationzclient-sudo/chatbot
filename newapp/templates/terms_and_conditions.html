@@ -1,0 +1,469 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Terms and Conditions - SpeedBots</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --card: #ffffff;
+      --ink: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --fill: #f3f4f6;
+      --primary: #667eea;
+      --primary-press: #5a67d8;
+      --primary-light: #eef2ff;
+      --radius: 18px;
+      --shadow: 0 20px 50px rgba(0,0,0,.08);
+      --success: #16a34a;
+      --success-bg: #f0fdf4;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 16px;
+    }
+
+    .container {
+      width: min(760px, 96vw);
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 32px 36px;
+      color: white;
+    }
+
+    .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+    .header p { font-size: 14px; opacity: 0.85; }
+
+    .tc-scroll {
+      max-height: 55vh;
+      overflow-y: auto;
+      padding: 28px 36px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tc-scroll::-webkit-scrollbar { width: 6px; }
+    .tc-scroll::-webkit-scrollbar-track { background: var(--fill); }
+    .tc-scroll::-webkit-scrollbar-thumb { background: #c4c8d0; border-radius: 4px; }
+
+    .tc-scroll h2.tc-main-title {
+      font-size: 20px; font-weight: 700;
+      text-align: center; margin: 0 0 20px;
+      color: var(--primary);
+    }
+
+    .tc-scroll h3 {
+      font-size: 16px; font-weight: 700;
+      margin: 24px 0 8px; color: #1e293b;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 6px;
+    }
+
+    .tc-scroll h4 {
+      font-size: 14px; font-weight: 600;
+      margin: 18px 0 6px; color: #334155;
+    }
+
+    .tc-scroll p {
+      font-size: 13px; line-height: 1.7;
+      color: #475569; margin: 0 0 10px;
+    }
+
+    .footer {
+      padding: 20px 36px 28px;
+    }
+
+    .agree-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .agree-row input[type="checkbox"] {
+      width: 20px; height: 20px;
+      accent-color: var(--primary);
+      cursor: pointer; flex-shrink: 0;
+    }
+
+    .agree-row label {
+      font-size: 14px; font-weight: 500;
+      color: var(--ink); cursor: pointer;
+      user-select: none;
+    }
+
+    .btn {
+      width: 100%; height: 48px; border: 0;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white; font-weight: 600;
+      font-size: 15px; cursor: pointer;
+      transition: all .2s ease;
+      display: flex; align-items: center;
+      justify-content: center; gap: 8px;
+    }
+
+    .btn:hover:not(:disabled) { background: var(--primary-press); transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn svg { width: 18px; height: 18px; }
+
+    .messages {
+      margin: 0 0 12px; padding: 0; list-style: none; font-size: 13px;
+    }
+    .messages li {
+      padding: 10px 12px; border-radius: 10px; margin-bottom: 8px;
+      background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;
+    }
+    .messages li.success {
+      background: var(--success-bg); color: var(--success);
+      border-color: #bbf7d0;
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 16px 8px; }
+      .header { padding: 24px 20px; }
+      .tc-scroll { padding: 20px; max-height: 50vh; }
+      .footer { padding: 16px 20px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📋 Terms and Conditions</h1>
+      <p>Please read and accept the terms below to continue to the SpeedBot Setup Guide.</p>
+    </div>
+
+    <div class="tc-scroll" id="tcContent">
+      <h2 class="tc-main-title">Terms and Conditions</h2>
+            <p>These are the Terms and Conditions governing the use of Speedbots.io and the Agreement that operates between You (the "User") and Soul Creationz Pte Ltd (the "Company"). These Terms and Conditions set out the rights and obligations of all users regarding the use of Speedbots.io and any other related Agreement or legal relationship with the Company.</p>
+            <p>Your access to and use of Speedbots.io is conditioned on Your acceptance of and compliance with these Terms and Conditions. These Terms and Conditions apply to all visitors, users, and others who access or use Speedbots.io. By accessing or using Speedbots.io, You agree to be bound by these Terms and Conditions. If You disagree with any part of these Terms and Conditions, you may not access Speedbots.io.</p>
+            <p>Your access to and use of Speedbots.io is also conditioned on Your acceptance of and compliance with the Privacy Policy of the Company. Our Privacy Policy describes Our policies and procedures on the collection, use, and disclosure of Your personal information when You use the Service and tells You about Your privacy rights and how the law protects You. Please read Our Privacy Policy carefully before using Speedbots.io.</p>
+            <p>For GDPR, Cookies and Data Protection/Privacy related matters, email us at privacy@speedbots.io.</p>
+            <p>Although the entire contractual relationship relating to these Products is entered into solely by the Company and Users, Users acknowledge and agree that, where Speedbots.io has been provided to them via or in combination with an independent party, that third party may enforce these Terms as a third-party beneficiary.</p>
+            <p>Speedbots.io is provided by:</p>
+            <p>Soul Creationz Pte Ltd ( 202243766C)</p>
+            <h4>1 TAMPINES NORTH DRIVE 1
+#06-08
+T-SPACE
+SINGAPORE (528559)</h4>
+            <p>Soul Creationz (201003075174)</p>
+            <p>No. C-10-1, BLOCK C, Level 12,</p>
+            <p>Menara Uncang Emas, Jalan Loke Yew,</p>
+            <p>55200 Kuala Lumpur</p>
+            <p>Company contact email: nithi@soulcreationz.com</p>
+            <p>"Speedbots.io" refers to</p>
+            <p>This website, including its subdomains and any other website through which the Company makes its Service available;</p>
+            <p>Applications for mobile, tablet and other smart device systems;</p>
+            <p>The Application Program Interfaces (API);</p>
+            <p>The Service;</p>
+            <p>Any applications, sample and content files, source code, scripts, instruction sets or software included as part of the Service, as well as any related documentation;</p>
+            <h3>1. TERMS OF USE</h3>
+            <p>Unless otherwise specified, the terms of use detailed in this section generally apply when using Speedbots.io. Single or additional conditions of use or access may apply in specific scenarios and, in such cases, are additionally indicated within this document.</p>
+            <p>By using Speedbots.io, Users confirm to meet the following requirements:</p>
+            <p>Users represent a Business;</p>
+            <p>Users must be recognized as an adult by applicable law;</p>
+            <p>User has the capacity to enter into this legally binding Agreement;</p>
+            <p>Users aren't located in a country that is subject to a U.S. Government embargo or that has been designated by the U.S. Government as a "terrorist-supporting" country;</p>
+            <p>Users aren't listed on any U.S. Government list of prohibited or restricted parties;</p>
+            <h4>1.1 ACCOUNT REGISTRATION</h4>
+            <p>To use the Service Users must register or create a User account, providing all required data or information in a complete and truthful manner. Failure to do so will cause unavailability of the Service.</p>
+            <p>Users are responsible for keeping their login credentials confidential and safe. For this reason, Users are also required to choose passwords that meet the highest standards of strength permitted by Speedbots.io.</p>
+            <p>By registering, Users agree to be fully responsible for all activities that occur under their username and password.</p>
+            <p>Users are required to immediately and unambiguously inform the Company via the contact details indicated in this document, if they think their personal information, including but not limited to User accounts, access credentials or personal data, have been violated, unduly disclosed or stolen.</p>
+            <h4>CONDITIONS FOR ACCOUNT REGISTRATION</h4>
+            <p>Registration of User accounts on Speedbots.io is subject to the conditions outlined below. By registering, Users agree to meet such conditions.</p>
+            <p>Accounts registered by bots or any other automated methods are not permitted.</p>
+            <p>Unless otherwise specified, each User must register only one account.</p>
+            <p>Unless explicitly permitted, a User account may not be shared with other persons.</p>
+            <h4>ACCOUNT TERMINATION</h4>
+            <p>Users can terminate their account and stop using the Service at any time by doing the following:</p>
+            <p>By using the tools provided for account termination on Speedbots.io.</p>
+            <p>By directly contacting the Company at the contact details provided in this document.</p>
+            <p>However, termination of the account will not be possible until the subscription period paid for by the User has expired.</p>
+            <h4>ACCOUNT SUSPENSION AND DELETION</h4>
+            <p>The Company reserves the right, at its sole discretion, to suspend or delete at any time and without notice, User accounts which it deems inappropriate, offensive or in violation of these Terms.</p>
+            <p>The suspension or deletion of User accounts shall not entitle Users to any claims for compensation, damages or reimbursement.</p>
+            <p>The suspension or deletion of accounts due to causes attributable to the User does not exempt the User from paying any applicable fees or prices.</p>
+            <h4>1.2 CONTENT PROVIDED BY COMPANY</h4>
+            <p>Unless where otherwise specified or clearly recognizable, all content available on Speedbots.io is owned or provided by the Company or its licensors.</p>
+            <p>The Company undertakes its utmost effort to ensure that the content provided on Speedbots.io infringes no applicable legal provisions or third-party rights. However, it may not always be possible to achieve such a result.</p>
+            <p>In such cases, without prejudice to any legal prerogatives of Users to enforce their rights, Users are asked to report related complaints using the contact details provided in this document.</p>
+            <h4>ALL RIGHTS RESERVED</h4>
+            <p>The Company holds and reserves all intellectual property rights for any such content.</p>
+            <p>Users may not therefore use such content in any way that is not necessary or implicit in the proper use of the Service.</p>
+            <p>In particular, but without limitation, Users may not copy, download, share (beyond the limits set forth below), modify, translate, transform, publish, transmit, sell, sublicense, edit, transfer/assign to third parties or create derivative works from the content available on Speedbots.io, nor allow any third party to do so through the User or their device, even without the User's knowledge.</p>
+            <p>Where explicitly stated on Speedbots.io, the User may download, copy and/or share some content available through Speedbots.io for its sole personal and non-commercial use and provided that the copyright attributions and all the other attributions requested by the Company are correctly implemented.</p>
+            <p>Any applicable statutory limitation or exception to copyright shall stay unaffected.</p>
+            <h4>1.3 CONTENT PROVIDED BY USERS</h4>
+            <p>The Company allows Users to upload, share or provide their own content to Speedbots.io.</p>
+            <p>By providing content to Speedbots.io, Users confirm that they are legally allowed to do so and that they are not infringing any statutory provisions and/or third-party rights.</p>
+            <p>Further insights regarding acceptable content can be found inside the section of these Terms which detail the acceptable uses.</p>
+            <h4>RIGHTS REGARDING CONTENT PROVIDED BY USERS</h4>
+            <p>Users acknowledge and accept that by providing their own content on Speedbots.io they grant the Company a non-exclusive, fully paid-up and royalty-free license to process such content solely for the operation and maintenance of Speedbots.io as contractually required.</p>
+            <p>To the extent permitted by applicable law, Users waive any moral rights in connection with content they provide to Speedbots.io.</p>
+            <p>Users acknowledge, accept and confirm that all content they provide through Speedbots.io is provided subject to the same general conditions set forth for content on Speedbots.io.</p>
+            <h4>LIABILITY FOR PROVIDED CONTENT</h4>
+            <p>Users are solely liable for any content they upload, post, share, or provide through Speedbots.io. Users acknowledge and accept that the Company does not filter or moderate such content.</p>
+            <p>However, the Company reserves the right to remove, delete, block or rectify such content at its own discretion and to, without prior notice, deny the uploading User access to Speedbots.io:</p>
+            <p>if any complaint based on such content is received;</p>
+            <p>if a notice of infringement of intellectual property rights is received;</p>
+            <p>upon order of a public authority; or</p>
+            <p>where the Company is made aware that the content, while being accessible via Speedbots.io, may represent a risk for Users, third parties and/or the availability of the Service.</p>
+            <p>The removal, deletion, blocking or rectification of content shall not entitle Users that have provided such content or that are liable for it, to any claims for compensation, damages or reimbursement.</p>
+            <p>Users agree to hold the Company harmless from and against any claim asserted and/or damage suffered due to content they provided to or provided through Speedbots.io.</p>
+            <h4>CONTENT BACKUPS</h4>
+            <p>Although regular backups of Content are performed, the Company does not guarantee there will be no loss or corruption of data.</p>
+            <p>Corrupt or invalid backup points may be caused by, without limitation, Content that is corrupted prior to being backed up or that changes during the time a backup is performed.</p>
+            <p>The Company will provide support and attempt to troubleshoot any known or discovered issues that may affect the backups of Content. But You acknowledge that the Company has no liability related to the integrity of Content or the failure to successfully restore Content to a usable state.</p>
+            <p>You agree to maintain a complete and accurate copy of any Content in a location independent of the Service.</p>
+            <h4>1.4 ACCESS TO EXTERNAL RESOURCES</h4>
+            <p>Through Speedbots.io Users may have access to external resources provided by third parties. Users acknowledge and accept that the Company has no control over such resources and is therefore not responsible for their content and availability.</p>
+            <p>Conditions applicable to any resources provided by third parties, including those applicable to any possible grant of rights in content, result from each such third parties’ terms and conditions or, in the absence of those, applicable statutory law.</p>
+            <h4>1.5 ACCEPTABLE USE</h4>
+            <p>Speedbots.io and the Service may only be used within the scope of what they are provided for, under these Terms and applicable law.</p>
+            <p>Users are solely responsible for making sure that their use of Speedbots.io and/or the Service violates no applicable law, regulations or third-party rights.</p>
+            <p>Therefore, the Company reserves the right to take any appropriate measure to protect its legitimate interests including by denying Users access to Speedbots.io or the Service, terminating contracts, reporting any misconduct performed through Speedbots.io or the Service to the competent authorities – such as judicial or administrative authorities - whenever Users engage or are suspected to engage in any of the following activities:</p>
+            <p>violate laws, regulations and/or these Terms;</p>
+            <p>infringe any third-party rights;</p>
+            <p>considerably impair the Company’s legitimate interests;</p>
+            <p>offend the Company or any third party.</p>
+            <h4>1.6 AFFILIATE PROGRAM</h4>
+            <p>Speedbots.io gives Users the opportunity to receive advantages if, as a result of their recommendation, any new User purchases a Subscription offered on Speedbots.io, subject to the terms and conditions set forth in the Affiliate registration process.</p>
+            <p>While no general limitation applies to the number of persons that can be invited, the amount of advantage or benefit that each User can receive, may be limited.</p>
+            <p>The Company reserves the right to end the program at any time at its own discretion.</p>
+            <h4>1.7 SOFTWARE LICENSE</h4>
+            <p>Any intellectual or industrial property rights, and any other exclusive rights on software or technical applications embedded in or related to Speedbots.io are held by the Company and/or its licensors.</p>
+            <p>Subject to Users’ compliance with and notwithstanding any divergent provision of these Terms, the Company merely grants Users a revocable, non-exclusive, non-sublicensable and non-transferable license to use the software and/or any other technical means embedded in the Service within the scope and for the purposes of Speedbots.io and the Service offered.</p>
+            <p>This license does not grant Users any rights to access, usage or disclosure of the original source code. All techniques, algorithms, and procedures contained in the software and any documentation thereto related is the Company’s or its licensors’ sole property.</p>
+            <p>All rights and license grants to Users shall immediately terminate upon any termination or expiration of the Agreement.</p>
+            <h4>1.8 API USAGE TERMS</h4>
+            <p>Users may access their data relating to Speedbots.io via the Application Program Interface (API). Any use of the API, including use of the API through a third-party product/service that accesses Speedbots.io, is bound by these Terms and, in addition, the User expressly understands and agrees that the Company bears no responsibility and shall not be held liable for any damages or losses resulting from the User’s use of the API or their use of any third-party products/services that access data through the API.</p>
+            <h3>2. SUBSCRIPTION TERMS</h3>
+            <p>The fees, duration and conditions applicable to the purchase of such Subscriptions are described below and in the dedicated sections of Speedbots.io.</p>
+            <p>Unless specified on the Oder Form, the Subscription Products provided on Speedbots.io, as part of the Service, are subject to the following terms:</p>
+            <h4>2.1 FREE TRIAL</h4>
+            <p>Users have the option to test Speedbots.io during a limited and non-renewable trial period, at no cost. Some features or functions of Speedbots.io may not be available to Users during the trial period.</p>
+            <p>Further conditions applicable to the trial period, including its duration, will be specified on Speedbots.io. The trial period shall end automatically and shall not convert into any paid Product unless the User actively purchases such paid Product.</p>
+            <p>At any time and without notice, the Company reserves the right to (i) modify the terms and conditions of the Free Trial offer, or (ii) cancel such Free Trial offer.</p>
+            <h4>2.2 PRODUCT DESCRIPTION</h4>
+            <p>Prices, descriptions or availability of Products are outlined in the respective sections of Speedbots.io and are subject to change without notice.</p>
+            <p>While Products on Speedbots.io are presented with the greatest accuracy technically possible, representation on Speedbots.io through any means (including, as the case may be, graphic material, images, colors, sounds) is for reference only and implies no warranty as to the characteristics of the purchased Product.</p>
+            <p>The characteristics of the chosen Product will be outlined during the purchasing process and in the dedicated sections of Speedbots.io.</p>
+            <h4>2.3 ORDER SUBMISSION</h4>
+            <p>Any steps taken from choosing a Product to order submission form part of the purchasing process. Users must choose the desired Product and verify their purchase selection. After having reviewed the information displayed in the purchase selection, Users may place the order by submitting it.</p>
+            <p>When the User submits an order, the following applies:</p>
+            <p>The submission of an order determines contract conclusion and therefore creates for the User the obligation to pay the price, taxes and possible further fees and expenses, as specified on the order page.</p>
+            <p>In case the purchased Product requires active input from the User, such as the provision of personal information or data, specifications or special wishes, the order submission creates an obligation for the User to cooperate accordingly.</p>
+            <h4>2.4 PRICES</h4>
+            <p>Users are informed during the purchasing process and before order submission, about any fees, taxes and costs that they will be charged.</p>
+            <p>Unless specified, Prices are displayed exclusive of any applicable fees, taxes and costs, depending on the section the User is browsing.</p>
+            <p>The Company, in its sole discretion and at any time, may modify the Subscription fees. Any Subscription fee change will become effective at the end of the then-current Subscription period. The Company will provide Users with reasonable prior notice of any change in Subscription fees.</p>
+            <p>The continued use of the Service after the Subscription fee change comes into effect shall constitute an agreement to pay the modified Subscription fee amount.</p>
+            <h4>2.5 REFUNDS</h4>
+            <p>Except when required by law, paid Subscription fees are non-refundable. There will be no refunds or credits for partial periods of service, upgrade/downgrade refunds, or refunds for service periods unused.</p>
+            <p>Certain refund requests for Subscriptions may be considered by the Company on a case-by-case basis and granted at the sole discretion of the Company.</p>
+            <h4>2.6 DISCOUNTS</h4>
+            <p>The Company may offer discounts or provide special offers for the purchase of Products. Any such offer or discount shall always be subject to the eligibility criteria and the terms and conditions set out in the corresponding section of Speedbots.io.</p>
+            <p>Offers and discounts are always granted at the Company’s sole discretion. Repeated or recurring offers or discounts create no claim/title or right that Users may enforce in the future.</p>
+            <p>Depending on the case, discounts or offers shall be valid for a limited time. If an offer or discount is limited by time, the time indications refer to the time zone of the Company, as indicated in the Company’s location details in this document.</p>
+            <p>Discounts can be based on Coupons. If breach of the conditions applicable to Coupons occurs, the Company can legitimately refuse to fulfill its contractual obligations and expressly reserves the right to take appropriate legal action to protect its rights and interests. Unless otherwise stated, these rules apply to the use of Coupons:</p>
+            <p>Each Coupon is only valid when used in the manner and within the timeframe specified;</p>
+            <p>A Coupon may only be applied, in its entirety, at the actual time of purchase – partial use is not permitted;</p>
+            <p>Unless otherwise stated, single-use Coupons may only be used once per purchase and therefore may only be applied a single time even in cases involving recurring purchases;</p>
+            <p>A Coupon cannot be applied cumulatively;</p>
+            <p>The User is not entitled to any credit/refund/compensation if there is a difference between the value of the Coupon and the redeemed value;</p>
+            <p>Unless otherwise specified, all discounts shall expire at the end of the first billing period.</p>
+            <h4>2.7 METHODS OF PAYMENT</h4>
+            <p>Information related to accepted payment methods are made available during the purchasing process. Some payment methods may only be available subject to additional conditions or fees. In such cases related information can be found in the dedicated section of Speedbots.io.</p>
+            <p>Payment methods marked accordingly are managed directly by the Company. In this case, the Company collects and stores the data necessary for the processing of payments and for fulfilling any legal obligation related to them. The User may read the privacy policy of Speedbots.io to learn more about the data processing and Users’ rights regarding their data.</p>
+            <p>Other payment methods – if any – are independently provided by third-party services. In such cases Speedbots.io collects no payment information – such as credit card details – but only receives a notification from the relevant third-party provider once the payment has been successfully completed.</p>
+            <p>If payment through the available methods fail, the Company shall be under no obligation to fulfil the purchase order. Any possible costs or fees resulting from the failed or refused payment shall be borne by the User.</p>
+            <h4>2.8 SUBSCRIPTION PERIOD</h4>
+            <p>Subscriptions allow Users to receive a Product continuously or regularly over a determined period of time. Unless otherwise stated in the Order Form, Paid subscriptions begin on the day the payment is received by the Company.</p>
+            <p>The Service or some parts of the Service are available only with a paid Subscription. You will be billed in advance on a recurring and periodic basis (such as monthly, quarterly or annually), depending on the type of Subscription plan you select when purchasing the Subscription.</p>
+            <p>In order to maintain subscriptions, Users must pay the required recurring fee in a timely manner. Failure to do so may cause service interruptions.</p>
+            <h4>AUTOMATIC RENEWAL</h4>
+            <p>Subscriptions are automatically renewed through the payment method that the User chose during purchase, unless the User cancels the subscription within the deadlines for termination specified in the relevant section of these Terms and/or Speedbots.io. The renewed subscription will last for a period equal to the original term.</p>
+            <p>Should automatic billing fail to occur for any reason, the Company will issue an electronic invoice indicating that the User must proceed manually. The Company reserves the right to freeze User’s access to Speedbots.io until any outstanding invoices have been paid.</p>
+            <h4>TERMINATION</h4>
+            <p>Recurring subscriptions may be terminated at any time by sending a clear and unambiguous termination notice to the Company using the contact details provided in this document, or — if applicable — by using the corresponding controls inside Speedbots.io. Subscriptions may not be terminated prematurely and shall run out upon expiration of the subscription term.</p>
+            <p>If the notice of termination is received by the Company before the subscription renews, the termination shall take effect at the end of the current period, otherwise the automatic renewal shall apply.</p>
+            <h4>2.9 ADDITIONAL CHARGES</h4>
+            <p>Users may incur additional charges if the usage over the billing month exceeds their Subscription’s limit. The Subcription limits are detailed in the purchasing process and in the respective sections of Speedbots.io. User agrees to pay any additional charges incurred at the end of each billing month.</p>
+            <h4>2.10 LATE PAYMENT</h4>
+            <p>Any failure to make a payment of any Fees or taxes entitle the Company to suspend, in whole or in part, access to Services, until such payment is received. Unless otherwise stated in the Order Form, the Company shall assess and Customer shall pay a late fee equal to the lesser of 10% of the outstanding balance per month or the maximum rate / fee permitted by law in the jurisdiction where the User is located. Furthermore, upon any such failure all outstanding amounts shall become due and payable without further delay.</p>
+            <h4>2.11 APPLICABLE TAXES</h4>
+            <p>Unless specified, fees are displayed exclusive of any applicable taxes, duties, withholdings, tariffs, levies, customs, capital or income taxes or other governmental charges or expenses, including but not limited to value added tax, sales tax, consumption tax and similar taxes or duties as well as any current or future municipal, state, federal or provincial taxes, and User will pay, indemnify and hold harmless the Company from same.</p>
+            <h4>2.12 THIRD PARTY FEES</h4>
+            <p>Speedbots.io Fees are exclusive of any charges that may be assessed by a Third Party (e.g. Messaging Platforms) for access to or use of their services. Such charges shall be the responsibility of User, whether paid directly to the Third Party or whether such access is resold through Speedbots.io, in which case Speedbots.io shall advise User in writing as to the applicable charges and User shall have the right to accept such charges or decline them and not use the associated channel. In the event a Third Party imposes special requirements on Speedbots.io beyond the standard services, then Speedbots.io shall have the right to charge User for this additional service and User shall have the right to accept such charges or decline them and not use the associated channel.</p>
+            <h3>3. ADDITIONAL SERVICES</h3>
+            <h4>3.1 TERMS AND CONDITIONS APPLYING TO EXTRA FEATURES</h4>
+            <p>Users that have an active subscription may purchase single extra add-ons or features, described in the relevant section of Speedbots.io or in the Order Form.</p>
+            <p>Prices, duration, terms of use and termination of such extras may differ from those of the main Product and, unless otherwise specified, do not influence the prices, duration, terms of use and termination of the latter.</p>
+            <h4>3.2 PERFORMANCE ADDITIONAL OF SERVICES</h4>
+            <p>The purchased service shall be performed or made available within the timeframe specified on Speedbots.io or as communicated before the order submission. The performance of additional services are provided on the basis of payment.</p>
+            <h3>4. RIGHT OF WITHDRAWAL</h3>
+            <p>Except when required by law, the right of withdrawal does not apply on Speedbots.io. Users acknowledge and accept that the right of withdrawal does not apply to contracts concluded over Speedbots.io due to the nature of its offering.</p>
+            <h3>5. LIABILITY AND INDEMNIFICATION</h3>
+            <p>The User agrees to indemnify and hold the Company and its subsidiaries, affiliates, officers, directors, agents, co-branders, partners and employees harmless from and against any claim or demand ⁠— including but not limited to lawyer's fees and costs ⁠— made by any third party due to or in relation with any culpable use of or connection to the Service, violation of these Terms, infringement of any third-party rights or statutory provision by the User or its affiliates, officers, directors, agents, co-branders, partners and employees to the extent allowed by applicable law.</p>
+            <p>Unless otherwise explicitly stated and without prejudice to applicable statutory product liability provisions, Users shall have no right to claim damages against the Company (or any natural or legal person acting on its behalf).</p>
+            <p>Unless damages have been caused by way of intent or gross negligence, or they affect life, health or physical integrity, the Company shall only be liable to the extent of typical and foreseeable damages at the moment the contract was entered into.</p>
+            <p>In any event of liability, the compensation may not exceed the total payments that have been, will be or would be received by the Company from the User based on the contract over a period of 12 months, or the period of the duration of the Agreement, if shorter.</p>
+            <p>Some jurisdictions do not allow the exclusion of certain types of liabilities or limitations on applicable statutory rights, so some of the exclusions and limitations in these terms may not apply. But in such a case the exclusions and limitations set forth in this section shall be applied to the greatest extent enforceable under applicable law.</p>
+            <h4>5.2 LIABILITY AND INDEMNIFICATION: AUSTRALIAN USERS</h4>
+            <h4>LIMITATION OF LIABILITY</h4>
+            <p>Nothing in these Terms excludes, restricts or modifies any guarantee, condition, warranty, right or remedy which the User may have under the Competition and Consumer Act 2010 (Cth) or any similar State and Territory legislation and which cannot be excluded, restricted or modified (non-excludable right). To the fullest extent permitted by law, our liability to the User, including liability for a breach of a non-excludable right and liability which is not otherwise excluded under these Terms of Use, is limited, at the Company’s sole discretion, to the re-performance of the services or the payment of the cost of having the services supplied again.</p>
+            <h4>5.3 LIABILITY AND INDEMNIFICATION: US USERS</h4>
+            <h4>DISCLAIMER OF WARRANTIES</h4>
+            <p>Speedbots.io is provided strictly on an “as is” and “as available” basis. Use of the Service is at Users’ own risk. To the maximum extent permitted by applicable law, the Company expressly disclaims all conditions, representations, and warranties — whether express, implied, statutory or otherwise, including, but not limited to, any implied warranty of merchantability, fitness for a particular purpose, or non-infringement of third-party rights. No advice or information, whether oral or written, obtained by user from Company or through the Service will create any warranty not expressly stated herein.</p>
+            <p>Without limiting the foregoing, the Company, its subsidiaries, affiliates, licensors, officers, directors, agents, co-branders, partners, suppliers and employees do not warrant that the content is accurate, reliable or correct; that the Service will meet Users’ requirements; that the Service will be available at any particular time or location, uninterrupted or secure; that any defects or errors will be corrected; or that the Service is free of viruses or other harmful components. Any content downloaded or otherwise obtained through the use of the Service is downloaded at users own risk and users shall be solely responsible for any damage to Users’ computer system or mobile device or loss of data that results from such download or Users’ use of the Service.</p>
+            <p>The Company does not warrant, endorse, guarantee, or assume responsibility for any product or service advertised or offered by a third party through the Service or any hyperlinked website or service, and the Company shall not be a party to or in any way monitor any transaction between Users and third-party providers of products or services.</p>
+            <p>The Service may become inaccessible or it may not function properly with Users’ web browser, mobile device, and/or operating system. The Company cannot be held liable for any perceived or actual damages arising from Service content, operation, or use of this Service.</p>
+            <p>Federal law, some states, and other jurisdictions, do not allow the exclusion and limitations of certain implied warranties. The above exclusions may not apply to Users. This Agreement gives Users specific legal rights, and Users may also have other rights which vary from state to state. The disclaimers and exclusions under this agreement shall not apply to the extent prohibited by applicable law.</p>
+            <h4>LIMITATIONS OF LIABILITY</h4>
+            <p>To the maximum extent permitted by applicable law, in no event shall the Company, and its subsidiaries, affiliates, officers, directors, agents, co-branders, partners, suppliers and employees be liable for</p>
+            <p>any indirect, punitive, incidental, special, consequential or exemplary damages, including without limitation damages for loss of profits, goodwill, use, data or other intangible losses, arising out of or relating to the use of, or inability to use, the Service; and</p>
+            <p>any damage, loss or injury resulting from hacking, tampering or other unauthorized access or use of the Service or User account or the information contained therein;</p>
+            <p>any errors, mistakes, or inaccuracies of content;</p>
+            <p>personal injury or property damage, of any nature whatsoever, resulting from User access to or use of the Service;</p>
+            <p>any unauthorized access to or use of the Company’s secure servers and/or any and all personal information stored therein;</p>
+            <p>any interruption or cessation of transmission to or from the Service;</p>
+            <p>any bugs, viruses, trojan horses, or the like that may be transmitted to or through the Service;</p>
+            <p>any errors or omissions in any content or for any loss or damage incurred as a result of the use of any content posted, emailed, transmitted, or otherwise made available through the Service; and/or</p>
+            <p>the defamatory, offensive, or illegal conduct of any User or third party. In no event shall the Company, and its subsidiaries, affiliates, officers, directors, agents, co-branders, partners, suppliers and employees be liable for any claims, proceedings, liabilities, obligations, damages, losses or costs in an amount exceeding the amount paid by User to the Company hereunder in the preceding 12 months, or the period of duration of this agreement between the Company and User, whichever is shorter.</p>
+            <p>This limitation of liability section shall apply to the fullest extent permitted by law in the applicable jurisdiction whether the alleged liability is based on contract, tort, negligence, strict liability, or any other basis, even if company has been advised of the possibility of such damage.</p>
+            <p>Some jurisdictions do not allow the exclusion or limitation of incidental or consequential damages, therefore the above limitations or exclusions may not apply to User. The terms give User specific legal rights, and User may also have other rights which vary from jurisdiction to jurisdiction. The disclaimers, exclusions, and limitations of liability under the terms shall not apply to the extent prohibited by applicable law.</p>
+            <h4>INDEMNIFICATION</h4>
+            <p>The User agrees to defend, indemnify and hold the Company and its subsidiaries, affiliates, officers, directors, agents, co-branders, partners, suppliers and employees harmless from and against any and all claims or demands, damages, obligations, losses, liabilities, costs or debt, and expenses, including, but not limited to, legal fees and expenses, arising from</p>
+            <p>User’s use of and access to the Service, including any data or content transmitted or received by User;</p>
+            <p>User’s violation of these terms, including, but not limited to, User’s breach of any of the representations and warranties set forth in these terms;</p>
+            <p>User’s violation of any third-party rights, including, but not limited to, any right of privacy or intellectual property rights;</p>
+            <p>User’s violation of any statutory law, rule, or regulation;</p>
+            <p>any content that is submitted from User’s account, including third party access with User’s unique username, password or other security measure, if applicable, including, but not limited to, misleading, false, or inaccurate information;</p>
+            <p>User’s wilful misconduct; or</p>
+            <p>statutory provision by User or its affiliates, officers, directors, agents, co-branders, partners, suppliers and employees to the extent allowed by applicable law.</p>
+            <h3>6. COMMON PROVISIONS</h3>
+            <h4>6.1 NO WAIVER</h4>
+            <p>The Company’s failure to assert any right or provision under these Terms shall not constitute a waiver of any such right or provision. No waiver shall be considered a further or continuing waiver of such term or any other term.</p>
+            <h4>6.2 SERVICE INTERRUPTION</h4>
+            <p>To ensure the best possible service level, the Company reserves the right to interrupt the Service for maintenance, system updates or any other changes, informing the Users appropriately.</p>
+            <p>Within the limits of law, the Company may also decide to suspend or terminate the Service altogether. If the Service is terminated, the Company will cooperate with Users to enable them to withdraw Personal Data or information in accordance with applicable law.</p>
+            <p>Additionally, the Service might not be available due to reasons outside the Company’s reasonable control, such as “force majeure” (eg. labor actions, infrastructural breakdowns or blackouts etc).</p>
+            <h4>6.3 "AS IS" AND "AS AVAILABLE" DISCLAIMER</h4>
+            <p>The Service is provided to You "AS IS" and "AS AVAILABLE" and with all faults and defects without warranty of any kind. To the maximum extent permitted under applicable law, the Company, on its own behalf and on behalf of its Affiliates and its and their respective licensors and service providers, expressly disclaims all warranties, whether express, implied, statutory or otherwise, with respect to the Service, including all implied warranties of merchantability, fitness for a particular purpose, title and non-infringement, and warranties that may arise out of course of dealing, course of performance, usage or trade practice. Without limitation to the foregoing, the Company provides no warranty or undertaking, and makes no representation of any kind that the Service will meet Your requirements, achieve any intended results, be compatible or work with any other software, applications, systems or services, operate without interruption, meet any performance or reliability standards or be error free or that any errors or defects can or will be corrected.</p>
+            <p>Without limiting the foregoing, neither the Company nor any of the company's provider makes any representation or warranty of any kind, express or implied: (i) as to the operation or availability of the Service, or the information, content, and materials or products included thereon; (ii) that the Service will be uninterrupted or error-free; (iii) as to the accuracy, reliability, or currency of any information or content provided through the Service; or (iv) that the Service, its servers, the content, or e-mails sent from or on behalf of the Company are free of viruses, scripts, trojan horses, worms, malware, timebombs or other harmful components.</p>
+            <p>Some jurisdictions do not allow the exclusion of certain types of warranties or limitations on applicable statutory rights of a consumer, so some or all of the above exclusions and limitations may not apply to You. But in such a case the exclusions and limitations set forth in this section shall be applied to the greatest extent enforceable under applicable law.</p>
+            <h4>6.4 SERVICE RESELLING</h4>
+            <p>Users may not reproduce, duplicate, copy, sell, resell or exploit any portion of Speedbots.io and of its Service without the Company’s express prior written permission, granted either directly or through a legitimate reselling programme.</p>
+            <h4>6.5 INTELLECTUAL PROPERTY RIGHTS</h4>
+            <p>Without prejudice to any more specific provision of these Terms, any intellectual property rights, such as copyrights, trademark rights, patent rights and design rights related to Speedbots.io are the exclusive property of the Company or its licensors and are subject to the protection granted by applicable laws or international treaties relating to intellectual property.</p>
+            <p>All trademarks — nominal or figurative — and all other marks, trade names, service marks, word marks, illustrations, images, or logos appearing in connection with Speedbots.io are, and remain, the exclusive property of the Company or its licensors and are subject to the protection granted by applicable laws or international treaties related to intellectual property.</p>
+            <h4>6.6 TRADEMARK LICENSE</h4>
+            <p>During the Term, User hereby grants to Company a worldwide, non-exclusive, non-transferable and non-sub-licensable (other than to affiliates) royalty-free licence to use User’s trademarks and logos, solely in connection with the marketing, advertising, and promotion of the Company's Solution, including listing the Customer and the Customer Application on the Company's Website; and only in accordance with User's reasonable trademark usage guidelines, as updated by User from time to time. User may require Company to cease using User's trademarks and logos if, in the reasonable opinion of User, the continued display of User's trademarks and logos would cause a materially adverse effect on User's image and the goodwill associated therewith.</p>
+            <h4>6.7 CHANGES TO THESE TERMS</h4>
+            <p>The Company reserves the right to amend or otherwise modify these Terms at any time. If the amendment is material the Company will make reasonable efforts to provide User prior notice to any new terms taking effect. What constitutes a material change will be determined at the Company’s sole discretion.</p>
+            <p>Such changes will only affect the relationship with the User for the future.</p>
+            <p>The continued use of the Service will signify the User’s acceptance of the revised Terms. If Users do not wish to be bound by the changes, they must stop using the Service. Failure to accept the revised Terms, may entitle either party to terminate the Agreement.</p>
+            <p>The applicable previous version will govern the relationship prior to the User's acceptance. The User can obtain any previous version from the Company.</p>
+            <h4>6.8 ASSIGNMENT OF CONTRACT</h4>
+            <p>The Company reserves the right to transfer, assign, dispose of by novation, or subcontract any or all rights or obligations under these Terms, taking the User’s legitimate interests into account. Provisions regarding changes of these Terms will apply accordingly.</p>
+            <p>Users may not assign or transfer their rights or obligations under these Terms in any way, without the written permission of the Company.</p>
+            <h4>6.9 CONTACTS</h4>
+            <p>All communications relating to the use of Speedbots.io must be sent using the contact information stated in this document.</p>
+            <h4>6.10 SEVERABILITY</h4>
+            <p>Should any provision of these Terms be deemed or become invalid or unenforceable under applicable law, the invalidity or unenforceability of such provision shall not affect the validity of the remaining provisions, which shall remain in full force and effect.</p>
+            <h4>SEVERABILITY: US USERS</h4>
+            <p>Any such invalid or unenforceable provision will be interpreted, construed and reformed to the extent reasonably required to render it valid, enforceable and consistent with its original intent. These Terms constitute the entire Agreement between Users and the Company with respect to the subject matter hereof, and supersede all other communications, including but not limited to all prior agreements, between the parties with respect to such subject matter. These Terms will be enforced to the fullest extent permitted by law.</p>
+            <h4>SEVERABILITY: EU USERS</h4>
+            <p>Should any provision of these Terms be or be deemed void, invalid or unenforceable, the parties shall do their best to find, in an amicable way, an agreement on valid and enforceable provisions thereby substituting the void, invalid or unenforceable parts.</p>
+            <p>In case of failure to do so, the void, invalid or unenforceable provisions shall be replaced by the applicable statutory provisions, if so permitted or stated under the applicable law.</p>
+            <p>Without prejudice to the above, the nullity, invalidity or the impossibility to enforce a particular provision of these Terms shall not nullify the entire Agreement, unless the severed provisions are essential to the Agreement, or of such importance that the parties would not have entered into the contract if they had known that the provision would not be valid, or in cases where the remaining provisions would translate into an unacceptable hardship on any of the parties.</p>
+            <h4>6.11 AUTHORITATIVE VERSION OF THESE TERMS</h4>
+            <p>These Terms are drawn up and revised in English. Other language versions of these Terms are provided for information purposes only. In the event of any inconsistency between different linguistic versions, the original version shall always prevail.</p>
+            <h4>6.12 GOVERNING LAW</h4>
+            <p>These Terms are governed by the law of the place where the Company is based, as disclosed in the relevant section of this document, without regard to conflict of laws principles.</p>
+            <h4>6.13 VENUE OF JURISDICTION</h4>
+            <p>The exclusive competence to decide on any controversy resulting from or connected to these Terms lies with the courts of the place where the Company is based, as displayed in the relevant section of this document.</p>
+            <h4>6.14 PRIVACY POLICY</h4>
+            <p>To learn more about the use of their Personal Data, Users may refer to the privacy policy of Speedbots.io.</p>
+            <h4>6.15 FAIR USE POLICY</h4>
+            <p>To ensure the provision of a quality of Service to all Users, and to ensure that the behavior of some does not disadvantage the majority, you agree to abide by any fair use policy which we may apply. Notwithstanding any Product representations, the Company reserves the right to enforce limits to any or all provisions of the Service, including but not limited to messages, contacts, properties, snippets, files or any other other characteristic of the Product that might be added to the Service in the future. Users will not use the System in any manner that could damage, disable, overburden, or impair the Service or interfere with any other parties.</p>
+            <h3>7. DISPUTE RESOLUTION</h3>
+            <h4>7.1 AMICABLE DISPUTE RESOLUTION</h4>
+            <p>Users may bring any disputes to the Company who will try to resolve them amicably.</p>
+            <p>While Users' right to take legal action shall always remain unaffected, in the event of any controversy regarding the use of Speedbots.io or the Service, Users are asked to contact the Company at the contact details provided in this document.</p>
+            <p>The User may submit the complaint including a brief description and if applicable, the details of the related order, purchase, or account, to the Company’s email address specified in this document.</p>
+            <h3>8. DEFINITIONS AND LEGAL REFERENCES</h3>
+            <h4>SPEEDBOTS.IO (OR THIS APPLICATION)</h4>
+            <p>The property that enables the provision of the Service.</p>
+            <h4>AGREEMENT</h4>
+            <p>Any legally binding or contractual relationship between the Company and the User, governed by these Terms.</p>
+            <h4>COUPON</h4>
+            <p>Any code or voucher, in print or electronic form, which allows the User to purchase the Product at a discounted price.</p>
+            <h4>EUROPEAN (OR EUROPE)</h4>
+            <p>Applies where a User is physically present or has their registered offices within the EU, regardless of nationality.</p>
+            <h4>COMPANY (OR WE)</h4>
+            <p>Indicates the natural person(s) or legal entity that provides Speedbots.io and/or the Service to Users.</p>
+            <h4>PRODUCT</h4>
+            <p>A good or service available for purchase through Speedbots.io, such as e.g. physical goods, digital files, software, booking services etc. The sale of Products may be part of the Service.</p>
+            <h4>SERVICE</h4>
+            <p>The service provided by Speedbots.io as described in these Terms and on Speedbots.io.</p>
+            <p>TERMS</p>
+            <p>All provisions applicable to the use of Speedbots.io and/or the Service as described in this document, including any other related documents or agreements, and as updated from time to time.</p>
+            <h4>USER (OR YOU)</h4>
+            <p>Indicates any natural person or legal entity using Speedbots.io.</p>
+    </div>
+
+    <div class="footer">
+      {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <form method="post" id="tcForm">
+        {% csrf_token %}
+        <div class="agree-row">
+          <input type="checkbox" id="agreeCheck" name="agree" />
+          <label for="agreeCheck">I have read and agree to the SpeedBot Terms and Conditions</label>
+        </div>
+        <button type="submit" class="btn" id="continueBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+          Continue to Setup Guide
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const cb = document.getElementById('agreeCheck');
+    const btn = document.getElementById('continueBtn');
+    cb.addEventListener('change', () => { btn.disabled = !cb.checked; });
+  </script>
+</body>
+</html>
