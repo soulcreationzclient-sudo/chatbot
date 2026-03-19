@@ -197,6 +197,8 @@ class OrganizationUser(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True, related_name='members')
     role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name='users')
     is_active = models.BooleanField(default=True)
+    terms_accepted = models.BooleanField(default=False, help_text="Whether user has accepted Terms & Conditions")
+    terms_accepted_at = models.DateTimeField(null=True, blank=True, help_text="When T&C were accepted")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
