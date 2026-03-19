@@ -157,7 +157,9 @@
     <!-- Header -->
     <div class="guide-header">
       <div style="display:flex;align-items:center;gap:20px;margin-bottom:12px;">
-        <img src="{% endverbatim %}{% static 'images/speedbot_logo.png' %}{% verbatim %}" alt="SpeedBot" style="height:70px;filter:brightness(0) invert(1);drop-shadow(0 2px 8px rgba(0,0,0,.15));" />
+        <div style="background:white;border-radius:16px;padding:8px 12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.15);">
+          <img src="{% endverbatim %}{% static 'images/speedbot_logo.png' %}{% verbatim %}" alt="SpeedBot" style="height:52px;" />
+        </div>
         <h1 style="margin:0;font-size:28px;">SpeedBot Setup Guide</h1>
       </div>
       <p>Everything you need to set up and start using your AI-powered chatbot platform.</p>
@@ -465,32 +467,10 @@
       </div>
     </div>
 
-    <!-- Section 12: WebChat -->
+    <!-- Section 12: Test Chat -->
     <div class="section">
       <div class="section-header" onclick="toggleSection(this)">
         <span class="section-num">12</span>
-        <span class="section-title">Using the WebChat Widget</span>
-        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-      </div>
-      <div class="section-body">
-        <div class="section-content">
-          <p>Embed a chatbot widget on your website for visitors to chat in real-time.</p>
-          <ol>
-            <li>Go to <strong>WebChat → Widgets</strong>.</li>
-            <li>Click <strong>"Create Widget"</strong>.</li>
-            <li>Customize: name, color, greeting message, position.</li>
-            <li>Click <strong>Save</strong>, then copy the <strong>embed code</strong>.</li>
-            <li>Paste it into your website's HTML before <span class="code-inline">&lt;/body&gt;</span>.</li>
-          </ol>
-          <div class="tip"><span class="tip-icon">💡</span> <span>WebChat uses the same AI prompt as WhatsApp — no separate setup needed!</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Section 13: Test Chat -->
-    <div class="section">
-      <div class="section-header" onclick="toggleSection(this)">
-        <span class="section-num">13</span>
         <span class="section-title">Test Chat</span>
         <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
       </div>
@@ -528,8 +508,8 @@
             <li><input type="checkbox" id="c9"><label for="c9">Follow-up messages configured (if needed)</label></li>
             <li><input type="checkbox" id="c10"><label for="c10">Calendly connected and booking links added (if needed)</label></li>
             <li><input type="checkbox" id="c11"><label for="c11">External APIs configured (if needed)</label></li>
-            <li><input type="checkbox" id="c12"><label for="c12">WebChat widget set up (if needed)</label></li>
-            <li><input type="checkbox" id="c13"><label for="c13">Test Chat completed — all features working ✅</label></li>
+
+            <li><input type="checkbox" id="c12"><label for="c12">Test Chat completed — all features working ✅</label></li>
           </ul>
         </div>
       </div>
