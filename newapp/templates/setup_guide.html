@@ -1,4 +1,5 @@
-{% load static %}{% verbatim %}
+{% load static %}
+{% verbatim %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -155,7 +156,10 @@
   <div class="container">
     <!-- Header -->
     <div class="guide-header">
-      <h1>🚀 SpeedBot Setup Guide</h1>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">
+        <img src="{% endverbatim %}{% static 'images/speedbot_logo.jpeg' %}{% verbatim %}" alt="SpeedBot" style="height:44px;border-radius:10px;" />
+      </div>
+      <h1>SpeedBot Setup Guide</h1>
       <p>Everything you need to set up and start using your AI-powered chatbot platform.</p>
     </div>
 
@@ -186,21 +190,7 @@
       </div>
       <div class="section-body">
         <div class="section-content">
-          <ol>
-            <li>Navigate to <strong>Settings → Integration</strong>.</li>
-            <li>Click on <strong>Connect WhatsApp</strong>.</li>
-            <li>You will be redirected to the <strong>Meta (Facebook) Embedded Signup</strong> flow.</li>
-            <li>Follow the on-screen steps:
-              <ul>
-                <li>Log in with your Facebook account.</li>
-                <li>Select or create a <strong>WhatsApp Business Account</strong>.</li>
-                <li>Choose the phone number you want to connect.</li>
-                <li>Complete the OTP verification.</li>
-              </ul>
-            </li>
-            <li>Once completed, you'll be redirected back — your WhatsApp number is now connected!</li>
-          </ol>
-          <div class="warning"><span class="warning-icon">⚠️</span> <span>The phone number must not already be registered on the regular WhatsApp app. Make sure your Meta Business account is <strong>verified</strong>.</span></div>
+          <div class="tip"><span class="tip-icon">🤝</span> <span><strong>Our team will help you with this.</strong> We'll connect your WhatsApp account for you during onboarding. No action needed from your side!</span></div>
         </div>
       </div>
     </div>
@@ -555,7 +545,7 @@
 
     <!-- Footer -->
     <div class="guide-footer">
-      Need help? Contact the <strong>SpeedBot Team</strong> — we're here for you!<br>
+      Need help? Email us at <a href="mailto:nithi@soulcreationz.com" style="color:var(--primary);font-weight:600;">nithi@soulcreationz.com</a><br>
       <small>© SpeedBot — AI-Powered Chatbot Platform</small>
     </div>
   </div>
