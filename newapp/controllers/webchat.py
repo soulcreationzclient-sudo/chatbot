@@ -93,6 +93,7 @@ class WebChatController:
                         'name': visitor_name or f'Webchat {anonymous_id[:8]}',
                         'admin_id': admin_id,
                         'organization_id': organization_id,
+                        'created_at': timezone.now(),
                     }
                 )
                 if visitor_name and user_obj.name != visitor_name:
@@ -341,7 +342,6 @@ session=session,
                 try:
                     from ..image_tag_processor import parse_image_tags, get_image_asset
                     from ..models import Admin as AdminModel, ImageAsset
-                    from ..models import Organization # Import Organization model
                     import re
                     
                     image_tags = parse_image_tags(bot_response_text)
