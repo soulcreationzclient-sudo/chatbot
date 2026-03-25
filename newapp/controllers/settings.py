@@ -1506,3 +1506,87 @@ class Settingcontroller :
         prompt.delete()
         return JsonResponse({'success': True, 'msg': 'Prompt deleted!'})
 
+
+    # ==================== GOOGLE CALENDAR LINKS ====================
+
+    def gcalendar_links(request):
+        """Google Calendar links management page."""
+        from ..models import GoogleCalendarLink, Organization
+        from django.db.models import Q
+
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+
+        links = GoogleCalendarLink.objects.none()
+        if org_id:
+            links = GoogleCalendarLink.objects.filter(organization_id=org_id).order_by('-created_at')
+        elif admin_id:
+            links = GoogleCalendarLink.objects.filter(
+                Q(admin_id=admin_id) | Q(organization__isnull=True, admin_id=admin_id)
+            ).order_by('-created_at')
+
+        return render(request, 'set/gcalendar_links.html', {'links': links})
+
+    @csrf_exempt
+    def gcalendar_link_save(request):
+        """Create or update a Google Calendar link."""
+        from ..models import GoogleCalendarLink, Organization
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST only'}, status=405)
+
+        data = json.loads(request.body)
+        link_id = data.get('id')
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+
+        fields = {
+            'name': data.get('name', '').strip(),
+            'description': data.get('description', '').strip(),
+            'calendar_id': data.get('calendar_id', '').strip(),
+            'duration_minutes': int(data.get('duration_minutes', 30)),
+            'service_account_json': data.get('service_account_json', '').strip(),
+            'custom_field_name': data.get('custom_field_name', '').strip(),
+            'booking_message': data.get('booking_message', '').strip(),
+            'start_hour': int(data.get('start_hour', 9)),
+            'end_hour': int(data.get('end_hour', 17)),
+            'timezone': data.get('timezone', 'Asia/Kuala_Lumpur').strip(),
+            'is_active': data.get('is_active', True),
+        }
+
+        available_days = data.get('available_days', [])
+        if isinstance(available_days, list):
+            fields['available_days'] = available_days
+
+        if not fields['name'] or not fields['calendar_id']:
+            return JsonResponse({'error': 'Name and Calendar ID are required'}, status=400)
+
+        if link_id:
+            # Update
+            link = GoogleCalendarLink.objects.filter(id=link_id).first()
+            if not link:
+                return JsonResponse({'error': 'Link not found'}, status=404)
+            for k, v in fields.items():
+                setattr(link, k, v)
+            link.save()
+        else:
+            # Create
+            link = GoogleCalendarLink(**fields)
+            if org_id:
+                link.organization_id = org_id
+            elif admin_id:
+                link.admin_id = admin_id
+            link.save()
+
+        return JsonResponse({'success': True, 'id': link.id})
+
+    @csrf_exempt
+    def gcalendar_link_delete(request, link_id):
+        """Delete a Google Calendar link."""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST only'}, status=405)
+        from ..models import GoogleCalendarLink
+        link = GoogleCalendarLink.objects.filter(id=link_id).first()
+        if not link:
+            return JsonResponse({'error': 'Not found'}, status=404)
+        link.delete()
+        return JsonResponse({'success': True})

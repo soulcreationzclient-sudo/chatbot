@@ -1,0 +1,240 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Google Calendar Booking Links{% endblock %}
+
+{% block head_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    :root { --bg-card: #ffffff; --border-soft: #e5e7eb; --text-main: #0f172a; --text-muted: #64748b; --accent: #3b82f6; }
+    .settings-wrap { padding: 24px 32px; max-width: 900px; }
+    .breadcrumb-nav { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
+    .breadcrumb-nav a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .page-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .page-desc { color: var(--text-muted); margin-bottom: 24px; }
+    .link-card { background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 14px; padding: 18px 20px; margin-bottom: 12px; }
+    .link-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    .link-name { font-weight: 700; font-size: 16px; color: var(--text-main); }
+    .link-meta { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .tag-syntax { font-family: monospace; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-size: 13px; cursor: pointer; border: 1px solid #e2e8f0; }
+    .tag-syntax:hover { background: #e2e8f0; }
+    .btn-add { background: #3B82F6; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+    .btn-edit { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+    .btn-delete { background: transparent; color: #ef4444; border: 1px solid #ef4444; padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; margin-left: 8px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .status-dot.active { background: #22c55e; }
+    .status-dot.inactive { background: #ef4444; }
+    .info-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-wrap">
+    <div class="breadcrumb-nav">
+        <a href="{% url 'settings' %}">Settings</a> &gt; <b>Google Calendar Booking</b>
+    </div>
+
+    <h1 class="page-title">📅 Google Calendar Booking Links</h1>
+    <p class="page-desc">Create booking links that work with Google Calendar. Use <code>{% templatetag openvariable %}gcalendar:link_name{% templatetag closevariable %}</code> in your AI prompt to send booking links to users.</p>
+
+    <div class="info-box">
+        <strong>💡 How it works:</strong><br>
+        1. Create a link below with your Google Calendar ID and service account credentials<br>
+        2. In your AI prompt, use the tag (e.g., <code>{% templatetag openvariable %}gcalendar:consultation{% templatetag closevariable %}</code>)<br>
+        3. When AI triggers the tag, user receives a booking link with available time slots<br>
+        4. User picks a slot → event is created in your Google Calendar automatically
+    </div>
+
+    <!-- Existing Links -->
+    {% for link in links %}
+    <div class="link-card">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="link-name">
+                    <span class="status-dot {% if link.is_active %}active{% else %}inactive{% endif %}"></span>
+                    {{ link.name }}
+                </div>
+                <div class="link-meta">
+                    📎 Calendar: {{ link.calendar_id|truncatechars:40 }} · ⏱ {{ link.duration_minutes }} min
+                    · 🕐 {{ link.start_hour }}:00–{{ link.end_hour }}:00 {{ link.timezone }}
+                </div>
+                {% if link.description %}
+                <div class="link-meta">{{ link.description }}</div>
+                {% endif %}
+                <div class="mt-2">
+                    <span class="tag-syntax" onclick="copyTag('{{ link.name }}')" title="Click to copy">
+                        {% templatetag openvariable %}gcalendar:{{ link.name }}{% templatetag closevariable %}
+                    </span>
+                </div>
+            </div>
+            <div>
+                <button class="btn-edit" onclick="editLink({{ link.id }}, {{ link|safe }})">Edit</button>
+                <button class="btn-delete" onclick="deleteLink({{ link.id }}, '{{ link.name|escapejs }}')">Delete</button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div style="text-align:center; padding:40px; background:#f8fafc; border-radius:14px; border:1px dashed var(--border-soft); color:var(--text-muted);">
+        <p class="mb-3">No Google Calendar booking links yet.</p>
+        <p class="small">Click "Add Booking Link" to create one.</p>
+    </div>
+    {% endfor %}
+
+    <div class="mt-4">
+        <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addModal">+ Add Booking Link</button>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Add Google Calendar Link</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editLinkId" value="">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Link Name / Tag <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="linkName" placeholder="e.g., consultation">
+                        <div class="form-text">Used in prompt as {% templatetag openvariable %}gcalendar:name{% templatetag closevariable %}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Duration (minutes)</label>
+                        <input type="number" class="form-control" id="linkDuration" value="30">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Google Calendar ID <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="linkCalendarId" placeholder="primary or abc@group.calendar.google.com">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <input type="text" class="form-control" id="linkDescription" placeholder="e.g., 30 minute consultation">
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Start Hour</label>
+                        <input type="number" class="form-control" id="linkStartHour" value="9" min="0" max="23">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">End Hour</label>
+                        <input type="number" class="form-control" id="linkEndHour" value="17" min="0" max="23">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Timezone</label>
+                        <input type="text" class="form-control" id="linkTimezone" value="Asia/Kuala_Lumpur">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Service Account JSON Credentials</label>
+                    <textarea class="form-control" id="linkServiceAccount" rows="4" placeholder="Paste your Google service account JSON here..."></textarea>
+                    <div class="form-text">Get this from Google Cloud Console → Service Accounts → Keys → Create JSON key</div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Custom Field Name (optional)</label>
+                        <input type="text" class="form-control" id="linkCustomField" placeholder="e.g., booking_confirmed">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Booking Confirmation Message (optional)</label>
+                    <textarea class="form-control" id="linkBookingMessage" rows="2" placeholder="Message sent when booking is confirmed"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="saveLink()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const modal = new bootstrap.Modal(document.getElementById('addModal'));
+
+    function getCsrfToken() {
+        const name = 'csrftoken=';
+        const decoded = decodeURIComponent(document.cookie);
+        const ca = decoded.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i].trim();
+            if (c.indexOf(name) === 0) return c.substring(name.length, c.length);
+        }
+        return '';
+    }
+
+    function copyTag(name) {
+        const tag = String.fromCharCode(123,123) + 'gcalendar:' + name + String.fromCharCode(125,125);
+        navigator.clipboard.writeText(tag).then(() => {
+            alert('Copied: ' + tag);
+        });
+    }
+
+    async function saveLink() {
+        const id = document.getElementById('editLinkId').value;
+        const data = {
+            name: document.getElementById('linkName').value.trim(),
+            calendar_id: document.getElementById('linkCalendarId').value.trim(),
+            description: document.getElementById('linkDescription').value.trim(),
+            duration_minutes: parseInt(document.getElementById('linkDuration').value) || 30,
+            start_hour: parseInt(document.getElementById('linkStartHour').value) || 9,
+            end_hour: parseInt(document.getElementById('linkEndHour').value) || 17,
+            timezone: document.getElementById('linkTimezone').value.trim(),
+            service_account_json: document.getElementById('linkServiceAccount').value.trim(),
+            custom_field_name: document.getElementById('linkCustomField').value.trim(),
+            booking_message: document.getElementById('linkBookingMessage').value.trim(),
+        };
+        if (id) data.id = parseInt(id);
+
+        if (!data.name || !data.calendar_id) {
+            alert('Name and Calendar ID are required');
+            return;
+        }
+
+        const res = await fetch('/settings/gcalendar/save/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (result.success) {
+            window.location.reload();
+        } else {
+            alert(result.error || 'Failed to save');
+        }
+    }
+
+    async function deleteLink(id, name) {
+        if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
+        const res = await fetch('/settings/gcalendar/' + id + '/delete/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || 'Failed to delete');
+        }
+    }
+
+    // Reset modal on close
+    document.getElementById('addModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('editLinkId').value = '';
+        document.getElementById('linkName').value = '';
+        document.getElementById('linkCalendarId').value = '';
+        document.getElementById('linkDescription').value = '';
+        document.getElementById('linkDuration').value = '30';
+        document.getElementById('linkStartHour').value = '9';
+        document.getElementById('linkEndHour').value = '17';
+        document.getElementById('linkTimezone').value = 'Asia/Kuala_Lumpur';
+        document.getElementById('linkServiceAccount').value = '';
+        document.getElementById('linkCustomField').value = '';
+        document.getElementById('linkBookingMessage').value = '';
+        document.getElementById('modalTitle').textContent = 'Add Google Calendar Link';
+    });
+</script>
+{% endblock %}

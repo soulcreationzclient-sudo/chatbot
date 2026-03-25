@@ -119,6 +119,11 @@ urlpatterns = [
     path('gcalendar/book/<str:token>/', gcalendar_views.gcalendar_booking_page, name='gcalendar_booking_page'),
     path('gcalendar/book/<str:token>/confirm/', gcalendar_views.gcalendar_confirm_booking, name='gcalendar_confirm_booking'),
     
+    # Google Calendar Admin/Settings
+    path('settings/gcalendar/', Settingcontroller.gcalendar_links, name='gcalendar_links_view'),
+    path('settings/gcalendar/save/', Settingcontroller.gcalendar_link_save, name='gcalendar_link_save'),
+    path('settings/gcalendar/<int:link_id>/delete/', Settingcontroller.gcalendar_link_delete, name='gcalendar_link_delete'),
+    
     # ==================== LEGACY ROUTES (backward compatibility) ====================
     # logout
     path('',Logincontroller.enter,name=''),
