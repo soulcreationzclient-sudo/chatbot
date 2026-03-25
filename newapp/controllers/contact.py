@@ -227,8 +227,8 @@ class Contactcontroller:
         # Hard delete the user record
         user.delete()
 
-        # Redirect to user listing page
-        return redirect('show_people')
+        # Redirect to My Contacts page
+        return redirect('contact_dashboard')
 
     @staticmethod
     def add_user_tag(request):
