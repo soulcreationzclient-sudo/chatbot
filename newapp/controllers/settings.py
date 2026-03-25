@@ -1347,3 +1347,132 @@ class Settingcontroller :
         
         link.delete()
         return JsonResponse({'success': True, 'msg': 'Link deleted!'})
+
+    # ==================== PROMPT MANAGEMENT (Multi-Agent) ====================
+    @staticmethod
+    def prompt_list(request):
+        """AI Agent page — list all prompts for prompt management."""
+        from ..models import ChatGPTPrompt, Organization, Admin
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        if not admin_id and not org_id:
+            return redirect('/login')
+        
+        prompts = ChatGPTPrompt.objects.none()
+        org = None
+        admin = None
+        if org_id:
+            org = Organization.objects.filter(id=org_id).first()
+            prompts = ChatGPTPrompt.objects.filter(organization_id=org_id).order_by('-is_default', '-updated_at')
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            prompts = ChatGPTPrompt.objects.filter(admin=admin).order_by('-is_default', '-updated_at')
+        
+        return render(request, 'set/ai_agent.html', {
+            'prompts': prompts,
+            'organization': org,
+            'admin': admin,
+        })
+
+    @staticmethod
+    def prompt_create(request):
+        """Create a new prompt."""
+        from ..models import ChatGPTPrompt, Organization, Admin
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        name = data.get('name', 'New Prompt').strip()
+        prompt_text = data.get('prompt_text', '').strip()
+        gpt_model = data.get('gpt_model', '').strip()
+        is_default = data.get('is_default', False)
+        if isinstance(is_default, str):
+            is_default = is_default.lower() in ('true', '1', 'on')
+        
+        prompt = ChatGPTPrompt(name=name, prompt_text=prompt_text, gpt_model=gpt_model, is_default=is_default)
+        
+        if org_id:
+            prompt.organization_id = org_id
+            if is_default:
+                ChatGPTPrompt.objects.filter(organization_id=org_id, is_default=True).update(is_default=False)
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            prompt.admin = admin
+            if is_default:
+                ChatGPTPrompt.objects.filter(admin=admin, is_default=True).update(is_default=False)
+        
+        prompt.save()
+        return JsonResponse({'success': True, 'id': prompt.id, 'msg': 'Prompt created!'})
+
+    @staticmethod
+    def prompt_update(request, prompt_id):
+        """Update a prompt."""
+        from ..models import ChatGPTPrompt, Organization, Admin
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        prompt = None
+        if org_id:
+            prompt = ChatGPTPrompt.objects.filter(id=prompt_id, organization_id=org_id).first()
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                prompt = ChatGPTPrompt.objects.filter(id=prompt_id, admin=admin).first()
+        
+        if not prompt:
+            return JsonResponse({'error': 'Prompt not found'}, status=404)
+        
+        data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        
+        if 'name' in data:
+            prompt.name = data['name'].strip()
+        if 'prompt_text' in data:
+            prompt.prompt_text = data['prompt_text'].strip()
+        if 'gpt_model' in data:
+            prompt.gpt_model = data['gpt_model'].strip()
+        if 'is_default' in data:
+            is_default = data['is_default']
+            if isinstance(is_default, str):
+                is_default = is_default.lower() in ('true', '1', 'on')
+            if is_default:
+                if org_id:
+                    ChatGPTPrompt.objects.filter(organization_id=org_id, is_default=True).update(is_default=False)
+                elif admin_id:
+                    admin = Admin.objects.filter(id=admin_id).first()
+                    if admin:
+                        ChatGPTPrompt.objects.filter(admin=admin, is_default=True).update(is_default=False)
+            prompt.is_default = is_default
+        
+        prompt.save()
+        return JsonResponse({'success': True, 'msg': 'Prompt updated!'})
+
+    @staticmethod
+    def prompt_delete(request, prompt_id):
+        """Delete a prompt."""
+        from ..models import ChatGPTPrompt, Organization, Admin
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        
+        prompt = None
+        if org_id:
+            prompt = ChatGPTPrompt.objects.filter(id=prompt_id, organization_id=org_id).first()
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                prompt = ChatGPTPrompt.objects.filter(id=prompt_id, admin=admin).first()
+        
+        if not prompt:
+            return JsonResponse({'error': 'Prompt not found'}, status=404)
+        
+        prompt.delete()
+        return JsonResponse({'success': True, 'msg': 'Prompt deleted!'})
+

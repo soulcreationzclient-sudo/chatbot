@@ -189,6 +189,12 @@ urlpatterns = [
     #path('admin/connect_google_calendar/', Integrationcontroller.connect_google_calendar, name='connect_google_calendar'),
     #path('admin/disconnect_google_calendar/', Integrationcontroller.disconnect_google_calendar, name='disconnect_google_calendar'),
 
+    # ==================== PROMPT MANAGEMENT (AI Agent) ====================
+    path('setting/ai_agent', Settingcontroller.prompt_list, name='ai_agent_view'),
+    path('api/prompt/create/', Settingcontroller.prompt_create, name='prompt_create'),
+    path('api/prompt/<int:prompt_id>/update/', Settingcontroller.prompt_update, name='prompt_update'),
+    path('api/prompt/<int:prompt_id>/delete/', Settingcontroller.prompt_delete, name='prompt_delete'),
+
     
     
     # whatsapp
