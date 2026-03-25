@@ -228,7 +228,7 @@ class Contactcontroller:
 
         # CUSTOM DELETE LOGIC:
         UserTag.objects.filter(user=user).delete()
-        Message.objects.filter(user=user).delete()
+        Message.objects.filter(user_id=user).delete()
 
         # Redirect to user listing page
         return redirect('show_people')  # replace 'show_people' with your actual user listing url name
