@@ -1,4 +1,4 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
 {% load static %}
 {% block title %}Integration Channels{% endblock %}
 
@@ -281,11 +281,7 @@
     else alert('Failed to change mode: ' + (data.error || 'Unknown error'));
   }
 
-  const goToPromptPageBtn = document.getElementById('goToPromptPage');
-  if (goToPromptPageBtn) goToPromptPageBtn.addEventListener('click', async () => { await updateChatGPTMode('prompt'); window.location.href = '/chatgpt_prompt/'; });
 
-  const goToAIpageBtn = document.getElementById('goToAIpage');
-  if (goToAIpageBtn) goToAIpageBtn.addEventListener('click', async () => { await updateChatGPTMode('ai_agent'); window.location.href = '/ai_agent/upload/'; });
 
   // Calendly modal handlers
   const calendlyModalEl = document.getElementById('calendlyModal');
@@ -500,8 +496,7 @@
       <div class="modal-footer">
         {% if chatgpt_connected %}
         <button type="button" class="btn btn-danger" id="confirmChatGPTDisconnect">Disconnect</button>
-        <button type="button" class="btn btn-primary" id="goToPromptPage">Enter Prompt</button>
-        <button type="button" class="btn btn-secondary" id="goToAIpage">AI Agent</button>
+        <a href="/setting/ai_agent" class="btn btn-primary">Manage Prompts</a>
         {% else %}
         <button type="button" class="btn btn-success" id="confirmChatGPTConnect">Connect</button>
         {% endif %}
