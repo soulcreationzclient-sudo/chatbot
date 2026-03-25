@@ -217,21 +217,18 @@ class Contactcontroller:
         return render(request, 'contact/edit_user.html', {'form': form, 'user': user, 'custom_fields': custom_fields})
 
     def delete_user(request, id):
-        """Soft-delete a user - archive instead of permanent deletion"""
+        """Delete a user and all associated data"""
         user = get_object_or_404(User, id=id)
 
-        # SOFT DELETE: Archive from inbox instead of deleting
-        # Contact remains in All Contacts view but data is RESET (tags/history cleared)
-        user.is_in_inbox = False
-        user.archived_at = timezone.now()
-        user.save(update_fields=['is_in_inbox', 'archived_at'])
-
-        # CUSTOM DELETE LOGIC:
+        # Delete associated data first
         UserTag.objects.filter(user=user).delete()
         Message.objects.filter(user_id=user).delete()
+        
+        # Hard delete the user record
+        user.delete()
 
         # Redirect to user listing page
-        return redirect('show_people')  # replace 'show_people' with your actual user listing url name
+        return redirect('show_people')
 
     @staticmethod
     def add_user_tag(request):
