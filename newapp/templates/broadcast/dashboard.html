@@ -444,7 +444,7 @@
     }
 
     function copyTemplateTag(name) {
-        const tag = `{{template:${name}}}`;
+        const tag = '{% templatetag openvariable %}template:' + name + '{% templatetag closevariable %}';
         navigator.clipboard.writeText(tag).then(() => {
             // Visual feedback
             const btn = event.currentTarget;
