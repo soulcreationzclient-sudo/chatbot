@@ -98,6 +98,23 @@ urlpatterns = [
     path('settings/team/<int:member_id>/toggle/', team_views.team_toggle, name='team_toggle'),
     path('settings/team/<int:member_id>/delete/', team_views.team_delete, name='team_delete'),
     
+    # ==================== PIPELINE CRM ====================
+    path('pipeline/', pipeline_views.pipeline_list, name='pipeline_list'),
+    path('pipeline/create/', pipeline_views.pipeline_create, name='pipeline_create'),
+    path('pipeline/<int:pipeline_id>/', pipeline_views.pipeline_board, name='pipeline_board'),
+    path('pipeline/<int:pipeline_id>/delete/', pipeline_views.pipeline_delete, name='pipeline_delete'),
+    path('pipeline/<int:pipeline_id>/stage/create/', pipeline_views.stage_create, name='stage_create'),
+    path('pipeline/stage/<int:stage_id>/delete/', pipeline_views.stage_delete, name='stage_delete'),
+    path('pipeline/stage/<int:stage_id>/rename/', pipeline_views.stage_rename, name='stage_rename'),
+    path('pipeline/opportunity/create/', pipeline_views.opportunity_create, name='opportunity_create'),
+    path('pipeline/opportunity/<int:opp_id>/move/', pipeline_views.opportunity_move, name='opportunity_move'),
+    path('pipeline/opportunity/<int:opp_id>/update/', pipeline_views.opportunity_update, name='opportunity_update'),
+    path('pipeline/opportunity/<int:opp_id>/delete/', pipeline_views.opportunity_delete, name='opportunity_delete'),
+    path('pipeline/opportunity/<int:opp_id>/comment/', pipeline_views.opportunity_comment, name='opportunity_comment'),
+    path('pipeline/automation/create/', pipeline_views.automation_create, name='automation_create'),
+    path('pipeline/automation/<int:auto_id>/delete/', pipeline_views.automation_delete, name='automation_delete'),
+    path('pipeline/automation/<int:auto_id>/update/', pipeline_views.automation_update, name='automation_update'),
+    
     # ==================== GOOGLE CALENDAR BOOKING (Feature 6) ====================
     path('gcalendar/book/<str:token>/', gcalendar_views.gcalendar_booking_page, name='gcalendar_booking_page'),
     path('gcalendar/book/<str:token>/confirm/', gcalendar_views.gcalendar_confirm_booking, name='gcalendar_confirm_booking'),

@@ -236,7 +236,7 @@
     My Contacts
   </a>
 
-  {% url 'pipeline_board' as pipeline_url %}
+  {% url 'pipeline_list' as pipeline_url %}
   <a href="{{ pipeline_url }}" class="nav-item {% if '/pipeline/' in request.path %}active{% endif %}">
     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <rect x="3" y="3" width="5" height="18" rx="1.5"/>
