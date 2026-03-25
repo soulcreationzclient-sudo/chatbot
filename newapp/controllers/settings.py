@@ -651,10 +651,17 @@ class Settingcontroller :
             tags = Tag.objects.none()
         
         # Get approved WhatsApp templates for the template picker
+        # Query by BOTH org and admin to ensure we find templates regardless of how they were synced
+        from django.db.models import Q
+        q_filter = Q()
         if org_id:
-            templates = WhatsAppTemplate.objects.filter(organization_id=org_id, status='APPROVED')
-        elif admin_id:
-            templates = WhatsAppTemplate.objects.filter(admin_id=admin_id, status='APPROVED')
+            q_filter |= Q(organization_id=org_id)
+        if admin_id:
+            q_filter |= Q(admin_id=admin_id)
+        if admin:
+            q_filter |= Q(admin_id=admin.id)
+        if q_filter:
+            templates = WhatsAppTemplate.objects.filter(q_filter, status='APPROVED').distinct()
         else:
             templates = WhatsAppTemplate.objects.none()
         
