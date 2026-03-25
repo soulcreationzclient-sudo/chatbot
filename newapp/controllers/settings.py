@@ -615,7 +615,7 @@ class Settingcontroller :
     
     @staticmethod
     def followup_settings(request):
-        from ..models import FollowUpMessage, Admin, Tag
+        from ..models import FollowUpMessage, Admin, Tag, WhatsAppTemplate
         
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
@@ -636,6 +636,7 @@ class Settingcontroller :
                 'admin': None,
                 'followups': [],
                 'tags': Tag.objects.none(),
+                'templates': WhatsAppTemplate.objects.none(),
                 'error_message': 'Follow-up settings require a WhatsApp connection. Please connect WhatsApp first in Settings > Channels.'
             })
         
@@ -649,10 +650,19 @@ class Settingcontroller :
         else:
             tags = Tag.objects.none()
         
+        # Get approved WhatsApp templates for the template picker
+        if org_id:
+            templates = WhatsAppTemplate.objects.filter(organization_id=org_id, status='APPROVED')
+        elif admin_id:
+            templates = WhatsAppTemplate.objects.filter(admin_id=admin_id, status='APPROVED')
+        else:
+            templates = WhatsAppTemplate.objects.none()
+        
         return render(request, 'set/followup_settings.html', {
             'admin': admin,
             'followups': followups,
-            'tags': tags
+            'tags': tags,
+            'templates': templates
         })
     
     @staticmethod
@@ -689,12 +699,18 @@ class Settingcontroller :
             data = json.loads(request.body)
             next_step = existing_count + 1
             
+            use_template = data.get('use_template', False)
+            if isinstance(use_template, str):
+                use_template = use_template.lower() in ('true', '1', 'on')
+            
             followup = FollowUpMessage.objects.create(
                 admin=admin,
                 step=next_step,
                 delay_minutes=data.get('delay_minutes', 10),
                 message=data.get('message', ''),
-                tag_id=data.get('tag_id') or None
+                tag_id=data.get('tag_id') or None,
+                use_template=use_template,
+                template_id=data.get('template_id') or None
             )
             
             return JsonResponse({'success': True, 'id': followup.id})
@@ -735,6 +751,13 @@ class Settingcontroller :
             followup.message = data.get('message', followup.message)
             if 'tag_id' in data:
                 followup.tag_id = data.get('tag_id') or None
+            if 'use_template' in data:
+                use_template = data['use_template']
+                if isinstance(use_template, str):
+                    use_template = use_template.lower() in ('true', '1', 'on')
+                followup.use_template = use_template
+            if 'template_id' in data:
+                followup.template_id = data.get('template_id') or None
             followup.save()
             
             return JsonResponse({'success': True})

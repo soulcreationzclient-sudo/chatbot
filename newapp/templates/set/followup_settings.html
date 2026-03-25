@@ -106,6 +106,31 @@
         font-weight: 600;
         color: var(--text-main);
     }
+
+    .template-warning {
+        background: #fef3c7;
+        border: 1px solid #fbbf24;
+        color: #92400e;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-top: 8px;
+        display: none;
+    }
+
+    .template-section {
+        background: #f8fafc;
+        border: 1px solid var(--border-soft);
+        border-radius: 10px;
+        padding: 14px;
+        margin-top: 12px;
+    }
+
+    .template-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 </style>
 {% endblock %}
 
@@ -142,7 +167,11 @@
                 <div class="col-md-3 mb-3">
                     <label class="form-label">Delay (minutes)</label>
                     <input type="number" class="form-control delay-input" value="{{ followup.delay_minutes }}" min="1"
-                        max="1440" data-id="{{ followup.id }}">
+                        max="10080" data-id="{{ followup.id }}" onchange="checkDelayWarning(this)">
+                    <div class="template-warning" id="delayWarning_{{ followup.id }}"
+                        {% if followup.delay_minutes > 1440 %}style="display:block"{% endif %}>
+                        ⚠️ Delay exceeds 24h — WhatsApp requires a <strong>template message</strong>.
+                    </div>
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">Tag Filter (Optional)</label>
@@ -156,10 +185,29 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Message</label>
                     <textarea class="form-control message-input" rows="3"
-                        data-id="{{ followup.id }}">{{ followup.message }}</textarea>
+                        data-id="{{ followup.id }}" {% if followup.use_template %}disabled{% endif %}>{{ followup.message }}</textarea>
                 </div>
             </div>
-            <button class="btn btn-sm btn-primary" onclick="saveFollowup({{ followup.id }})">Save Changes</button>
+            <!-- Template Message Section -->
+            <div class="template-section">
+                <div class="template-toggle">
+                    <input type="checkbox" class="form-check-input use-template-input" data-id="{{ followup.id }}"
+                        {% if followup.use_template %}checked{% endif %}
+                        onchange="toggleTemplateFields(this, {{ followup.id }})">
+                    <label class="form-label mb-0">Use WhatsApp Template (required for 24h+ delays)</label>
+                </div>
+                <div class="mt-2 template-picker" id="templatePicker_{{ followup.id }}"
+                    style="{% if not followup.use_template %}display:none{% endif %}">
+                    <select class="form-select template-select" data-id="{{ followup.id }}">
+                        <option value="">Select a template...</option>
+                        {% for tmpl in templates %}
+                        <option value="{{ tmpl.id }}" {% if followup.template_id == tmpl.id %}selected{% endif %}>{{ tmpl.name }} ({{ tmpl.category }})</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Templates are synced from Meta. Go to Settings → Template Management to sync.</div>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-primary mt-3" onclick="saveFollowup({{ followup.id }})">Save Changes</button>
         </div>
         {% empty %}
         <div class="empty-state" id="emptyState">
@@ -188,8 +236,11 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label">Delay (minutes)</label>
-                    <input type="number" class="form-control" id="newDelay" value="10" min="1" max="1440">
+                    <input type="number" class="form-control" id="newDelay" value="10" min="1" max="10080" onchange="checkNewDelayWarning()">
                     <div class="form-text">Time to wait before sending this follow-up</div>
+                    <div class="template-warning" id="newDelayWarning">
+                        ⚠️ Delay exceeds 24h — WhatsApp requires a <strong>template message</strong>.
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Tag Filter (Optional)</label>
@@ -204,6 +255,23 @@
                     <label class="form-label">Message</label>
                     <textarea class="form-control" id="newMessage" rows="4"
                         placeholder="Hi! Just following up on my previous message..."></textarea>
+                </div>
+                <!-- Template Section in Modal -->
+                <div class="template-section">
+                    <div class="template-toggle">
+                        <input type="checkbox" class="form-check-input" id="newUseTemplate"
+                            onchange="toggleNewTemplateFields()">
+                        <label class="form-label mb-0">Use WhatsApp Template (required for 24h+ delays)</label>
+                    </div>
+                    <div class="mt-2" id="newTemplatePicker" style="display:none">
+                        <select class="form-select" id="newTemplate">
+                            <option value="">Select a template...</option>
+                            {% for tmpl in templates %}
+                            <option value="{{ tmpl.id }}">{{ tmpl.name }} ({{ tmpl.category }})</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Templates are synced from Meta. Go to Settings → Template Management to sync.</div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -233,11 +301,24 @@
     async function createFollowup() {
         const delay = document.getElementById('newDelay').value;
         const message = document.getElementById('newMessage').value;
+        const useTemplate = document.getElementById('newUseTemplate').checked;
+        const templateId = document.getElementById('newTemplate')?.value || '';
+
+        if (useTemplate && !templateId) {
+            alert('Please select a template when "Use Template" is enabled.');
+            return;
+        }
 
         const res = await fetch('/api/followup/create/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-            body: JSON.stringify({ delay_minutes: parseInt(delay), message: message, tag_id: document.getElementById('newTag').value })
+            body: JSON.stringify({
+                delay_minutes: parseInt(delay),
+                message: message,
+                tag_id: document.getElementById('newTag').value,
+                use_template: useTemplate,
+                template_id: templateId || null
+            })
         });
 
         if (res.ok) {
@@ -252,17 +333,80 @@
         const delay = card.querySelector('.delay-input').value;
         const message = card.querySelector('.message-input').value;
         const tag = card.querySelector('.tag-input').value;
+        const useTemplate = card.querySelector('.use-template-input')?.checked || false;
+        const templateId = card.querySelector('.template-select')?.value || '';
+
+        if (useTemplate && !templateId) {
+            alert('Please select a template when "Use Template" is enabled.');
+            return;
+        }
 
         const res = await fetch(`/api/followup/${id}/update/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-            body: JSON.stringify({ delay_minutes: parseInt(delay), message: message, tag_id: document.getElementById('newTag').value })
+            body: JSON.stringify({
+                delay_minutes: parseInt(delay),
+                message: message,
+                tag_id: tag,
+                use_template: useTemplate,
+                template_id: templateId || null
+            })
         });
 
         if (res.ok) {
             alert('Saved!');
         } else {
             alert('Failed to save');
+        }
+    }
+
+    // Template toggle helpers
+    function toggleTemplateFields(checkbox, id) {
+        const picker = document.getElementById(`templatePicker_${id}`);
+        const card = checkbox.closest('.followup-card');
+        const msgInput = card.querySelector('.message-input');
+        if (checkbox.checked) {
+            picker.style.display = 'block';
+            msgInput.disabled = true;
+            msgInput.placeholder = 'Template message will be used instead';
+        } else {
+            picker.style.display = 'none';
+            msgInput.disabled = false;
+            msgInput.placeholder = '';
+        }
+    }
+
+    function toggleNewTemplateFields() {
+        const checked = document.getElementById('newUseTemplate').checked;
+        const picker = document.getElementById('newTemplatePicker');
+        const msgInput = document.getElementById('newMessage');
+        if (checked) {
+            picker.style.display = 'block';
+            msgInput.disabled = true;
+            msgInput.placeholder = 'Template message will be used instead';
+        } else {
+            picker.style.display = 'none';
+            msgInput.disabled = false;
+            msgInput.placeholder = 'Hi! Just following up on my previous message...';
+        }
+    }
+
+    function checkDelayWarning(input) {
+        const id = input.dataset.id;
+        const warning = document.getElementById(`delayWarning_${id}`);
+        if (warning) {
+            warning.style.display = parseInt(input.value) > 1440 ? 'block' : 'none';
+        }
+    }
+
+    function checkNewDelayWarning() {
+        const delay = parseInt(document.getElementById('newDelay').value);
+        const warning = document.getElementById('newDelayWarning');
+        warning.style.display = delay > 1440 ? 'block' : 'none';
+        // Auto-enable template toggle if delay > 24h
+        if (delay > 1440) {
+            document.getElementById('newUseTemplate').checked = true;
+            toggleNewTemplateFields();
         }
     }
 
