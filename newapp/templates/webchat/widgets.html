@@ -254,6 +254,44 @@
             background: #f8f9fa;
             display: flex;
             gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .share-link-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: #eef6ff;
+            border: 1px solid #bee3f8;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+
+        .share-link-url {
+            flex: 1;
+            font-size: 12px;
+            font-family: monospace;
+            color: #2563eb;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .share-link-copy {
+            padding: 4px 10px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .share-link-copy:hover {
+            background: #1d4ed8;
         }
 
         /* Empty State */
@@ -502,9 +540,17 @@
                         </span>
                         {% endif %}
                     </div>
+
+                    <!-- Shareable Link -->
+                    <div class="share-link-row">
+                        <span style="font-size:14px;">🔗</span>
+                        <span class="share-link-url" id="share-url-{{ widget.id }}">{{ request.scheme }}://{{ request.get_host }}/webchat/w/{{ widget.id }}/</span>
+                        <button class="share-link-copy" onclick="copyShareLink({{ widget.id }})">📋 Copy</button>
+                    </div>
                 </div>
                 <div class="widget-actions">
                     <button class="btn btn-secondary btn-sm" onclick="getEmbedCode({{ widget.id }})">Get Code</button>
+                    <button class="btn btn-success btn-sm" onclick="openShareLink({{ widget.id }})">🔗 Open Link</button>
                     <button class="btn btn-primary btn-sm" onclick="openEditModal({{ widget.id }})">Edit</button>
                     <button class="btn btn-danger btn-sm" onclick="deleteWidget({{ widget.id }})">Delete</button>
                 </div>
@@ -725,6 +771,29 @@
             textarea.select();
             document.execCommand('copy');
             alert('Copied to clipboard!');
+        }
+
+        function copyShareLink(widgetId) {
+            const url = document.getElementById('share-url-' + widgetId).textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                const btn = event.currentTarget;
+                const original = btn.innerHTML;
+                btn.innerHTML = '✅ Copied!';
+                setTimeout(() => { btn.innerHTML = original; }, 1500);
+            }).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = url;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Copied: ' + url);
+            });
+        }
+
+        function openShareLink(widgetId) {
+            const url = document.getElementById('share-url-' + widgetId).textContent;
+            window.open(url, '_blank');
         }
 
         // Close modals on outside click
