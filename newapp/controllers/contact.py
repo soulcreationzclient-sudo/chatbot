@@ -141,11 +141,20 @@ class Contactcontroller:
                 messages.warning(request, error)
                 return redirect(request.META.get("HTTP_REFERER", "contact/add"))
             
-            if(not User.objects.filter(phone_no=phone_no)):
-                # Support both organization and admin auth
-                org_id = request.session.get('organization_id')
-                admin_id = request.session.get('admin_id')
-                
+            # Support both organization and admin auth
+            org_id = request.session.get('organization_id')
+            admin_id = request.session.get('admin_id')
+
+            # Check duplicate within the SAME org/admin only (not globally)
+            if org_id:
+                phone_exists = User.objects.filter(phone_no=phone_no, organization_id=org_id).exists()
+            elif admin_id:
+                phone_exists = User.objects.filter(phone_no=phone_no, admin_id=admin_id).exists()
+            else:
+                messages.error(request, 'Not authenticated')
+                return redirect('/login')
+
+            if not phone_exists:
                 if org_id:
                     from ..models import Organization
                     org = Organization.objects.filter(id=org_id).first()
@@ -156,7 +165,7 @@ class Contactcontroller:
                         created_at=timezone.now(),
                         is_in_inbox=True
                     )
-                elif admin_id:
+                else:
                     admin = Admin.objects.filter(id=admin_id).first()
                     if not admin:
                         messages.error(request, 'Admin not found')
@@ -168,9 +177,6 @@ class Contactcontroller:
                         created_at=timezone.now(),
                         is_in_inbox=True
                     )
-                else:
-                    messages.error(request, 'Not authenticated')
-                    return redirect('/login')
                     
                 messages.success(request,'successfully inserted')
                 return redirect(request.META.get("HTTP_REFERER", "contact/add"))

@@ -337,22 +337,24 @@ class whatsappcontroller:
                             if contacts and len(contacts) > 0:
                                 wa_name = contacts[0].get('profile', {}).get('name')
 
-                            # Get or create user
-                            existing_user = User.objects.filter(phone_no=phone).first()
+                            # Get or create user — ORG-SCOPED to prevent cross-org leakage
+                            existing_user = None
+                            if org_check:
+                                existing_user = User.objects.filter(phone_no=phone, organization=org_check).first()
+                            elif admin_check:
+                                existing_user = User.objects.filter(phone_no=phone, admin_id=admin_check).first()
+
                             if not existing_user:
+                                # No user in this org — create a new one (even if phone exists in another org)
                                 existing_user = User(
                                     phone_no=phone,
                                     created_at=timezone.now(),
                                     admin_id=admin_check,
-                                    is_in_inbox=True,  # Ensure user appears in inbox
+                                    is_in_inbox=True,
                                 )
-                                # Set organization if found
                                 if org_check:
                                     existing_user.organization = org_check
                             else:
-                                # Existing user - ensure organization is set if missing
-                                if org_check and not existing_user.organization:
-                                    existing_user.organization = org_check
                                 # Ensure user is visible in inbox when they message
                                 existing_user.is_in_inbox = True
                                     
