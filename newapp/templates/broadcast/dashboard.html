@@ -314,8 +314,8 @@
     <div class="usage-box">
         <h3>🤖 Use Templates in AI Prompt</h3>
         <p>Add these tags to your ChatGPT prompt to make the AI send template messages automatically:</p>
-        <p style="margin-bottom: 4px;"><code>{{template:template_name}}</code> — sends a WhatsApp template message</p>
-        <p style="font-size: 12px; color: #92400e;">Example prompt instruction: <em>"When user confirms booking, respond with: {{template:hello_world}}"</em></p>
+        <p style="margin-bottom: 4px;"><code>{% templatetag openvariable %}template:template_name{% templatetag closevariable %}</code> — sends a WhatsApp template message</p>
+        <p style="font-size: 12px; color: #92400e;">Example prompt instruction: <em>"When user confirms booking, respond with: {% templatetag openvariable %}template:hello_world{% templatetag closevariable %}"</em></p>
         <p style="margin-top: 8px;"><strong>⚡ Manual Rule Mode:</strong></p>
         <p style="margin-bottom: 0;">Copy the tag from each template below and paste into your AI prompt.</p>
     </div>
@@ -337,7 +337,7 @@
                     <div class="template-name">
                         {{ tpl.name }}
                         <span class="template-tag" onclick="copyTemplateTag('{{ tpl.name }}')" title="Click to copy">
-                            {{template:{{ tpl.name }}}}
+                            {% templatetag openvariable %}template:{{ tpl.name }}{% templatetag closevariable %}
                             <span class="copy-icon">📋</span>
                         </span>
                     </div>
