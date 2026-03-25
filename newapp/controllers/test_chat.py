@@ -103,21 +103,36 @@ def test_chat_send(request):
                 'message': 'Please enter a message'
             })
 
-        # Always use the prompt from Settings (ChatGPTPrompt)
-        prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
+        # Feature 1: prefer is_default prompt, fallback to latest
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        if org_id:
+            prompt_obj = ChatGPTPrompt.objects.filter(organization_id=org_id, is_default=True).first()
+            if not prompt_obj:
+                prompt_obj = ChatGPTPrompt.objects.filter(organization_id=org_id).order_by('-updated_at').first()
+        elif admin_id:
+            prompt_obj = ChatGPTPrompt.objects.filter(admin_id=admin_id, is_default=True).first()
+            if not prompt_obj:
+                prompt_obj = ChatGPTPrompt.objects.filter(admin_id=admin_id).order_by('-updated_at').first()
+        else:
+            prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
         system_prompt = prompt_obj.prompt_text if prompt_obj else "You are a helpful assistant."
 
         # Get OpenAI API key from organization or admin
         openai_key = None
         gpt_model = 'gpt-4o-mini'
-        org_id = request.session.get('organization_id')
-        admin_id = request.session.get('admin_id')
+        
+        # Use per-prompt gpt_model if set
+        if prompt_obj and prompt_obj.gpt_model:
+            gpt_model = prompt_obj.gpt_model
         
         if org_id:
             try:
                 org = Organization.objects.get(id=org_id)
                 openai_key = org.openai_api_key
-                gpt_model = getattr(org, 'gpt_model', 'gpt-4o-mini')
+                if not gpt_model or gpt_model == 'gpt-4o-mini':
+                    gpt_model = getattr(org, 'gpt_model', gpt_model)
             except Organization.DoesNotExist:
                 pass
         
@@ -264,14 +279,29 @@ def test_chat_quick(request):
                 'message': 'Please enter a message'
             })
 
-        # Get default prompt
-        prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
+        # Feature 1: prefer is_default prompt per org/admin
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        if org_id:
+            prompt_obj = ChatGPTPrompt.objects.filter(organization_id=org_id, is_default=True).first()
+            if not prompt_obj:
+                prompt_obj = ChatGPTPrompt.objects.filter(organization_id=org_id).order_by('-updated_at').first()
+        elif admin_id:
+            prompt_obj = ChatGPTPrompt.objects.filter(admin_id=admin_id, is_default=True).first()
+            if not prompt_obj:
+                prompt_obj = ChatGPTPrompt.objects.filter(admin_id=admin_id).order_by('-updated_at').first()
+        else:
+            prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
         system_prompt = prompt_obj.prompt_text if prompt_obj else "You are a helpful assistant."
 
         # Get OpenAI API key
         openai_key = None
-        org_id = request.session.get('organization_id')
-        admin_id = request.session.get('admin_id')
+        gpt_model = 'gpt-4o-mini'
+        
+        # Use per-prompt gpt_model if set
+        if prompt_obj and prompt_obj.gpt_model:
+            gpt_model = prompt_obj.gpt_model
         
         if org_id:
             try:
@@ -293,7 +323,7 @@ def test_chat_quick(request):
                 client = OpenAI(api_key=openai_key)
                 
                 response = client.chat.completions.create(
-                    model="gpt-4-turbo",
+                    model=gpt_model,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_message}

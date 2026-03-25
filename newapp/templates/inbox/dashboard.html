@@ -197,7 +197,7 @@
   /* RESPONSIVE */
   @media (max-width: 1200px) {
     .right-panel {
-      width: 280px;
+      width: 260px;
     }
   }
 
@@ -220,15 +220,13 @@
 
   /* RIGHT PANEL - Always Visible */
   .right-panel {
-    width: 320px;
-    min-width: 280px;
+    width: 300px;
     background: var(--bg-panel);
     border-left: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
   }
 
   .right-panel-head {
@@ -300,10 +298,6 @@
     font-weight: 500;
     cursor: pointer;
     transition: opacity 0.15s ease;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .tag-pill:hover {
@@ -378,17 +372,6 @@
     background: #e5e7eb;
   }
 
-  .custom-field-actions {
-    display: flex;
-    gap: 6px;
-    margin-top: 6px;
-  }
-
-  .custom-field-actions .btn {
-    padding: 2px 8px;
-    font-size: 11px;
-  }
-
   .custom-field-empty {
     text-align: center;
     padding: 20px 10px;
@@ -419,9 +402,6 @@
     font-weight: 600;
     font-size: 14px;
     color: var(--text-main);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .accordion-icon {
@@ -530,17 +510,63 @@
     width: 100%;
   }
 
-  .voice-message {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
 
-  .voice-label {
-    font-size: 11px;
-    color: var(--text-muted);
-  }
+  .btn-transfer {
+  background: #fff;
+  border: 1.5px solid #dadce0;
+  color: #5f6368;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.btn-transfer:hover { background: #f8f9fa; border-color: #bdc1c6; }
+
+.th-icon-btn {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: background .12s;
+}
+.th-icon-btn:hover { background: #f3f4f6; }
+
+.bot-banner {
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.bot-banner.bot-on { background: linear-gradient(90deg, #f59e0b, #f97316); color: #fff; }
+.bot-banner.bot-off { background: #e8eaed; color: #9aa0a6; }
+
+.bot-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%; flex-shrink: 0;
+}
+.bot-on .bot-dot { background: rgba(255,255,255,.8); animation: blink 1.5s infinite; }
+.bot-off .bot-dot { background: #9aa0a6; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.bot-active {
+  color: #22c55e;
+}
 </style>
 {% endblock %}
 
@@ -554,10 +580,8 @@
         <select id="tagFilter" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
           <option value="">All Tags</option>
           {% for t in all_tags %}
-          {% with t.id|stringformat:"s" as tid %}
-          <option value="{{ t.id }}" {% if request.GET.tag_id == tid %}selected{% endif %}>{{ t.name }}
+          <option value="{{ t.id }}" {% if request.GET.tag_id == t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}
           </option>
-          {% endwith %}
           {% endfor %}
         </select>
       </div>
@@ -572,52 +596,76 @@
   <!-- Thread -->
   <section class="thread">
     <div class="thread-head">
-      {% if selected_user %}
-      <div class="avatar" style="width:36px;height:36px">{{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}</div>
-      <div style="flex:1">
-        <div style="font-weight:700">{{ selected_user.name|default:"User" }}</div>
-        <div class="text-muted" style="font-size:12px">
-          {{ selected_user.phone_no }}
-          {% if selected_user.contact_id %}
-          <span style="margin-left:8px;background:#e0e7ff;color:#4338ca;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">{{ selected_user.contact_id }}</span>
-          {% endif %}
-        </div>
-      </div>
-      <button type="button" id="botToggleBtn"
-        class="btn btn-sm {% if selected_user.bot_enabled %}btn-success{% else %}btn-outline-secondary{% endif %}"
-        onclick="toggleBot({{ selected_user.id }})" title="Toggle bot auto-reply">
-        🤖 Bot {% if selected_user.bot_enabled %}ON{% else %}OFF{% endif %}
-      </button>
-      <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteContact({{ selected_user.id }})"
-        title="Delete contact">
-        🗑️ Delete
-      </button>
-      {% if is_beta %}
-      <a href="/api/inbox/export/{{ selected_user.id }}/csv/" class="btn btn-sm btn-outline-primary" title="Export chat as CSV">
-        📥 Export
-      </a>
-      {% endif %}
-      {% else %}
-      <div style="font-weight:700">Select a conversation</div>
-      {% endif %}
+  {% if selected_user %}
+  <div class="avatar" style="width:36px;height:36px">
+    {{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}
+  </div>
+
+  <div style="flex:1">
+    <div style="font-weight:700">
+      {{ selected_user.name|default:"User" }}
     </div>
+  </div>
+
+  <!-- BOT BUTTON -->
+  <button type="button" class="th-icon-btn" onclick="toggleBot({{ selected_user.id }})" title="Toggle bot">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Head -->
+  <rect x="4" y="7" width="16" height="12" rx="3"></rect>
+
+  <!-- Eyes -->
+  <line x1="9" y1="12" x2="9" y2="12"></line>
+  <line x1="15" y1="12" x2="15" y2="12"></line>
+
+  <!-- Mouth -->
+  <line x1="9" y1="15" x2="15" y2="15"></line>
+
+  <!-- Antenna -->
+  <line x1="12" y1="7" x2="12" y2="4"></line>
+  <circle cx="12" cy="3" r="1"></circle>
+</svg>
+  </button>
+
+  <!-- DELETE BUTTON -->
+  <button type="button" class="th-icon-btn" onclick="deleteContact({{ selected_user.id }})" title="Delete contact">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+      <path d="M10 11v6"/>
+      <path d="M14 11v6"/>
+      <path d="M9 6V4h6v2"/>
+    </svg>
+  </button>
+
+  {% else %}
+  <div style="font-weight:700">Select a conversation</div>
+  {% endif %}
+</div>
+
+<!-- Bot Banner — add this immediately AFTER the closing </div> of thread-head -->
+{% if selected_user %}
+<div class="bot-banner {% if selected_user.bot_enabled %}bot-on{% else %}bot-off{% endif %}"
+     id="botBanner"
+     onclick="toggleBot({{ selected_user.id }})"
+     title="Click to toggle bot">
+  <span class="bot-dot"></span>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2"/>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    <line x1="9" y1="16" x2="9" y2="16" stroke-width="3"/>
+    <line x1="12" y1="16" x2="12" y2="16" stroke-width="3"/>
+    <line x1="15" y1="16" x2="15" y2="16" stroke-width="3"/>
+  </svg>
+  <span id="botBannerText">{% if selected_user.bot_enabled %}The bot is active{% else %}Bot is inactive{% endif %}</span>
+</div>
+{% endif %}
 
     <div class="thread-body" id="threadBody">
       {% if messages %}
       {% for m in messages %}
       <div class="rowmsg {% if m.who == 'bot' %}bot{% else %}user{% endif %}">
         <div class="bubble">
-          {% if m.messages == '[Voice Message]' and m.media_url %}
-          <div class="voice-message">
-            <audio controls preload="none" style="height:32px;width:200px;">
-              <source src="{{ m.media_url }}" type="audio/ogg;codecs=opus">
-              Your browser does not support audio.
-            </audio>
-            <div class="voice-label">🎤 Voice Message</div>
-          </div>
-          {% else %}
           <div>{{ m.messages }}</div>
-          {% endif %}
           <div class="meta">{{ m.created_at|localtime|date:"H:i" }}</div>
         </div>
       </div>
@@ -630,33 +678,62 @@
     <!-- Chat Input Form -->
     <div class="p-3 border-top" style="background:#fff;">
       {% if window_expired %}
-      <!-- 24-hour window expired warning -->
-      <div class="alert alert-warning mb-0 d-flex align-items-center" style="border-radius:8px;">
-        <span class="me-2" style="font-size:20px;">⏰</span>
-        <div>
-          <strong>24-hour window expired</strong><br>
-          <small>User must message first to reopen the conversation window.{% if hours_since_last_message %} Last
-            message was {{ hours_since_last_message }} hours ago.{% endif %}</small>
-        </div>
-      </div>
-      {% else %}
+<div style="margin:10px 16px;">
+  <div style="background:#f8f9fa;border:1px solid #e5e7eb;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px;color:#6b7280;font-size:13px;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" flex-shrink="0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    User has been inactive more than 24 hours
+  </div>
+</div>
+{% else %}
       <form id="chatForm" onsubmit="return sendMessage(event);">
-        <div class="input-group">
-          <input type="file" id="mediaInput" style="display:none;" onchange="handleFileUpload(this)">
-          <button type="button" class="btn btn-light border" onclick="document.getElementById('mediaInput').click()"
-            title="Upload file">
-            📎
-          </button>
-          <button type="button" class="btn btn-light border" onclick="openAssetPicker()"
-            title="Select from Image Assets">
-            🖼️
-          </button>
-          <input id="userMessage" type="text" class="form-control" placeholder="Type your message..." autocomplete="off"
-            required />
-          <button type="submit" class="btn btn-primary">Send</button>
-        </div>
-      </form>
-      {% endif %}
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f2f5;border-top:1px solid #e5e7eb;">
+    
+    <input type="file" id="mediaInput" style="display:none;" onchange="handleFileUpload(this)">
+    
+    <!-- Attach file -->
+    <button type="button" onclick="document.getElementById('mediaInput').click()" title="Attach file"
+      style="width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:background .15s;"
+      onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='transparent'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+    </button>
+
+    <!-- Image assets -->
+    <button type="button" onclick="openAssetPicker()" title="Select image asset"
+      style="width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:background .15s;"
+      onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='transparent'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </button>
+
+    <!-- Text input pill -->
+    <div style="flex:1;background:#fff;border-radius:24px;display:flex;align-items:center;padding:8px 14px;box-shadow:0 1px 2px rgba(0,0,0,.06);">
+      <input id="userMessage" type="text" placeholder="Type your message…" autocomplete="off" required
+        style="flex:1;border:none;outline:none;font-size:14px;background:transparent;color:#111827;"/>
+    </div>
+
+    <!-- Send -->
+    <button type="submit" title="Send"
+      style="width:40px;height:40px;border-radius:50%;border:none;background:#00a884;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;transition:background .15s;box-shadow:0 2px 6px rgba(0,0,0,.15);"
+      onmouseover="this.style.background='#017a60'" onmouseout="this.style.background='#00a884'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Head -->
+  <rect x="4" y="6" width="16" height="12" rx="3"></rect>
+
+  <!-- Eyes -->
+  <circle cx="9" cy="12" r="1.5"></circle>
+  <circle cx="15" cy="12" r="1.5"></circle>
+
+  <!-- Mouth -->
+  <path d="M9 15h6"></path>
+
+  <!-- Antenna -->
+  <line x1="12" y1="6" x2="12" y2="3"></line>
+  <circle cx="12" cy="2" r="1"></circle>
+</svg>
+    </button>
+
+  </div>
+</form>
+{% endif %}
     </div>
 
   </section>
@@ -802,31 +879,24 @@
 
   // TOGGLE BOT ON/OFF
   async function toggleBot(userId) {
-    try {
-      const res = await fetch(`/api/inbox/toggle_bot/${userId}/`, {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': getCookie('csrftoken')
-        }
-      });
-      const data = await res.json();
-      if (data.success) {
-        const btn = document.getElementById('botToggleBtn');
-        if (data.bot_enabled) {
-          btn.className = 'btn btn-sm btn-success';
-          btn.innerHTML = '🤖 Bot ON';
-        } else {
-          btn.className = 'btn btn-sm btn-outline-secondary';
-          btn.innerHTML = '🤖 Bot OFF';
-        }
+  try {
+    const res = await fetch(`/api/inbox/toggle_bot/${userId}/`, {
+      method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    });
+    const data = await res.json();
+    if (data.success) {
+      const banner = document.getElementById('botBanner');
+      const txt = document.getElementById('botBannerText');
+      if (data.bot_enabled) {
+        banner.className = 'bot-banner bot-on';
+        txt.textContent = 'The bot is active';
       } else {
-        alert('Error: ' + (data.error || 'Failed to toggle'));
+        banner.className = 'bot-banner bot-off';
+        txt.textContent = 'Bot is inactive';
       }
-    } catch (e) {
-      alert('Network error');
-      console.error(e);
     }
-  }
+  } catch(e) { alert('Network error'); }
+}
 
   // IMAGE ASSET PICKER
   let assetPickerModal = null;
@@ -878,27 +948,19 @@
     // Close modal
     if (assetPickerModal) assetPickerModal.hide();
 
-    // Build absolute URL for WhatsApp API
-    const absoluteUrl = url.startsWith('http') ? url : window.location.origin + url;
+    const mediaMsg = `[Image: ${url}]`;
 
     const sendData = new FormData();
+    sendData.append('message', mediaMsg);
     sendData.append('user_id', currentUserId);
-    sendData.append('media_url', absoluteUrl);
-    sendData.append('media_type', 'image');
-    sendData.append('message', '');  // no caption
 
     try {
-      const res = await fetch('/inbox/send/', {
+      await fetch('/inbox/send/', {
         method: 'POST',
         headers: { 'X-CSRFToken': getCookie('csrftoken') },
         body: sendData
       });
-      if (res.ok) {
-        appendMessage(`[Image: ${url}]`, 'bot');
-      } else {
-        const errData = await res.json();
-        alert('Send failed: ' + (errData.error || 'Unknown error'));
-      }
+      appendMessage(mediaMsg, 'bot');
     } catch (e) {
       alert('Failed to send image');
       console.error(e);
@@ -943,28 +1005,22 @@
       const data = await res.json();
 
       if (res.ok && data.url) {
-        // Send the media as a proper WhatsApp image/document message
-        const sendData = new FormData();
-        sendData.append('user_id', currentUserId);
-        sendData.append('media_url', data.url);
-        sendData.append('media_type', data.type);  // 'image', 'video', or 'document'
-        sendData.append('message', data.type === 'image' ? '' : file.name);  // no caption for images
+        // Send the image as a message
+        const msgPrefix = data.type === 'image' ? '[Image: ' : '[Document: ';
+        const mediaMsg = `${msgPrefix}${data.url}]`;
 
-        const sendRes = await fetch('/inbox/send/', {
+        // Send via WhatsApp
+        const sendData = new FormData();
+        sendData.append('message', mediaMsg);
+        sendData.append('user_id', currentUserId);
+
+        await fetch('/inbox/send/', {
           method: 'POST',
           headers: { 'X-CSRFToken': getCookie('csrftoken') },
           body: sendData
         });
 
-        if (sendRes.ok) {
-          const displayMsg = data.type === 'image'
-            ? `[Image: ${data.url}]`
-            : `[Document: ${data.url}]`;
-          appendMessage(displayMsg, 'bot', null, new Date().toISOString());
-        } else {
-          const errData = await sendRes.json();
-          alert('Send failed: ' + (errData.error || 'Unknown error'));
-        }
+        appendMessage(mediaMsg, 'bot');
         msgInput.value = '';
       } else {
         alert('Upload failed: ' + (data.error || 'Unknown error'));
@@ -1026,7 +1082,45 @@
     window.location.href = url.toString();
   }
 
-  // (Duplicate handleFileUpload removed - using the one defined above)
+  // File Upload Logic
+  async function handleFileUpload(input) {
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Show loading?
+    const msgInput = document.getElementById('userMessage');
+    const originalPlaceholder = msgInput.placeholder;
+    msgInput.placeholder = "Uploading...";
+    msgInput.disabled = true;
+
+    try {
+      const res = await fetch('/api/inbox/upload_media/', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+
+      if (data.url) {
+        let tag = "";
+        if (data.type === 'image') tag = `[Image: ${data.url}] `;
+        else tag = `[Document: ${data.url}] `;
+
+        msgInput.value = (msgInput.value + " " + tag).trim();
+        msgInput.focus();
+      } else {
+        alert("Upload failed: " + (data.error || "Unknown error"));
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Upload network error");
+    } finally {
+      msgInput.placeholder = originalPlaceholder;
+      msgInput.disabled = false;
+      input.value = ""; // reset
+    }
+  }
 
 
   const threadBody = document.getElementById('threadBody');
@@ -1103,7 +1197,7 @@
     return false;
   }
 
-  function appendMessage(msg, sender, msgId = null, createdAt = null) {
+  function appendMessage(msg, sender, msgId = null) {
     // De-duplication check
     if (msgId && displayedMessageIds.has(msgId)) {
       console.log("Duplicate message ignored:", msgId);
@@ -1112,30 +1206,11 @@
     if (msgId) displayedMessageIds.add(msgId);
 
     const row = document.createElement('div');
-    row.classList.add('rowmsg', sender === 'human' ? 'user' : sender);
+    row.classList.add('rowmsg', sender);
     const bubble = document.createElement('div');
     bubble.classList.add('bubble');
 
-    // Render message content
-    const msgDiv = document.createElement('div');
-    if (msg === '[Voice Message]') {
-      msgDiv.innerHTML = '<div class="voice-message"><audio controls preload="none" style="height:32px;width:200px;"><source type="audio/ogg;codecs=opus">Your browser does not support audio.</audio><div class="voice-label">🎤 Voice Message</div></div>';
-    } else {
-      msgDiv.innerHTML = formatMessage(msg);
-    }
-    bubble.appendChild(msgDiv);
-
-    // Add timestamp
-    const meta = document.createElement('div');
-    meta.classList.add('meta');
-    if (createdAt) {
-      const d = new Date(createdAt);
-      meta.textContent = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
-    } else {
-      const now = new Date();
-      meta.textContent = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-    }
-    bubble.appendChild(meta);
+    bubble.innerHTML = formatMessage(msg);
 
     row.appendChild(bubble);
     threadBody.appendChild(row);
@@ -1146,39 +1221,34 @@
 
   function formatMessage(text) {
     if (!text) return '';
-
-    // Check if text contains any [Image: ...] or [Document: ...] tags
-    const hasImageTags = /\[Image:\s*[^\]]+\]/i.test(text);
-    const hasDocTags = /\[Document:\s*[^\]]+\]/i.test(text);
-
-    if (hasImageTags || hasDocTags) {
-      // Process text with embedded media tags
-      let html = '';
-      // Split on [Image: ...] and [Document: ...] tags, keeping the tags
-      const parts = text.split(/(\[Image:\s*[^\]]+\]|\[Document:\s*[^\]]+\])/i);
-
-      for (const part of parts) {
-        const imgMatch = part.match(/^\[Image:\s*(.*?)\]$/i);
-        const docMatch = part.match(/^\[Document:\s*(.*?)\]$/i);
-
-        if (imgMatch) {
-          const url = imgMatch[1].trim();
-          html += `<a href="${url}" target="_blank"><img src="${url}" style="max-width:300px; width:100%; border-radius:8px; margin:4px 0;" onerror="this.style.display='none'" onload="scrollToBottom()"></a>`;
-        } else if (docMatch) {
-          const url = docMatch[1].trim();
-          if (url.startsWith('/') || url.startsWith('http')) {
-            html += `<div class="d-flex align-items-center gap-2 p-2 bg-light rounded text-dark" style="margin:4px 0;"><i class="fa-solid fa-file-lines fs-4 text-primary"></i><a href="${url}" target="_blank" class="text-decoration-underline text-break" download>Download Document</a></div>`;
-          }
-        } else if (part.trim()) {
-          // Regular text part - escape HTML and convert newlines
-          const safeText = part.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-          html += safeText.replace(/\n/g, '<br>');
-        }
-      }
-      return html;
+    // Image
+    const imgMatch = text.match(/^\[Image:\s*(.*?)\]\s*(.*)/is);
+    if (imgMatch) {
+      const url = imgMatch[1].trim();
+      const caption = imgMatch[2].trim();
+      return `
+        <a href="${url}" target="_blank">
+          <img src="${url}" style="max-width:100%; border-radius:8px; margin-bottom:4px;" onerror="this.style.display='none'" onload="scrollToBottom()">
+        </a>
+        ${caption ? `<div class="mt-1">${caption}</div>` : ''}
+      `;
     }
-
-    // Plain text - escape HTML and convert newlines
+    // Document
+    const docMatch = text.match(/^\[Document:\s*(.*?)\]\s*(.*)/is);
+    if (docMatch) {
+      const url = docMatch[1].trim();
+      const caption = docMatch[2].trim();
+      if (url.startsWith('/') || url.startsWith('http')) {
+        return `
+          <div class="d-flex align-items-center gap-2 p-2 bg-light rounded text-dark">
+            <i class="fa-solid fa-file-lines fs-4 text-primary"></i>
+            <a href="${url}" target="_blank" class="text-decoration-underline text-break" download>Download Document</a>
+          </div>
+          ${caption ? `<div class="mt-1 small">${caption}</div>` : ''}
+        `;
+      }
+    }
+    // Text
     const safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     return safeText.replace(/\n/g, '<br>');
   }
@@ -1190,7 +1260,7 @@
       // Logic to auto-format existing can be simplified or kept if needed
       if (!el.classList.contains('meta')) {
         const raw = el.innerText;
-        if (raw.includes('[Image:') || raw.includes('[Document:')) {
+        if (raw.trim().startsWith('[Image:') || raw.trim().startsWith('[Document:')) {
           el.innerHTML = formatMessage(raw);
         }
       }
@@ -1200,7 +1270,7 @@
   // Polling Logic
   let lastMessageId = 0;
   {% if messages %}
-  lastMessageId = {{ messages.last.id |default:0 }};
+  lastMessageId = {{ messages.last.id|default:0 }};
   {% endif %}
   const currentUserId = "{{ selected_user.id|default:'' }}";
 
@@ -1221,7 +1291,7 @@
         data.messages.forEach(msg => {
           // Pass ID to appendMessage for de-dupe
           const mId = parseInt(msg.id);
-          appendMessage(msg.messages, msg.who, mId, msg.created_at);
+          appendMessage(msg.messages, msg.who, mId);
           lastMessageId = Math.max(lastMessageId, mId);
         });
       }
@@ -1946,6 +2016,13 @@
   // Replace the DOMContentLoaded listener with our enhanced version
   document.addEventListener('DOMContentLoaded', newDOMContentLoaded);
 
+  function toggleStar(btn) {
+  const svg = btn.querySelector('svg');
+  const starred = btn.dataset.starred === '1';
+  svg.setAttribute('fill', starred ? 'none' : '#f59e0b');
+  svg.setAttribute('stroke', starred ? 'currentColor' : '#f59e0b');
+  btn.dataset.starred = starred ? '0' : '1';
+}
 
 </script>
 {% endblock %}

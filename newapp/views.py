@@ -1178,8 +1178,17 @@ def chatgpt_respond(request):
                     return JsonResponse({"response": "Message sent (no AI configured)"})
                 return JsonResponse({"error": "OpenAI API key not configured."}, status=403)
 
-            # Get system prompt
-            prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
+            # Get system prompt — Feature 1: prefer is_default prompt
+            if org_id:
+                prompt_obj = ChatGPTPrompt.objects.filter(organization_id=org_id, is_default=True).first()
+                if not prompt_obj:
+                    prompt_obj = ChatGPTPrompt.objects.filter(organization_id=org_id).order_by('-updated_at').first()
+            elif admin_id:
+                prompt_obj = ChatGPTPrompt.objects.filter(admin_id=admin_id, is_default=True).first()
+                if not prompt_obj:
+                    prompt_obj = ChatGPTPrompt.objects.filter(admin_id=admin_id).order_by('-updated_at').first()
+            else:
+                prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
             system_prompt = prompt_obj.prompt_text if prompt_obj else "You are a helpful assistant."
 
             # Use new OpenAI v1.0+ API format
@@ -1228,8 +1237,12 @@ def chatgpt_respond(request):
                     })
 
             # Prepare API Call Params
+            # Feature 1: Use per-prompt gpt_model if set
+            selected_model = 'gpt-4-turbo'
+            if prompt_obj and prompt_obj.gpt_model:
+                selected_model = prompt_obj.gpt_model
             api_params = {
-                "model": "gpt-4-turbo",
+                "model": selected_model,
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
@@ -1300,34 +1313,68 @@ from django.shortcuts import render, redirect
 from .models import ChatGPTPrompt
 
 def chatgpt_prompt_page(request):
+    """Multi-prompt management page (Feature 1)."""
     # Get organization/admin from session
     org_id = request.session.get('organization_id')
     admin_id = request.session.get('admin_id')
     
-    # Get prompt for current org/admin
+    # Get all prompts for current org/admin
     if org_id:
-        prompt_obj = ChatGPTPrompt.objects.filter(organization_id=org_id).first()
+        prompts = ChatGPTPrompt.objects.filter(organization_id=org_id).order_by('-is_default', '-updated_at')
     elif admin_id:
-        prompt_obj = ChatGPTPrompt.objects.filter(admin_id=admin_id).first()
+        prompts = ChatGPTPrompt.objects.filter(admin_id=admin_id).order_by('-is_default', '-updated_at')
     else:
-        prompt_obj = None
+        prompts = ChatGPTPrompt.objects.none()
     
+    # Get the default prompt for backward compatibility
+    prompt_obj = prompts.filter(is_default=True).first() or prompts.first()
     current_prompt = prompt_obj.prompt_text if prompt_obj else ""
 
     if request.method == "POST":
+        action = request.POST.get('action', 'save')
+        prompt_id = request.POST.get('prompt_id')
         new_prompt = request.POST.get("prompt_text", "").strip()
-        if prompt_obj:
-            prompt_obj.prompt_text = new_prompt
-            prompt_obj.save()
+        prompt_name = request.POST.get("prompt_name", "Default Prompt").strip()
+        gpt_model = request.POST.get("gpt_model", "").strip()
+        set_default = request.POST.get("is_default") == 'on'
+        
+        if action == 'delete' and prompt_id:
+            ChatGPTPrompt.objects.filter(id=prompt_id).delete()
+        elif prompt_id:
+            # Update existing prompt
+            p = ChatGPTPrompt.objects.filter(id=prompt_id).first()
+            if p:
+                p.prompt_text = new_prompt
+                p.name = prompt_name
+                p.gpt_model = gpt_model
+                p.save()
+                if set_default:
+                    prompts.exclude(id=p.id).update(is_default=False)
+                    p.is_default = True
+                    p.save()
         else:
-            # Create new prompt for this org/admin
+            # Create new prompt
+            p = ChatGPTPrompt(
+                prompt_text=new_prompt,
+                name=prompt_name,
+                gpt_model=gpt_model,
+                is_default=set_default,
+            )
             if org_id:
-                ChatGPTPrompt.objects.create(prompt_text=new_prompt, organization_id=org_id)
+                p.organization_id = org_id
             elif admin_id:
-                ChatGPTPrompt.objects.create(prompt_text=new_prompt, admin_id=admin_id)
+                p.admin_id = admin_id
+            p.save()
+            if set_default:
+                prompts.exclude(id=p.id).update(is_default=False)
+        
         return redirect('integration_view')
 
-    return render(request, 'chatgpt_prompt.html', {"prompt": current_prompt})
+    return render(request, 'chatgpt_prompt.html', {
+        "prompt": current_prompt,
+        "prompts": prompts,
+        "current_prompt": prompt_obj,
+    })
 
 @csrf_exempt
 def get_message_chatgpt(request):
@@ -1498,11 +1545,15 @@ def get_message_chatgpt(request):
             who='human'
         )
 
-        # Get system prompt for this org/admin
+        # Get system prompt for this org/admin — Feature 1: prefer is_default
         if org:
-            prompt_obj = ChatGPTPrompt.objects.filter(organization=org).order_by('-updated_at').first()
+            prompt_obj = ChatGPTPrompt.objects.filter(organization=org, is_default=True).first()
+            if not prompt_obj:
+                prompt_obj = ChatGPTPrompt.objects.filter(organization=org).order_by('-updated_at').first()
         elif admin:
-            prompt_obj = ChatGPTPrompt.objects.filter(admin=admin).order_by('-updated_at').first()
+            prompt_obj = ChatGPTPrompt.objects.filter(admin=admin, is_default=True).first()
+            if not prompt_obj:
+                prompt_obj = ChatGPTPrompt.objects.filter(admin=admin).order_by('-updated_at').first()
         else:
             prompt_obj = None
         system_prompt = prompt_obj.prompt_text if prompt_obj else "You are a helpful assistant."

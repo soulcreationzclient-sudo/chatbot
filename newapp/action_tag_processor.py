@@ -2,17 +2,22 @@
 """
 Action Tag Processor for WhatsApp Messages
 
+
 This module handles the processing of action tags in AI responses, 
 allowing the chatbot to perform backend actions triggered by the prompt.
 
 Supported Tags:
 1. {{tag:add:tag_name}}    - Adds a tag to the user
 2. {{tag:remove:tag_name}} - Removes a tag from the user
-3. {{api:tool_name}}       - Executes a defined ExternalAPI tool
+3. {{api:tool_name}}       - Executes a defined ExternalAPI tool (supports chaining)
+4. {{template:template_name}} - Sends a WhatsApp template message
+5. {{calendly:name}}       - Inserts a Calendly booking link
 
 Usage in AI prompts:
     "I've marked you as a VIP. {{tag:add:vip}}"
     "Checking your invoice status... {{api:fetch_invoice}}"
+    "Sending you a follow-up... {{template:booking_confirmation}}"
+    "Creating your order... {{api:create_customer}} {{api:create_invoice}}"  # Chained
     
 The processor will:
 1. Parse the tags from the response
@@ -69,11 +74,37 @@ def parse_action_tags(text):
             'params': params
         })
     
-    # 4. Calendly Link: {{calendly:name}}
+    # 4. Template Send: {{template:name}} or {{template:name:1=John,2=Order123}}
+    template_matches = re.finditer(r'\{\{template:([a-zA-Z0-9_\-]+)(?::([^}]+))?\}\}', text)
+    for match in template_matches:
+        params = {}
+        if match.group(2):
+            for pair in match.group(2).split(','):
+                pair = pair.strip()
+                if '=' in pair:
+                    k, v = pair.split('=', 1)
+                    params[k.strip()] = v.strip()
+        actions.append({
+            'type': 'template_send',
+            'name': match.group(1).strip(),
+            'full_tag': match.group(0),
+            'params': params
+        })
+    
+    # 5. Calendly Link: {{calendly:name}}
     calendly_matches = re.finditer(r'\{\{calendly:([a-zA-Z0-9_\-\s]+)\}\}', text)
     for match in calendly_matches:
         actions.append({
             'type': 'calendly_link',
+            'name': match.group(1).strip(),
+            'full_tag': match.group(0)
+        })
+    
+    # 6. Google Calendar Booking: {{gcalendar:name}}
+    gcal_matches = re.finditer(r'\{\{gcalendar:([a-zA-Z0-9_\-\s]+)\}\}', text)
+    for match in gcal_matches:
+        actions.append({
+            'type': 'gcalendar_link',
             'name': match.group(1).strip(),
             'full_tag': match.group(0)
         })
@@ -237,11 +268,41 @@ def process_response_actions(text, admin, phone, organization=None):
                 outcome = logic.remove_user_tag(name, admin, phone)
                 
             elif action_type == 'api_call':
-                # Execute API with context + any inline params
+                # Feature 5: Check for API chaining — execute dependent APIs first
+                from .models import ExternalAPI
+                api_config = None
+                if organization:
+                    api_config = ExternalAPI.objects.filter(organization=organization, name=name).first()
+                if not api_config and admin:
+                    api_config = ExternalAPI.objects.filter(admin=admin, name=name).first()
+                
+                # Execute any prerequisite APIs first (chaining)
+                if api_config and api_config.depends_on:
+                    dep = api_config.depends_on
+                    dep_context = {"phone": phone, "phone_no": phone}
+                    print(f"[ActionTag] API Chain: executing prerequisite '{dep.name}' before '{name}'")
+                    dep_response = logic.execute_tool(dep.name, dep_context, admin)
+                    # Save prerequisite response fields to custom fields via response_mapping
+                    # (already handled inside execute_tool -> _process_response_mapping)
+                    print(f"[ActionTag] Prerequisite '{dep.name}' result: {dep_response[:200] if dep_response else 'empty'}")
+                
+                # Build context args — include custom fields so chained values are available
                 context_args = {
                     "phone": phone,
                     "phone_no": phone
                 }
+                
+                # Inject user's custom field values so {{cf:field_name}} and {{custom_field:name:value}} work
+                try:
+                    from .models import CustomFieldValue, User as UserModel
+                    user_obj = UserModel.objects.filter(phone_no__endswith=phone[-10:]).first() if phone else None
+                    if user_obj:
+                        cf_values = CustomFieldValue.objects.filter(user=user_obj).select_related('custom_field')
+                        for cfv in cf_values:
+                            context_args[cfv.custom_field.name] = cfv.value
+                except Exception:
+                    pass
+                
                 # Merge inline params from {{api:name:key=val}} format
                 inline_params = action.get('params', {})
                 if inline_params:
@@ -257,20 +318,107 @@ def process_response_actions(text, admin, phone, organization=None):
                     if isinstance(json_res, dict) and 'text' in json_res:
                          result['api_responses'].append(json_res['text'])
                     elif isinstance(json_res, dict) and not json_res:
-                         # Empty dict — no data found
                          result['api_responses'].append("Sorry, no data found for that request.")
                     elif isinstance(json_res, dict) and 'error' in json_res:
                          result['api_responses'].append(f"Sorry, an error occurred: {json_res['error']}")
-                    # else: skip raw JSON — don't send ugly dumps to user
                 except ValueError:
-                    # Plain text response — only send if non-empty
                     if api_response and api_response.strip():
                         result['api_responses'].append(api_response)
                     else:
                         result['api_responses'].append("Sorry, no data found for that request.")
             
+            elif action_type == 'template_send':
+                # Feature 2: Send a WhatsApp template message mid-conversation
+                try:
+                    from .models import WhatsAppTemplate, Organization as OrgModel
+                    from .template_message_sender import send_template_message
+                    
+                    # Look up the template
+                    tmpl = None
+                    if organization:
+                        tmpl = WhatsAppTemplate.objects.filter(organization=organization, name__iexact=name).first()
+                    if not tmpl and admin:
+                        tmpl = WhatsAppTemplate.objects.filter(admin=admin, name__iexact=name).first()
+                    
+                    if tmpl:
+                        # Get WhatsApp credentials
+                        org = None
+                        if organization:
+                            org = organization if hasattr(organization, 'whatsappid') else OrgModel.objects.filter(id=organization.id).first()
+                        elif admin:
+                            org = OrgModel.objects.filter(whatsapp_phone_id=admin.whatsapp_phone_id).first()
+                        
+                        tmpl_vars = action.get('params', {})
+                        # Auto-populate user name as param 1 if not set
+                        from .models import User as UserModel
+                        user_obj = UserModel.objects.filter(phone_no__endswith=phone[-10:]).first() if phone else None
+                        if user_obj and user_obj.name and '1' not in tmpl_vars:
+                            tmpl_vars['1'] = user_obj.name
+                        
+                        tmpl_result = send_template_message(
+                            phone_number=phone,
+                            template=tmpl,
+                            variables=tmpl_vars,
+                            organization=org
+                        )
+                        outcome = f"Template '{name}' sent: {'success' if tmpl_result.get('success') else tmpl_result.get('error', 'failed')}"
+                    else:
+                        outcome = f"Warning: Template '{name}' not found"
+                except Exception as tmpl_err:
+                    outcome = f"Error sending template '{name}': {str(tmpl_err)}"
+                    print(f"[ActionTag] {outcome}")
+            
             elif action_type == 'calendly_link':
                 pass  # Already handled above
+            
+            elif action_type == 'gcalendar_link':
+                # Feature 6: Generate a Google Calendar booking link
+                import uuid
+                try:
+                    from .models import GoogleCalendarLink, GoogleCalendarBooking, User as UserModel
+                    gcal_link = None
+                    if organization:
+                        gcal_link = GoogleCalendarLink.objects.filter(
+                            organization=organization, name__iexact=name, is_active=True
+                        ).first()
+                    if not gcal_link and admin:
+                        gcal_link = GoogleCalendarLink.objects.filter(
+                            admin=admin, name__iexact=name, is_active=True
+                        ).first()
+                    
+                    if gcal_link:
+                        user_obj = UserModel.objects.filter(
+                            phone_no__endswith=phone[-10:]
+                        ).first() if phone else None
+                        
+                        booking_token = uuid.uuid4().hex[:16]
+                        if user_obj:
+                            GoogleCalendarBooking.objects.create(
+                                user=user_obj,
+                                gcalendar_link=gcal_link,
+                                booking_token=booking_token,
+                                status='link_sent'
+                            )
+                        
+                        # Replace tag with booking page URL (absolute, for WhatsApp)
+                        try:
+                            from django.conf import settings
+                            base_url = getattr(settings, 'BASE_URL', 'https://chatbotad.io')
+                        except Exception:
+                            base_url = 'https://chatbotad.io'
+                        booking_url = f"{base_url}/gcalendar/book/{booking_token}/"
+                        replacement_text = replacement_text.replace(
+                            tag, booking_url
+                        )
+                        outcome = f"GCal booking link generated: {booking_url}"
+                    else:
+                        replacement_text = replacement_text.replace(tag, '')
+                        outcome = f"Warning: Google Calendar link '{name}' not found"
+                except Exception as gcal_err:
+                    replacement_text = replacement_text.replace(tag, '')
+                    outcome = f"Error generating GCal link: {str(gcal_err)}"
+                    print(f"[ActionTag] {outcome}")
+
                     
         except Exception as e:
             outcome = f"Error processing {tag}: {str(e)}"

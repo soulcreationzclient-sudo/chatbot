@@ -618,6 +618,48 @@ count=Count('id')
             return JsonResponse({'error': 'Session not found'}, status=404)
 
 
+# ==================== STANDALONE WEBCHAT PAGE ====================
+
+def webchat_standalone_page(request, widget_id):
+    """
+    Public standalone webchat page — no auth required.
+    Renders a full-page chat UI for a specific widget.
+    Shareable link: /webchat/w/<widget_id>/
+    """
+    from ..models import Organization, Admin as AdminModel
+
+    try:
+        widget = WebChatWidget.objects.get(id=widget_id, is_active=True)
+    except WebChatWidget.DoesNotExist:
+        from django.http import Http404
+        raise Http404("Chat widget not found or inactive.")
+
+    # Get org/admin info for the widget
+    org = None
+    admin_obj = None
+    org_name = 'Chat'
+    if widget.organization_id:
+        org = Organization.objects.filter(id=widget.organization_id).first()
+        if org:
+            org_name = org.name
+    if widget.admin_id:
+        admin_obj = AdminModel.objects.filter(id=widget.admin_id).first()
+        if admin_obj and not org:
+            org_name = admin_obj.assistant_name or 'Chat'
+
+    # Build API base URL (protocol + host without trailing slash)
+    api_base = request.build_absolute_uri('/').rstrip('/')
+
+    return render(request, 'webchat/standalone.html', {
+        'widget': widget,
+        'org_name': org_name,
+        'org_name_initial': org_name[0].upper() if org_name else 'C',
+        'org_id': widget.organization_id or '',
+        'admin_id': widget.admin_id or '',
+        'api_base': api_base,
+    })
+
+
 # Convenience function for URL patterns
 dashboard = WebChatAdminController.dashboard
 session_detail = WebChatAdminController.session_detail

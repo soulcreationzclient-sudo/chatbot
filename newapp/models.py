@@ -370,16 +370,20 @@ class UserTag(models.Model):
 
 
 class ChatGPTPrompt(models.Model):
+    name = models.CharField(max_length=100, default='Default Prompt', help_text="Prompt name (e.g. Sales Agent, Support Agent)")
     prompt_text = models.TextField()
     updated_at = models.DateTimeField(auto_now=True)
     organization = models.ForeignKey('Organization', on_delete=models.CASCADE, null=True, blank=True)
     admin = models.ForeignKey('Admin', on_delete=models.CASCADE, null=True, blank=True)
+    gpt_model = models.CharField(max_length=50, blank=True, default='', help_text="Override GPT model for this prompt (empty = use org default)")
+    is_default = models.BooleanField(default=False, help_text="If true, this prompt is used for incoming messages")
 
     class Meta:
         db_table = 'chatgpt_prompts'
 
     def __str__(self):
-        return f"ChatGPT Prompt (updated {self.updated_at})"
+        default_label = " ⭐" if self.is_default else ""
+        return f"{self.name}{default_label} (updated {self.updated_at})"
     
 class AIAgentConfig(models.Model):
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
@@ -432,6 +436,11 @@ class ExternalAPI(models.Model):
     body_type = models.CharField(max_length=20, choices=BODY_TYPE_CHOICES, default='json')
     payload = models.JSONField(default=dict, blank=True, help_text="JSON payload with {{placeholders}}")
     response_mapping = models.JSONField(default=list, blank=True, help_text="List of {jsonpath, custom_field} mappings")
+    # API Chaining (Feature 5: Invoice creation)
+    depends_on = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
+                                    related_name='dependents',
+                                    help_text="Run this API after the referenced API completes")
+    execution_order = models.IntegerField(default=0, help_text="Order for chained execution (lower runs first)")
 
     def __str__(self):
         return f"{self.name} ({self.admin.assistant_name if self.admin else 'No Admin'})"
@@ -532,6 +541,12 @@ class FollowUpMessage(models.Model):
     tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True, help_text="Only send to users with this tag (optional)")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Template Message support (Feature 2)
+    use_template = models.BooleanField(default=False, help_text="Use WhatsApp template instead of plain text")
+    template = models.ForeignKey('WhatsAppTemplate', null=True, blank=True, on_delete=models.SET_NULL,
+                                  help_text="WhatsApp template to send (when use_template=True)")
+    template_variables = models.JSONField(default=dict, blank=True,
+                                          help_text="Variable mapping for template parameters")
 
     def __str__(self):
         return f"Step {self.step} - {self.delay_minutes}min ({self.admin.assistant_name if self.admin else 'No Admin'})"
@@ -1076,6 +1091,13 @@ class PipelineStage(models.Model):
     name = models.CharField(max_length=100)
     order = models.IntegerField(default=0)
     color = models.CharField(max_length=7, default='#3b82f6', help_text="Hex color for column header")
+    # Auto-message on stage move (Feature 3)
+    auto_send_enabled = models.BooleanField(default=False, help_text="Automatically send template when lead moves to this stage")
+    auto_send_template = models.ForeignKey('WhatsAppTemplate', null=True, blank=True, on_delete=models.SET_NULL,
+                                            related_name='pipeline_stages',
+                                            help_text="Template to auto-send when lead enters this stage")
+    template_variables = models.JSONField(default=dict, blank=True,
+                                          help_text="Variable mapping for template parameters")
 
     class Meta:
         db_table = 'pipeline_stages'
@@ -1168,4 +1190,68 @@ class PipelineAutomation(models.Model):
 
     def __str__(self):
         return f"{self.get_trigger_type_display()} → {self.target_stage.name}"
+
+
+class GoogleCalendarLink(models.Model):
+    """
+    Named Google Calendar booking links that can be referenced in AI prompts
+    using the {{gcalendar:link_name}} tag syntax.
+    Similar to CalendlyLink but uses Google Calendar API directly.
+    """
+    id = models.AutoField(primary_key=True)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True, related_name='gcalendar_links')
+    name = models.CharField(max_length=100, help_text="Tag name used in prompt (e.g., consultation)")
+    description = models.TextField(blank=True, help_text="Description (e.g., 30 minute consultation)")
+    calendar_id = models.CharField(max_length=300, help_text="Google Calendar ID (e.g., primary or abc@group.calendar.google.com)")
+    duration_minutes = models.IntegerField(default=30, help_text="Appointment duration in minutes")
+    service_account_json = models.TextField(blank=True, default='', help_text="Google service account JSON credentials")
+    custom_field_name = models.CharField(max_length=100, blank=True, default='', help_text="Custom field to update when booking is confirmed")
+    booking_message = models.TextField(blank=True, default='', help_text="Custom message to send when booking is confirmed")
+    # Availability settings
+    available_days = models.JSONField(default=list, blank=True, help_text="Days available [0=Mon..6=Sun], empty=all")
+    start_hour = models.IntegerField(default=9, help_text="Earliest bookable hour (24h format)")
+    end_hour = models.IntegerField(default=17, help_text="Latest bookable hour (24h format)")
+    timezone = models.CharField(max_length=50, default='Asia/Kuala_Lumpur')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"GCal: {self.name} ({self.calendar_id[:30]})"
+
+    class Meta:
+        db_table = 'google_calendar_links'
+
+
+class GoogleCalendarBooking(models.Model):
+    """Tracks Google Calendar booking attempts and confirmations."""
+    STATUS_CHOICES = [
+        ('link_sent', 'Link Sent'),
+        ('slot_selected', 'Slot Selected'),
+        ('booked', 'Booked'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='gcalendar_bookings')
+    gcalendar_link = models.ForeignKey(GoogleCalendarLink, on_delete=models.CASCADE, related_name='bookings')
+    booking_token = models.CharField(max_length=64, unique=True, help_text='UUID token for booking page URL')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='link_sent')
+    selected_slot = models.DateTimeField(null=True, blank=True, help_text="Selected appointment time")
+    google_event_id = models.CharField(max_length=200, blank=True, default='', help_text="Google Calendar event ID")
+    attendee_name = models.CharField(max_length=200, blank=True, default='')
+    attendee_email = models.CharField(max_length=200, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.phone_no} → {self.gcalendar_link.name} ({self.status})"
+
+    class Meta:
+        db_table = 'google_calendar_bookings'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['booking_token']),
+            models.Index(fields=['user', 'status']),
+        ]
 

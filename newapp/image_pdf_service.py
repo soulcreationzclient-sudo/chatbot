@@ -381,13 +381,17 @@ def analyze_media_message(
     if not base64_images:
         return "Sorry, I couldn't extract any images to analyze."
     
-    # Get system prompt — filter by organization/admin for correct business context
+    # Get system prompt — Feature 1: prefer is_default prompt per org/admin
     from .models import ChatGPTPrompt
     prompt_obj = None
     if organization:
-        prompt_obj = ChatGPTPrompt.objects.filter(organization=organization).order_by('-updated_at').first()
+        prompt_obj = ChatGPTPrompt.objects.filter(organization=organization, is_default=True).first()
+        if not prompt_obj:
+            prompt_obj = ChatGPTPrompt.objects.filter(organization=organization).order_by('-updated_at').first()
     if not prompt_obj and admin:
-        prompt_obj = ChatGPTPrompt.objects.filter(admin=admin).order_by('-updated_at').first()
+        prompt_obj = ChatGPTPrompt.objects.filter(admin=admin, is_default=True).first()
+        if not prompt_obj:
+            prompt_obj = ChatGPTPrompt.objects.filter(admin=admin).order_by('-updated_at').first()
     if not prompt_obj:
         prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
     system_prompt = prompt_obj.prompt_text if prompt_obj else ""

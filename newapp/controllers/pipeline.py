@@ -223,12 +223,23 @@ def opportunity_move(request, opp_id):
     new_stage_id = data.get('stage_id')
 
     opp = get_object_or_404(Opportunity, id=opp_id)
+    old_stage = opp.stage
     new_stage = get_object_or_404(PipelineStage, id=new_stage_id)
 
     opp.stage = new_stage
     opp.save()
 
+    # Feature 3: Auto-send template message on stage move
+    if new_stage.auto_send_enabled and new_stage.auto_send_template:
+        try:
+            from ..template_message_sender import send_pipeline_stage_template
+            send_pipeline_stage_template(opp, new_stage)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Pipeline auto-send failed: {e}")
+
     return JsonResponse({'success': True})
+
 
 
 @csrf_exempt

@@ -237,13 +237,12 @@
     confirmChatGPTConnectBtn.addEventListener('click', async () => {
       clearAlert('chatgptAlert');
       const apiKey = document.getElementById('chatgptKey').value.trim();
-      const gptModel = document.getElementById('chatgptModelNew')?.value || 'gpt-4o-mini';
       if (!apiKey) { showAlert('Please enter an API key.', 'warning', 'chatgptAlert'); return; }
       try {
         const res = await fetch('/connect_openai_key/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-          body: JSON.stringify({ api_key: apiKey, gpt_model: gptModel })
+          body: JSON.stringify({ api_key: apiKey })
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
@@ -271,31 +270,6 @@
     });
   }
 
-  // Save GPT Model handler
-  const saveGptModelBtn = document.getElementById('saveGptModel');
-  if (saveGptModelBtn) {
-    saveGptModelBtn.addEventListener('click', async () => {
-      clearAlert('chatgptAlert');
-      const model = document.getElementById('chatgptModelConnected').value;
-      try {
-        const res = await fetch('/set_gpt_model/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-          body: JSON.stringify({ gpt_model: model })
-        });
-        const data = await res.json();
-        if (data.success) {
-          showAlert('Model updated to ' + model, 'success', 'chatgptAlert');
-          setTimeout(() => window.location.reload(), 600);
-        } else {
-          showAlert(data.error || 'Failed to update model', 'danger', 'chatgptAlert');
-        }
-      } catch (err) {
-        showAlert('Failed to save model. ' + err.message, 'danger', 'chatgptAlert');
-      }
-    });
-  }
-
   async function updateChatGPTMode(mode) {
     const response = await fetch('/set_chatgpt_mode/', {
       method: 'POST',
@@ -313,7 +287,54 @@
   const goToAIpageBtn = document.getElementById('goToAIpage');
   if (goToAIpageBtn) goToAIpageBtn.addEventListener('click', async () => { await updateChatGPTMode('ai_agent'); window.location.href = '/ai_agent/upload/'; });
 
+  // Calendly modal handlers
+  const calendlyModalEl = document.getElementById('calendlyModal');
+  const calendlyModal = new bootstrap.Modal(calendlyModalEl);
 
+  const calendlyConnectLink = document.getElementById('calendlyConnectLink');
+  if (calendlyConnectLink) calendlyConnectLink.addEventListener('click', (e) => { e.preventDefault(); calendlyModal.show(); });
+
+  const calendlyDisconnectLink = document.getElementById('calendlyDisconnectLink');
+  if (calendlyDisconnectLink) calendlyDisconnectLink.addEventListener('click', (e) => { e.preventDefault(); calendlyModal.show(); });
+
+  const followupDelayRange = document.getElementById('followupDelayRange');
+  const followupDelayValue = document.getElementById('followupDelayValue');
+  if (followupDelayRange && followupDelayValue) {
+    followupDelayRange.addEventListener('input', () => { followupDelayValue.textContent = followupDelayRange.value; });
+  }
+
+  const confirmCalendlyConnectBtn = document.getElementById('confirmCalendlyConnect');
+  if (confirmCalendlyConnectBtn) {
+    confirmCalendlyConnectBtn.addEventListener('click', async () => {
+      clearAlert('calendlyAlert');
+      const token = document.getElementById('calendlyToken').value.trim();
+      const url = document.getElementById('calendlySchedulingUrl').value.trim();
+      if (!token || !url) { showAlert('Please enter both token and scheduling URL.', 'warning', 'calendlyAlert'); return; }
+      try {
+        const res = await fetch('/connect_calendly/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+          body: JSON.stringify({ calendly_token: token, scheduling_url: url })
+        });
+        const data = await res.json();
+        if (data.success) { showAlert(data.msg || 'Connected!', 'success', 'calendlyAlert'); setTimeout(() => window.location.reload(), 600); }
+        else showAlert(data.error || 'Failed to connect', 'danger', 'calendlyAlert');
+      } catch (err) { showAlert('Failed to connect. ' + err.message, 'danger', 'calendlyAlert'); }
+    });
+  }
+
+  const confirmCalendlyDisconnectBtn = document.getElementById('confirmCalendlyDisconnect');
+  if (confirmCalendlyDisconnectBtn) {
+    confirmCalendlyDisconnectBtn.addEventListener('click', async () => {
+      clearAlert('calendlyAlert');
+      try {
+        const res = await fetch('/disconnect_calendly/', { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } });
+        const data = await res.json();
+        if (data.success) { showAlert(data.msg || 'Disconnected!', 'success', 'calendlyAlert'); setTimeout(() => window.location.reload(), 600); }
+        else showAlert(data.error || 'Failed to disconnect', 'danger', 'calendlyAlert');
+      } catch (err) { showAlert('Failed to disconnect. ' + err.message, 'danger', 'calendlyAlert'); }
+    });
+  }
 
 
 </script>
@@ -374,11 +395,6 @@
                 {% elif chatgpt_mode == "ai_agent" %}AI Agent Mode
                 {% else %}Not Set{% endif %}
               </span>
-              {% if chatgpt_connected %}
-              <span class="badge rounded-pill ms-1" style="background: #dcfce7 !important; color: #166534;">
-                {{ current_gpt_model|default:"gpt-4o-mini" }}
-              </span>
-              {% endif %}
             </div>
             <div class="d-flex align-items-center gap-3">
               {% if chatgpt_connected %}
@@ -391,7 +407,35 @@
           </div>
         </a>
 
+        <!-- Calendly Card -->
+        {% if calendly_connected %}
+        <a href="javascript:void(0)" class="text-decoration-none text-reset" id="calendlyDisconnectLink">
+          {% else %}
+          <a href="javascript:void(0)" class="text-decoration-none text-reset" id="calendlyConnectLink">
+            {% endif %}
+            <div class="channel-card">
+              <div class="d-flex align-items-center gap-3">
+                <div class="icon-box" style="background:#fef3c7;">
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="#f59e0b" stroke-width="2" />
+                    <path d="M16 2v4M8 2v4M3 10h18" stroke="#f59e0b" stroke-width="2" />
+                  </svg>
+                </div>
+                <div class="fw-semibold">Calendly</div>
+                {% if calendly_connected %}
 
+                {% endif %}
+              </div>
+              <div class="d-flex align-items-center gap-3">
+                {% if calendly_connected %}
+                <i class="fa-solid fa-circle-check text-success" title="connected" aria-label="connected"></i>
+                {% else %}
+                <i class="fa-solid fa-circle-xmark text-danger" title="not connected" aria-label="not connected"></i>
+                {% endif %}
+                <span class="text-muted fs-5">&rsaquo;</span>
+              </div>
+            </div>
+          </a>
   </div>
 </div>
 
@@ -444,44 +488,11 @@
       <div class="modal-body">
         {% if chatgpt_connected %}
         <p>ChatGPT is currently <b>connected</b>. Do you want to disconnect?</p>
-        <div class="mb-3">
-          <label for="chatgptModelConnected" class="form-label fw-semibold">GPT Model</label>
-          <select id="chatgptModelConnected" class="form-select">
-            <option value="gpt-5.2" {% if current_gpt_model == 'gpt-5.2' %}selected{% endif %}>GPT-5.2 (Most Powerful)</option>
-            <option value="gpt-5" {% if current_gpt_model == 'gpt-5' %}selected{% endif %}>GPT-5 (Advanced)</option>
-            <option value="gpt-5-mini" {% if current_gpt_model == 'gpt-5-mini' %}selected{% endif %}>GPT-5 Mini (Fast & Smart)</option>
-            <option value="gpt-5-nano" {% if current_gpt_model == 'gpt-5-nano' %}selected{% endif %}>GPT-5 Nano (Fastest & Cheapest)</option>
-            <option value="o3-mini" {% if current_gpt_model == 'o3-mini' %}selected{% endif %}>o3-mini (Reasoning)</option>
-            <option value="gpt-4.1" {% if current_gpt_model == 'gpt-4.1' %}selected{% endif %}>GPT-4.1 (Reliable)</option>
-            <option value="gpt-4.1-mini" {% if current_gpt_model == 'gpt-4.1-mini' %}selected{% endif %}>GPT-4.1 Mini (Affordable)</option>
-            <option value="gpt-4.1-nano" {% if current_gpt_model == 'gpt-4.1-nano' %}selected{% endif %}>GPT-4.1 Nano (Ultra Fast)</option>
-            <option value="gpt-4o-mini" {% if current_gpt_model == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o Mini (Legacy)</option>
-            <option value="gpt-4-turbo" {% if current_gpt_model == 'gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo (Legacy)</option>
-          </select>
-          <div class="form-text">Choose the AI model for your chatbot responses.</div>
-        </div>
-        <button type="button" class="btn btn-primary btn-sm" id="saveGptModel">💾 Save Model</button>
         {% else %}
         <div class="mb-3">
           <label for="chatgptKey" class="form-label">OpenAI API Key</label>
           <input type="text" id="chatgptKey" class="form-control" placeholder="Enter OpenAI API Key" />
           <div class="form-text">We'll store this securely to enable ChatGPT features.</div>
-        </div>
-        <div class="mb-3">
-          <label for="chatgptModelNew" class="form-label fw-semibold">GPT Model</label>
-          <select id="chatgptModelNew" class="form-select">
-            <option value="gpt-5.2">GPT-5.2 (Most Powerful)</option>
-            <option value="gpt-5">GPT-5 (Advanced)</option>
-            <option value="gpt-5-mini">GPT-5 Mini (Fast & Smart)</option>
-            <option value="gpt-5-nano">GPT-5 Nano (Fastest & Cheapest)</option>
-            <option value="o3-mini">o3-mini (Reasoning)</option>
-            <option value="gpt-4.1">GPT-4.1 (Reliable)</option>
-            <option value="gpt-4.1-mini">GPT-4.1 Mini (Affordable)</option>
-            <option value="gpt-4.1-nano">GPT-4.1 Nano (Ultra Fast)</option>
-            <option value="gpt-4o-mini" selected>GPT-4o Mini (Legacy)</option>
-            <option value="gpt-4-turbo">GPT-4 Turbo (Legacy)</option>
-          </select>
-          <div class="form-text">Choose the AI model for your chatbot responses.</div>
         </div>
         {% endif %}
         <div id="chatgptAlert" class="alert d-none" role="alert"></div>
@@ -490,7 +501,7 @@
         {% if chatgpt_connected %}
         <button type="button" class="btn btn-danger" id="confirmChatGPTDisconnect">Disconnect</button>
         <button type="button" class="btn btn-primary" id="goToPromptPage">Enter Prompt</button>
-        <button type="button" class="btn btn-secondary" id="goToAIpage" style="display:none;">AI Agent</button>
+        <button type="button" class="btn btn-secondary" id="goToAIpage">AI Agent</button>
         {% else %}
         <button type="button" class="btn btn-success" id="confirmChatGPTConnect">Connect</button>
         {% endif %}
@@ -500,5 +511,49 @@
   </div>
 </div>
 
+<!-- Calendly Modal -->
+<div class="modal fade" id="calendlyModal" tabindex="-1" aria-labelledby="calendlyModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="calendlyModalLabel">Calendly Integration</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if calendly_connected %}
+        <p>Calendly is currently <b>connected</b>.</p>
+        <div class="mb-3">
+          <label class="form-label">Scheduling URL</label>
+          <input type="text" class="form-control" value="{% if org %}{{ org.calendly_scheduling_url }}{% else %}{{ admin.calendly_scheduling_url }}{% endif %}" disabled>
+        </div>
+        <hr>
 
+        {% else %}
+        <div class="mb-3">
+          <label for="calendlyToken" class="form-label">Calendly Personal Access Token</label>
+          <input type="password" id="calendlyToken" class="form-control" placeholder="Enter your Calendly PAT">
+          <div class="form-text">Get your token from <a href="https://calendly.com/integrations/api_webhooks"
+              target="_blank">Calendly API Settings</a></div>
+        </div>
+        <div class="mb-3">
+          <label for="calendlySchedulingUrl" class="form-label">Scheduling URL</label>
+          <input type="text" id="calendlySchedulingUrl" class="form-control"
+            placeholder="https://calendly.com/your-name/30min">
+          <div class="form-text">The booking link to share with users</div>
+        </div>
+        {% endif %}
+        <div id="calendlyAlert" class="alert d-none" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        {% if calendly_connected %}
+
+        <button type="button" class="btn btn-danger" id="confirmCalendlyDisconnect">Disconnect</button>
+        {% else %}
+        <button type="button" class="btn btn-success" id="confirmCalendlyConnect">Connect</button>
+        {% endif %}
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

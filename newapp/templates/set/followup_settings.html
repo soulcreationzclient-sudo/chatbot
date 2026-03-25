@@ -139,24 +139,10 @@
                 <button class="btn-delete" onclick="deleteFollowup({{ followup.id }})">Delete</button>
             </div>
             <div class="row">
-                <div class="col-md-5 mb-3">
-                    <label class="form-label">Delay</label>
-                    <div class="d-flex gap-2 align-items-center">
-                        <div>
-                            <input type="number" class="form-control hours-input" value="0" min="0" max="24" data-id="{{ followup.id }}" style="width:75px;" onchange="syncDelayFromParts(this)">
-                            <small class="text-muted" style="font-size:11px;">Hours (max 24)</small>
-                        </div>
-                        <div>
-                            <input type="number" class="form-control minutes-input" value="0" min="0" max="59" data-id="{{ followup.id }}" style="width:75px;" onchange="syncDelayFromParts(this)">
-                            <small class="text-muted" style="font-size:11px;">Minutes</small>
-                        </div>
-                        <div>
-                            <input type="number" class="form-control seconds-input" value="0" min="0" max="59" data-id="{{ followup.id }}" style="width:75px;" onchange="syncDelayFromParts(this)">
-                            <small class="text-muted" style="font-size:11px;">Seconds</small>
-                        </div>
-                    </div>
-                    <input type="hidden" class="delay-input" value="{{ followup.delay_minutes }}" data-id="{{ followup.id }}">
-                    <div class="text-muted" style="font-size:11px;margin-top:4px;">Max: 24 hours (1440 minutes)</div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Delay (minutes)</label>
+                    <input type="number" class="form-control delay-input" value="{{ followup.delay_minutes }}" min="1"
+                        max="1440" data-id="{{ followup.id }}">
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">Tag Filter (Optional)</label>
@@ -201,23 +187,9 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">Delay</label>
-                    <div class="d-flex gap-2 align-items-center">
-                        <div>
-                            <input type="number" class="form-control" id="newHours" value="0" min="0" max="24" style="width:85px;" onchange="syncNewDelay()">
-                            <small class="text-muted" style="font-size:11px;">Hours (max 24)</small>
-                        </div>
-                        <div>
-                            <input type="number" class="form-control" id="newMinutes" value="10" min="0" max="59" style="width:85px;" onchange="syncNewDelay()">
-                            <small class="text-muted" style="font-size:11px;">Minutes</small>
-                        </div>
-                        <div>
-                            <input type="number" class="form-control" id="newSeconds" value="0" min="0" max="59" style="width:85px;" onchange="syncNewDelay()">
-                            <small class="text-muted" style="font-size:11px;">Seconds</small>
-                        </div>
-                    </div>
-                    <input type="hidden" id="newDelay" value="10">
-                    <div class="form-text">Max: 24 hours (1440 minutes). Seconds are rounded to nearest minute.</div>
+                    <label class="form-label">Delay (minutes)</label>
+                    <input type="number" class="form-control" id="newDelay" value="10" min="1" max="1440">
+                    <div class="form-text">Time to wait before sending this follow-up</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Tag Filter (Optional)</label>
@@ -258,46 +230,7 @@
         });
     });
 
-    // Sync hours+min+sec → hidden delay field for existing cards
-    function syncDelayFromParts(el) {
-        const card = el.closest('.followup-card');
-        const h = parseInt(card.querySelector('.hours-input').value) || 0;
-        const m = parseInt(card.querySelector('.minutes-input').value) || 0;
-        const s = parseInt(card.querySelector('.seconds-input').value) || 0;
-        let total = (h * 60) + m + Math.round(s / 60);
-        if (total > 1440) total = 1440;
-        if (total < 1) total = 1;
-        card.querySelector('.delay-input').value = total;
-    }
-
-    // Sync hours+min+sec → hidden delay field for new modal
-    function syncNewDelay() {
-        const h = parseInt(document.getElementById('newHours').value) || 0;
-        const m = parseInt(document.getElementById('newMinutes').value) || 0;
-        const s = parseInt(document.getElementById('newSeconds').value) || 0;
-        let total = (h * 60) + m + Math.round(s / 60);
-        if (total > 1440) total = 1440;
-        if (total < 1) total = 1;
-        document.getElementById('newDelay').value = total;
-    }
-
-    // On page load, split delay_minutes into hours/min/sec on existing cards
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.followup-card[data-id]').forEach(card => {
-            const delayInput = card.querySelector('.delay-input');
-            if (!delayInput) return;
-            const totalMin = parseInt(delayInput.value) || 0;
-            const h = Math.floor(totalMin / 60);
-            const m = totalMin % 60;
-            const hInput = card.querySelector('.hours-input');
-            const mInput = card.querySelector('.minutes-input');
-            if (hInput) hInput.value = h;
-            if (mInput) mInput.value = m;
-        });
-    });
-
     async function createFollowup() {
-        syncNewDelay();
         const delay = document.getElementById('newDelay').value;
         const message = document.getElementById('newMessage').value;
 

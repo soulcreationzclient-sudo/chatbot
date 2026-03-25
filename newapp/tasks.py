@@ -206,13 +206,60 @@ def process_pending_followups():
                 whatsapp_phone_id = admin.whatsapp_phone_id
                 whatsapp_token = admin.whatsapp_token
             
-            # Send the message
-            success, error = send_whatsapp_text(
-                phone_id=whatsapp_phone_id,
-                token=whatsapp_token,
-                to_phone=user.phone_no,
-                message=followup.message
-            )
+            # Send the message — Feature 2: Check for template message
+            followup_config = None
+            if admin:
+                from newapp.models import FollowUpMessage as FollowUpMessageModel
+                followup_config = FollowUpMessageModel.objects.filter(
+                    admin=admin, step=followup.step, is_active=True
+                ).first()
+            
+            if followup_config and followup_config.use_template and followup_config.template:
+                # Send template message instead of plain text
+                try:
+                    from newapp.template_message_sender import send_template_message
+                    
+                    # Build template variables, replacing placeholders with user data
+                    variables = dict(followup_config.template_variables) if followup_config.template_variables else {}
+                    if user.name:
+                        for key, val in variables.items():
+                            if isinstance(val, str):
+                                variables[key] = val.replace('{username}', user.name).replace('{{username}}', user.name).replace('{name}', user.name).replace('{{name}}', user.name)
+                        # Auto-set first body param to user name if not explicitly set
+                        if '1' not in variables:
+                            variables['1'] = user.name
+                    
+                    result = send_template_message(
+                        phone_number=user.phone_no,
+                        template=followup_config.template,
+                        variables=variables,
+                        phone_id=whatsapp_phone_id,
+                        token=whatsapp_token
+                    )
+                    success = result.get('success', False)
+                    error = result.get('error') if not success else None
+                    
+                    if success:
+                        # Store the template name in the message for tracking
+                        followup.message = f"[Template: {followup_config.template.name}]"
+                        followup.save(update_fields=['message'])
+                except Exception as tmpl_err:
+                    logger.error(f"Template send failed, falling back to text: {tmpl_err}")
+                    # Fall back to plain text
+                    success, error = send_whatsapp_text(
+                        phone_id=whatsapp_phone_id,
+                        token=whatsapp_token,
+                        to_phone=user.phone_no,
+                        message=followup.message
+                    )
+            else:
+                # Standard plain text send
+                success, error = send_whatsapp_text(
+                    phone_id=whatsapp_phone_id,
+                    token=whatsapp_token,
+                    to_phone=user.phone_no,
+                    message=followup.message
+                )
             
             followup.attempts += 1
             

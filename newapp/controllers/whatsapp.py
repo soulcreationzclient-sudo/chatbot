@@ -693,6 +693,7 @@ If the user's question relates to this document, answer based on your analysis a
 """
                                             webhook_logger.info(f"Using document context for {phone}")
                                         
+                                        prompt_obj = None  # Initialize — used later for per-prompt gpt_model
                                         if creds['chatgpt_mode'] == 'ai_agent':
                                             ai_agent = AIAgentConfig.objects.filter(admin=admin_check, is_active=True).last()
                                             pdf_content = ai_agent.pdf_text if ai_agent else ""
@@ -700,10 +701,15 @@ If the user's question relates to this document, answer based on your analysis a
                                             system_prompt = f"{instructions}\n\nREFER TO THE FOLLOWING FAQ/INSTRUCTIONS:\n{pdf_content}"
                                         else:
                                             # Use latest ChatGPT prompt for this org/admin
+                                            # Feature 1: Prefer is_default prompt, fallback to latest
                                             if org_check:
-                                                prompt_obj = ChatGPTPrompt.objects.filter(organization=org_check).order_by('-updated_at').first()
+                                                prompt_obj = ChatGPTPrompt.objects.filter(organization=org_check, is_default=True).first()
+                                                if not prompt_obj:
+                                                    prompt_obj = ChatGPTPrompt.objects.filter(organization=org_check).order_by('-updated_at').first()
                                             elif admin_check:
-                                                prompt_obj = ChatGPTPrompt.objects.filter(admin=admin_check).order_by('-updated_at').first()
+                                                prompt_obj = ChatGPTPrompt.objects.filter(admin=admin_check, is_default=True).first()
+                                                if not prompt_obj:
+                                                    prompt_obj = ChatGPTPrompt.objects.filter(admin=admin_check).order_by('-updated_at').first()
                                             else:
                                                 prompt_obj = None
                                             system_prompt = (
@@ -889,7 +895,10 @@ If the user's question relates to this document, answer based on your analysis a
                                         # --- END CONVERSATION HISTORY ---
 
                                         # Prepare API Call Params
+                                        # Feature 1: Use per-prompt gpt_model if set, otherwise org default
                                         selected_model = creds.get('gpt_model', 'gpt-4o-mini')
+                                        if prompt_obj and prompt_obj.gpt_model:
+                                            selected_model = prompt_obj.gpt_model
                                         api_params = {
                                             "model": selected_model,
                                             "messages": openai_messages,

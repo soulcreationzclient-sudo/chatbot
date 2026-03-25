@@ -1,0 +1,476 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Team Management{% endblock %}
+
+{% block head_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    :root {
+        --bg-card: #ffffff;
+        --border-soft: #e5e7eb;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --accent: #3b82f6;
+        --success: #22c55e;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+    }
+
+    .settings-wrap {
+        padding: 24px 32px;
+        max-width: 900px;
+    }
+
+    .breadcrumb-nav {
+        font-size: 14px;
+        color: var(--text-muted);
+        margin-bottom: 20px;
+    }
+
+    .breadcrumb-nav a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .page-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .page-desc {
+        color: var(--text-muted);
+        margin-bottom: 24px;
+    }
+
+    .member-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-soft);
+        border-radius: 14px;
+        padding: 18px 20px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: box-shadow 0.2s;
+    }
+
+    .member-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .member-card.inactive {
+        opacity: 0.5;
+    }
+
+    .member-info {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .member-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 16px;
+        color: #fff;
+    }
+
+    .member-avatar.admin { background: #3b82f6; }
+    .member-avatar.agent { background: #22c55e; }
+    .member-avatar.viewer { background: #8b5cf6; }
+
+    .member-name {
+        font-weight: 600;
+        font-size: 15px;
+        color: var(--text-main);
+    }
+
+    .member-email {
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+
+    .role-badge {
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .role-badge.client_admin { background: #dbeafe; color: #1d4ed8; }
+    .role-badge.agent { background: #dcfce7; color: #15803d; }
+    .role-badge.viewer { background: #f3e8ff; color: #7c3aed; }
+
+    .self-badge {
+        font-size: 11px;
+        background: #fef3c7;
+        color: #92400e;
+        padding: 2px 8px;
+        border-radius: 10px;
+        margin-left: 6px;
+    }
+
+    .btn-add {
+        background: #3B82F6;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-edit {
+        background: transparent;
+        color: var(--accent);
+        border: 1px solid var(--accent);
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .btn-toggle {
+        background: transparent;
+        color: var(--warning);
+        border: 1px solid var(--warning);
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .btn-delete {
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+        margin-left: 8px;
+    }
+
+    .permissions-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .perm-item {
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: #f8fafc;
+        border: 1px solid var(--border-soft);
+    }
+
+    .perm-item.yes { background: #dcfce7; border-color: #86efac; }
+    .perm-item.no { background: #fef2f2; border-color: #fecaca; }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-muted);
+        background: #f8fafc;
+        border-radius: 14px;
+        border: 1px dashed var(--border-soft);
+    }
+
+    .stats-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .stat-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-soft);
+        border-radius: 12px;
+        padding: 16px 20px;
+        flex: 1;
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .stat-label {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-wrap">
+    <div class="breadcrumb-nav">
+        <a href="{% url 'settings' %}">Settings</a> &gt; <b>Team Management</b>
+    </div>
+
+    <h1 class="page-title">👥 Team Management</h1>
+    <p class="page-desc">Manage your team members and control access to your organization's chatbot platform.</p>
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-number">{{ members|length }}</div>
+            <div class="stat-label">Total Members</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="activeCount">0</div>
+            <div class="stat-label">Active</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="roleCount">0</div>
+            <div class="stat-label">Roles in Use</div>
+        </div>
+    </div>
+
+    <!-- Members List -->
+    <div id="membersList">
+        {% for member in members %}
+        <div class="member-card {% if not member.is_active %}inactive{% endif %}" data-id="{{ member.id }}">
+            <div class="member-info">
+                <div class="member-avatar {% if member.role.name == 'client_admin' %}admin{% elif member.role.name == 'agent' %}agent{% else %}viewer{% endif %}">
+                    {{ member.user.first_name|default:member.user.username|truncatechars:1|upper }}
+                </div>
+                <div>
+                    <div class="member-name">
+                        {{ member.user.first_name|default:member.user.username }}
+                        {% if member.user == request.user %}<span class="self-badge">You</span>{% endif %}
+                        {% if not member.is_active %}<span class="self-badge" style="background:#fecaca;color:#991b1b;">Inactive</span>{% endif %}
+                    </div>
+                    <div class="member-email">{{ member.user.email|default:"No email" }} · @{{ member.user.username }}</div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="role-badge {{ member.role.name }}">{{ member.role.get_name_display }}</span>
+                {% if member.user != request.user and not member.is_super_admin %}
+                <button class="btn-edit" onclick="editMember({{ member.id }}, '{{ member.user.first_name|escapejs }}', '{{ member.user.email|escapejs }}', '{{ member.role.id }}')">Edit</button>
+                <button class="btn-toggle" onclick="toggleMember({{ member.id }})">
+                    {% if member.is_active %}Deactivate{% else %}Activate{% endif %}
+                </button>
+                <button class="btn-delete" onclick="deleteMember({{ member.id }}, '{{ member.user.first_name|default:member.user.username|escapejs }}')">Remove</button>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <p class="mb-3">No team members yet.</p>
+            <p class="small">Click "Add Team Member" to invite someone.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Add Button -->
+    <div class="mt-4">
+        <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addModal">
+            + Add Team Member
+        </button>
+    </div>
+
+    <!-- Role Permissions Reference -->
+    <div class="mt-4 p-3" style="background:#f8fafc; border-radius:12px; border:1px solid var(--border-soft);">
+        <h6 class="mb-3">📋 Role Permissions</h6>
+        <table class="table table-sm table-bordered mb-0" style="font-size:13px;">
+            <thead>
+                <tr>
+                    <th>Permission</th>
+                    <th class="text-center">Client Admin</th>
+                    <th class="text-center">Agent</th>
+                    <th class="text-center">Viewer</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>View Inbox</td><td class="text-center">✅</td><td class="text-center">✅</td><td class="text-center">✅</td></tr>
+                <tr><td>Send Messages</td><td class="text-center">✅</td><td class="text-center">✅</td><td class="text-center">❌</td></tr>
+                <tr><td>Manage Contacts</td><td class="text-center">✅</td><td class="text-center">✅</td><td class="text-center">❌</td></tr>
+                <tr><td>Manage Tags</td><td class="text-center">✅</td><td class="text-center">❌</td><td class="text-center">❌</td></tr>
+                <tr><td>Manage AI/Prompts</td><td class="text-center">✅</td><td class="text-center">❌</td><td class="text-center">❌</td></tr>
+                <tr><td>Broadcast</td><td class="text-center">✅</td><td class="text-center">❌</td><td class="text-center">❌</td></tr>
+                <tr><td>Manage Settings</td><td class="text-center">✅</td><td class="text-center">❌</td><td class="text-center">❌</td></tr>
+                <tr><td>Manage Team</td><td class="text-center">✅</td><td class="text-center">❌</td><td class="text-center">❌</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Add Team Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editMemberId" value="">
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="memberName" placeholder="e.g., John Doe">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Username <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="memberUsername" placeholder="e.g., johnd">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="memberEmail" placeholder="john@example.com">
+                </div>
+                <div class="mb-3" id="passwordField">
+                    <label class="form-label">Password <span class="text-danger">*</span></label>
+                    <input type="password" class="form-control" id="memberPassword" placeholder="Min 6 characters">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Role</label>
+                    <select class="form-select" id="memberRole">
+                        {% for role in roles %}
+                        <option value="{{ role.id }}">{{ role.get_name_display }} — {{ role.description|truncatechars:50 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="saveMember()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const addModal = new bootstrap.Modal(document.getElementById('addModal'));
+
+    // Compute stats
+    (function() {
+        const cards = document.querySelectorAll('.member-card');
+        let active = 0;
+        const rolesUsed = new Set();
+        cards.forEach(c => {
+            if (!c.classList.contains('inactive')) active++;
+            const badge = c.querySelector('.role-badge');
+            if (badge) rolesUsed.add(badge.textContent.trim());
+        });
+        document.getElementById('activeCount').textContent = active;
+        document.getElementById('roleCount').textContent = rolesUsed.size;
+    })();
+
+    function editMember(id, name, email, roleId) {
+        document.getElementById('editMemberId').value = id;
+        document.getElementById('memberName').value = name;
+        document.getElementById('memberEmail').value = email;
+        document.getElementById('memberRole').value = roleId;
+        document.getElementById('memberUsername').disabled = true;
+        document.getElementById('memberUsername').value = '';
+        document.getElementById('passwordField').style.display = 'none';
+        document.getElementById('modalTitle').textContent = 'Edit Team Member';
+        addModal.show();
+    }
+
+    async function saveMember() {
+        const memberId = document.getElementById('editMemberId').value;
+        const name = document.getElementById('memberName').value.trim();
+        const email = document.getElementById('memberEmail').value.trim();
+        const roleId = document.getElementById('memberRole').value;
+
+        if (memberId) {
+            // Update existing
+            const res = await fetch(`/settings/team/${memberId}/update/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ first_name: name, email: email, role_id: roleId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.error || 'Failed to update member');
+            }
+        } else {
+            // Create new
+            const username = document.getElementById('memberUsername').value.trim();
+            const password = document.getElementById('memberPassword').value;
+
+            if (!username) { alert('Username is required'); return; }
+            if (!password || password.length < 6) { alert('Password must be at least 6 characters'); return; }
+
+            const res = await fetch('/settings/team/add/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ username, password, first_name: name, email, role_id: roleId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.error || 'Failed to add member');
+            }
+        }
+    }
+
+    async function toggleMember(id) {
+        const res = await fetch(`/settings/team/${id}/toggle/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || 'Failed to toggle status');
+        }
+    }
+
+    async function deleteMember(id, name) {
+        if (!confirm(`Remove "${name}" from your team? This cannot be undone.`)) return;
+
+        const res = await fetch(`/settings/team/${id}/delete/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || 'Failed to remove member');
+        }
+    }
+
+    // Reset modal on close
+    document.getElementById('addModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('editMemberId').value = '';
+        document.getElementById('memberName').value = '';
+        document.getElementById('memberUsername').value = '';
+        document.getElementById('memberUsername').disabled = false;
+        document.getElementById('memberEmail').value = '';
+        document.getElementById('memberPassword').value = '';
+        document.getElementById('passwordField').style.display = 'block';
+        document.getElementById('modalTitle').textContent = 'Add Team Member';
+    });
+
+    function getCsrfToken() {
+        const name = 'csrftoken=';
+        const decoded = decodeURIComponent(document.cookie);
+        const ca = decoded.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i].trim();
+            if (c.indexOf(name) === 0) return c.substring(name.length, c.length);
+        }
+        return '';
+    }
+</script>
+{% endblock %}

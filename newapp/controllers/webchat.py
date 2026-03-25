@@ -18,7 +18,7 @@ from ..models import (
     Admin,
     Organization
 )
-from ..views import chatgpt_respond
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -82,15 +82,36 @@ class WebChatController:
             if language not in ['en', 'ar', 'both']:
                 language = 'en'
             
+            # Create or link a User record so tags/APIs/bookings work
+            webchat_phone = f"webchat_{session_id[:16]}"
+            visitor_name = request_data.get('visitor_name', '')
+            visitor_email = request_data.get('visitor_email', '')
+            try:
+                user_obj, _ = User.objects.get_or_create(
+                    phone_no=webchat_phone,
+                    defaults={
+                        'name': visitor_name or f'Webchat {anonymous_id[:8]}',
+                        'admin_id': admin_id,
+                        'organization_id': organization_id,
+                    }
+                )
+                if visitor_name and user_obj.name != visitor_name:
+                    user_obj.name = visitor_name
+                    user_obj.save(update_fields=['name'])
+            except Exception as user_err:
+                logger.error(f"Error creating webchat user: {user_err}")
+                user_obj = None
+            
             # Create session
             session = WebChatSession.objects.create(
                 session_id=session_id,
                 anonymous_id=anonymous_id,
+                user=user_obj,
                 admin_id=admin_id,
                 organization_id=organization_id,
                 language=language,
-                visitor_name=request_data.get('visitor_name'),
-                visitor_email=request_data.get('visitor_email'),
+                visitor_name=visitor_name,
+                visitor_email=visitor_email,
                 ip_address=request_data.get('ip_address'),
                 user_agent=request_data.get('user_agent'),
                 status='active'
@@ -236,25 +257,79 @@ session=session,
             bot_response_text = None
             
             try:
-                # Call existing chatgpt_respond function
-                ai_response = chatgpt_respond(
-                    message_content, 
-                    user_id=session.user_id,
-                    admin_id=session.admin_id,
-                    organization_id=session.organization_id,
-                    chat_type='webchat'
+                # Get system prompt — Feature 1: prefer is_default prompt
+                from ..models import ChatGPTPrompt
+                prompt_obj = None
+                if session.organization_id:
+                    prompt_obj = ChatGPTPrompt.objects.filter(
+                        organization_id=session.organization_id, is_default=True
+                    ).first()
+                    if not prompt_obj:
+                        prompt_obj = ChatGPTPrompt.objects.filter(
+                            organization_id=session.organization_id
+                        ).order_by('-updated_at').first()
+                elif session.admin_id:
+                    prompt_obj = ChatGPTPrompt.objects.filter(
+                        admin_id=session.admin_id, is_default=True
+                    ).first()
+                    if not prompt_obj:
+                        prompt_obj = ChatGPTPrompt.objects.filter(
+                            admin_id=session.admin_id
+                        ).order_by('-updated_at').first()
+                
+                system_prompt = (
+                    prompt_obj.prompt_text.strip()
+                    if prompt_obj and prompt_obj.prompt_text
+                    else "You are a helpful assistant."
                 )
                 
-                if ai_response:
-                    # Handle different response formats
-                    if isinstance(ai_response, dict):
-                        bot_response_text = ai_response.get('response', ai_response.get('message', str(ai_response)))
-                    elif isinstance(ai_response, str):
-                        bot_response_text = ai_response
-                    else:
-                        bot_response_text = str(ai_response)
+                # Get OpenAI API key
+                openai_key = None
+                gpt_model = 'gpt-4o-mini'
+                
+                # Use per-prompt gpt_model if set
+                if prompt_obj and prompt_obj.gpt_model:
+                    gpt_model = prompt_obj.gpt_model
+                
+                if session.organization_id:
+                    org_obj = Organization.objects.filter(id=session.organization_id).first()
+                    if org_obj:
+                        openai_key = org_obj.openai_api_key
+                        if not gpt_model or gpt_model == 'gpt-4o-mini':
+                            gpt_model = getattr(org_obj, 'gpt_model', gpt_model)
+                
+                if not openai_key and session.admin_id:
+                    admin_obj_ai = Admin.objects.filter(id=session.admin_id).first()
+                    if admin_obj_ai:
+                        openai_key = admin_obj_ai.openai_api_key
+                
+                if openai_key:
+                    from openai import OpenAI
+                    client = OpenAI(api_key=openai_key)
+                    
+                    # Build conversation history from session messages
+                    messages_history = [{"role": "system", "content": system_prompt}]
+                    past_messages = WebChatMessage.objects.filter(
+                        session=session
+                    ).order_by('-created_at')[:20]  # Last 20 messages for context
+                    
+                    for past_msg in reversed(list(past_messages)):
+                        role = "user" if past_msg.sender == "user" else "assistant"
+                        messages_history.append({
+                            "role": role,
+                            "content": past_msg.content or ""
+                        })
+                    
+                    # Add current message
+                    messages_history.append({"role": "user", "content": message_content})
+                    
+                    response = client.chat.completions.create(
+                        model=gpt_model,
+                        messages=messages_history
+                    )
+                    bot_response_text = response.choices[0].message.content
                 else:
-                    bot_response_text = "I couldn't process your message. Please try again."
+                    bot_response_text = "I'm sorry, the AI service is not configured yet. Please try again later."
                     
             except Exception as ai_error:
                 logger.error(f"AI response error: {str(ai_error)}")
@@ -294,16 +369,34 @@ session=session,
                 except Exception as img_error:
                     logger.error(f"Image tag processing error: {str(img_error)}")
             
-            # Process action tags ({{calendly:name}}, {{tag:...}}, {{api:...}})
+            # Process action tags ({{calendly:name}}, {{tag:...}}, {{api:...}}, {{gcalendar:...}})
             if bot_response_text:
                 try:
                     from ..action_tag_processor import process_response_actions
-                    bot_response_text = process_response_actions(
+                    # Resolve admin/org objects for the action tag processor
+                    admin_obj = None
+                    org_obj = None
+                    webchat_phone = None
+                    if session.admin_id:
+                        admin_obj = Admin.objects.filter(id=session.admin_id).first()
+                    if session.organization_id:
+                        org_obj = Organization.objects.filter(id=session.organization_id).first()
+                    if session.user:
+                        webchat_phone = session.user.phone_no
+                    else:
+                        webchat_phone = f"webchat_{session.session_id[:16]}"
+                    
+                    tag_result = process_response_actions(
                         bot_response_text,
-                        user_id=session.user_id,
-                        admin_id=session.admin_id,
-                        organization_id=session.organization_id
+                        admin_obj,
+                        webchat_phone,
+                        org_obj
                     )
+                    # process_response_actions returns a dict with 'final_text'
+                    if isinstance(tag_result, dict):
+                        bot_response_text = tag_result.get('final_text', bot_response_text)
+                    elif isinstance(tag_result, str):
+                        bot_response_text = tag_result
                 except Exception as tag_error:
                     logger.error(f"Action tag processing error: {str(tag_error)}")
             

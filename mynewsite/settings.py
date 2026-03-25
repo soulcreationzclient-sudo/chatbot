@@ -63,6 +63,9 @@ else:
         '.ngrok-free.dev',
     ]
 
+# Base URL for generating absolute links (booking pages, calendly redirects, etc.)
+BASE_URL = 'https://chatbotad.io'
+
 # SECURITY: Cookie and Session Settings
 # In production, enable secure cookies
 CSRF_COOKIE_SECURE = get_env_bool('CSRF_COOKIE_SECURE', not IS_PRODUCTION)

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - {{ gcal_link.description|default:gcal_link.name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .booking-card {
+            background: #fff;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.25);
+            overflow: hidden;
+        }
+        .booking-header {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            padding: 28px 24px;
+            text-align: center;
+        }
+        .booking-header h1 { font-size: 22px; font-weight: 700; }
+        .booking-header p { font-size: 14px; opacity: 0.85; margin-top: 6px; }
+        .booking-body { padding: 24px; }
+        .day-section { margin-bottom: 20px; }
+        .day-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .slots-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .slot-btn {
+            padding: 10px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 10px;
+            background: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .slot-btn:hover { border-color: #4f46e5; color: #4f46e5; }
+        .slot-btn.selected {
+            background: #4f46e5;
+            color: #fff;
+            border-color: #4f46e5;
+        }
+        .form-section { margin-top: 20px; display: none; }
+        .form-section.active { display: block; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus { border-color: #4f46e5; }
+        .confirm-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .confirm-btn:hover { opacity: 0.9; }
+        .confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .success-msg {
+            text-align: center;
+            padding: 40px 20px;
+            display: none;
+        }
+        .success-msg.active { display: block; }
+        .success-msg .icon { font-size: 48px; margin-bottom: 12px; }
+        .success-msg h2 { font-size: 20px; color: #059669; margin-bottom: 8px; }
+        .success-msg p { font-size: 14px; color: #6b7280; }
+        .empty-slots {
+            text-align: center;
+            padding: 30px;
+            color: #6b7280;
+        }
+        @media (max-width: 520px) {
+            body { padding: 0; }
+            .booking-card { border-radius: 0; min-height: 100vh; }
+        }
+    </style>
+</head>
+<body>
+    <div class="booking-card">
+        <div class="booking-header">
+            <h1>📅 {{ gcal_link.description|default:gcal_link.name }}</h1>
+            <p>{{ gcal_link.duration_minutes }} min · Select a time that works for you</p>
+        </div>
+
+        <div class="booking-body" id="slotsView">
+            {% for day, slots in slots_by_day.items %}
+            <div class="day-section">
+                <div class="day-label">{{ day }}</div>
+                <div class="slots-grid">
+                    {% for slot in slots %}
+                    <button class="slot-btn" data-start="{{ slot.start }}" onclick="selectSlot(this)">
+                        {{ slot.display }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-slots">
+                <p style="font-size: 36px; margin-bottom: 12px;">😔</p>
+                <p>No available slots at the moment.<br>Please try again later.</p>
+            </div>
+            {% endfor %}
+
+            <div class="form-section" id="formSection">
+                <div class="form-group">
+                    <label>Your Name</label>
+                    <input type="text" id="attendeeName" placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Email (optional)</label>
+                    <input type="email" id="attendeeEmail" placeholder="john@example.com">
+                </div>
+                <button class="confirm-btn" id="confirmBtn" onclick="confirmBooking()">
+                    Confirm Booking
+                </button>
+            </div>
+        </div>
+
+        <div class="success-msg" id="successView">
+            <div class="icon">✅</div>
+            <h2>Booking Confirmed!</h2>
+            <p id="successDetails">Your appointment has been scheduled.</p>
+        </div>
+    </div>
+
+    <script>
+        let selectedSlot = null;
+
+        function selectSlot(el) {
+            document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedSlot = el.getAttribute('data-start');
+            document.getElementById('formSection').classList.add('active');
+        }
+
+        async function confirmBooking() {
+            if (!selectedSlot) { alert('Please select a time slot'); return; }
+
+            const btn = document.getElementById('confirmBtn');
+            btn.disabled = true;
+            btn.textContent = 'Booking...';
+
+            try {
+                const res = await fetch('/gcalendar/book/{{ token }}/confirm/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        slot_start: selectedSlot,
+                        name: document.getElementById('attendeeName').value.trim(),
+                        email: document.getElementById('attendeeEmail').value.trim()
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('slotsView').style.display = 'none';
+                    document.getElementById('successView').classList.add('active');
+                    if (data.event_link) {
+                        document.getElementById('successDetails').innerHTML =
+                            'Your appointment has been scheduled.<br><a href="' + data.event_link + '" target="_blank" style="color:#4f46e5;">View in Google Calendar</a>';
+                    }
+                } else {
+                    alert(data.error || 'Failed to book. Please try again.');
+                    btn.disabled = false;
+                    btn.textContent = 'Confirm Booking';
+                }
+            } catch(e) {
+                alert('Something went wrong. Please try again.');
+                btn.disabled = false;
+                btn.textContent = 'Confirm Booking';
+            }
+        }
+    </script>
+</body>
+</html>

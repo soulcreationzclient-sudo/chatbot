@@ -18,9 +18,11 @@ from newapp.views import delete_pdf
 from newapp import calendly_views
 from newapp import calendly_integration_views
 from newapp import calendly_redirect_views
+from newapp import gcalendar_views
 
 # Multi-tenant admin imports
 from newapp.controllers import auth_views, superadmin_views, client_views
+from newapp.controllers import team_views
 from newapp.controllers import broadcast as broadcast_views
 from newapp.controllers import pipeline as pipeline_views
 from newapp.controllers import guide_views
@@ -50,6 +52,7 @@ from newapp.controllers.webchat_admin import (
     get_widget_embed_code,
     list_sessions_api,
     get_session_messages_api,
+    webchat_standalone_page,
 )
 
 # Test Chat imports
@@ -87,6 +90,17 @@ urlpatterns = [
     # ==================== CLIENT SETTINGS ====================
     path('client/settings/', client_views.client_settings, name='client_settings'),
     path('client/settings/update/', client_views.client_settings_update, name='client_settings_update'),
+    
+    # ==================== TEAM MANAGEMENT (Feature 4) ====================
+    path('settings/team/', team_views.team_list, name='team_list'),
+    path('settings/team/add/', team_views.team_add, name='team_add'),
+    path('settings/team/<int:member_id>/update/', team_views.team_update, name='team_update'),
+    path('settings/team/<int:member_id>/toggle/', team_views.team_toggle, name='team_toggle'),
+    path('settings/team/<int:member_id>/delete/', team_views.team_delete, name='team_delete'),
+    
+    # ==================== GOOGLE CALENDAR BOOKING (Feature 6) ====================
+    path('gcalendar/book/<str:token>/', gcalendar_views.gcalendar_booking_page, name='gcalendar_booking_page'),
+    path('gcalendar/book/<str:token>/confirm/', gcalendar_views.gcalendar_confirm_booking, name='gcalendar_confirm_booking'),
     
     # ==================== LEGACY ROUTES (backward compatibility) ====================
     # logout
@@ -283,6 +297,9 @@ urlpatterns = [
     path('api/webchat/widget/<int:widget_id>/embed/', get_widget_embed_code, name='webchat_embed_code'),
     path('api/webchat/sessions/', list_sessions_api, name='webchat_list_sessions'),
     path('api/webchat/sessions/<str:session_id>/messages/', get_session_messages_api, name='webchat_session_messages'),
+    
+    # ==================== WEBCHAT STANDALONE (Shareable Links) ====================
+    path('webchat/w/<int:widget_id>/', webchat_standalone_page, name='webchat_standalone'),
     
     # ==================== TEST CHAT (Prompt Testing) ====================
     path('test/chat/', test_chat, name='test_chat'),
