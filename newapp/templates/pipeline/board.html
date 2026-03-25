@@ -252,6 +252,7 @@
           <button class="col-menu-btn" onclick="toggleMenu(event, 'stage-menu-{{ stage.id }}')">⋮</button>
           <div class="dropdown-menu" id="stage-menu-{{ stage.id }}">
             <div class="dropdown-item" onclick="renameStage({{ stage.id }}, '{{ stage.name|escapejs }}')">✏️ Rename</div>
+            <div class="dropdown-item" onclick="openStageSettings({{ stage.id }}, '{{ stage.name|escapejs }}', {{ stage.auto_send_enabled|yesno:'true,false' }}, '{{ stage.auto_send_template_id|default:'' }}')">⚡ Auto-Send Template</div>
             <div class="dropdown-item danger" onclick="deleteStage({{ stage.id }})">🗑 Delete Stage</div>
           </div>
         </div>
@@ -392,6 +393,37 @@
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeEditAutoModal()">Cancel</button>
       <button class="btn btn-success" onclick="saveEditAuto()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stage Auto-Send Settings Modal -->
+<div class="modal-overlay" id="stageSettingsModal">
+  <div class="modal-box">
+    <h2>⚡ Stage Auto-Send Template</h2>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">When a lead is moved to this stage, automatically send a WhatsApp template message.</p>
+    <input type="hidden" id="stageSettingsId">
+    <div class="form-group">
+      <label>Stage: <span id="stageSettingsName" style="font-weight:700;"></span></label>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="stageAutoSendEnabled" style="width:auto;">
+        Enable auto-send template when lead enters this stage
+      </label>
+    </div>
+    <div class="form-group" id="stageTemplateGroup">
+      <label>Template to Send</label>
+      <select id="stageTemplateId">
+        <option value="">-- Select Template --</option>
+        {% for tpl in templates %}
+        <option value="{{ tpl.id }}">{{ tpl.name }} ({{ tpl.language }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeStageSettings()">Cancel</button>
+      <button class="btn btn-success" onclick="saveStageSettings()">Save</button>
     </div>
   </div>
 </div>
@@ -590,6 +622,38 @@
     const res = await api(`/api/pipeline/automation/update/${id}/`, data);
     if (res.ok) location.reload();
     else alert('Failed to update automation');
+  }
+
+  // ====== Stage Auto-Send Settings ======
+  function openStageSettings(stageId, stageName, autoEnabled, templateId) {
+    document.getElementById('stageSettingsId').value = stageId;
+    document.getElementById('stageSettingsName').textContent = stageName;
+    document.getElementById('stageAutoSendEnabled').checked = autoEnabled;
+    document.getElementById('stageTemplateId').value = templateId || '';
+    document.getElementById('stageTemplateGroup').style.display = autoEnabled ? 'block' : 'none';
+    document.getElementById('stageSettingsModal').classList.add('active');
+  }
+
+  document.getElementById('stageAutoSendEnabled').addEventListener('change', function() {
+    document.getElementById('stageTemplateGroup').style.display = this.checked ? 'block' : 'none';
+  });
+
+  function closeStageSettings() { document.getElementById('stageSettingsModal').classList.remove('active'); }
+
+  async function saveStageSettings() {
+    const stageId = document.getElementById('stageSettingsId').value;
+    const enabled = document.getElementById('stageAutoSendEnabled').checked;
+    const templateId = document.getElementById('stageTemplateId').value || null;
+    const res = await api(`/api/pipeline/stage/${stageId}/settings/`, {
+      auto_send_enabled: enabled,
+      template_id: templateId ? parseInt(templateId) : null
+    });
+    if (res.ok) {
+      closeStageSettings();
+      location.reload();
+    } else {
+      alert('Failed to save stage settings');
+    }
   }
 
   // Close modals on overlay click

@@ -85,6 +85,16 @@ def pipeline_board(request, pipeline_id):
     elif admin_id:
         custom_fields = CustomField.objects.filter(admin_id=admin_id, is_active=True)
 
+    # Get approved templates for stage auto-send config
+    from newapp.models import WhatsAppTemplate
+    from django.db.models import Q as QFilter
+    tmpl_filter = QFilter()
+    if admin_id:
+        tmpl_filter |= QFilter(admin_id=admin_id)
+    if org_id:
+        tmpl_filter |= QFilter(organization_id=org_id)
+    templates = WhatsAppTemplate.objects.filter(tmpl_filter, status='APPROVED').distinct() if tmpl_filter else WhatsAppTemplate.objects.none()
+
     return render(request, 'pipeline/board.html', {
         'pipeline': pipeline,
         'stages': stage_data,
@@ -93,6 +103,7 @@ def pipeline_board(request, pipeline_id):
         'tags': tags,
         'automations': automations,
         'custom_fields': custom_fields,
+        'templates': templates,
     })
 
 
@@ -314,6 +325,31 @@ def stage_rename(request, stage_id):
 
     stage = get_object_or_404(PipelineStage, id=stage_id)
     stage.name = name
+    stage.save()
+    return JsonResponse({'success': True})
+
+
+@csrf_exempt
+def stage_settings(request, stage_id):
+    """Update auto-send template settings for a pipeline stage."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    data = json.loads(request.body)
+    stage = get_object_or_404(PipelineStage, id=stage_id)
+
+    auto_send_enabled = data.get('auto_send_enabled', False)
+    template_id = data.get('template_id')
+
+    stage.auto_send_enabled = auto_send_enabled
+
+    if template_id:
+        from newapp.models import WhatsAppTemplate
+        template = WhatsAppTemplate.objects.filter(id=template_id).first()
+        stage.auto_send_template = template
+    else:
+        stage.auto_send_template = None
+
     stage.save()
     return JsonResponse({'success': True})
 
