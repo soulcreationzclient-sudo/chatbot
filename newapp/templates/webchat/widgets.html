@@ -699,9 +699,20 @@
         }
 
         async function saveWidget() {
-            const form = document.getElementById('widgetForm');
-            const formData = new FormData(form);
             const widgetId = document.getElementById('widgetId').value;
+            
+            const payload = {
+                name: document.getElementById('widgetName').value,
+                website_url: document.getElementById('websiteUrl').value,
+                display_mode: document.getElementById('displayMode').value,
+                theme: document.getElementById('theme').value,
+                primary_color: document.getElementById('primaryColor').value,
+                welcome_en: document.getElementById('welcomeEn').value,
+                welcome_ar: document.getElementById('welcomeAr').value,
+                show_language_selector: document.getElementById('showLangSelector').checked,
+                file_uploads_enabled: document.getElementById('fileUploads').checked,
+                voice_input_enabled: document.getElementById('voiceInput').checked
+            };
             
             const url = widgetId 
                 ? `/api/webchat/widget/${widgetId}/update/`
@@ -713,7 +724,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(Object.fromEntries(formData))
+                    body: JSON.stringify(payload)
                 });
 
                 const data = await response.json();
