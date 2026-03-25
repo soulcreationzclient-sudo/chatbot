@@ -17,6 +17,7 @@ class AdminAuthMiddleware:
             '/appointment_date', '/create-event', '/api/calendly/webhook',
             '/super-admin/', '/favicon.ico', '/book/', '/booking-confirmed/',
             '/terms/', '/guide/',
+            '/webchat/w/', '/api/webchat/', '/gcalendar/book/',
         )
 
         # Check if path is protected
