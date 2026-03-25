@@ -48,16 +48,17 @@
   .brand {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-weight: 600;
-    font-size: 16px;
-    color: #0f172a;
-    margin-bottom: 28px;
+    justify-content: flex-start;
+    padding: 4px 0;
+    margin-bottom: 12px;
+    margin-left: -10px;
   }
 
   .brand img {
-    width: 96px;
-    height: 96px;
+    width: 160px;
+    height: 80px;
+    object-fit: contain;
+    object-position: left center;
   }
 
   /* Nav label */
@@ -87,15 +88,22 @@
   }
 
   .nav-item svg {
-    width: 20px;
-    height: 20px;
-    stroke-width: 1.8;
+    width: 18px;
+    height: 18px;
+    stroke: #94a3b8;
+    stroke-width: 1.5;
+    fill: none;
     flex-shrink: 0;
+    transition: stroke 0.2s ease;
   }
 
   .nav-item:hover {
     background: #e8f0fe;
     color: #1d4ed8;
+  }
+
+  .nav-item:hover svg {
+    stroke: #1d4ed8;
   }
 
   .nav-item.active {
@@ -183,54 +191,56 @@
 <!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
   <div class="brand">
-    <img src="{% static 'images/speedbot.png' %}" alt="Speedbots" style="width:150px; height:150px; object-fit:contain;">
+    <img src="{% static 'images/speedbot.png' %}" alt="Speedbots">
   </div>
 
   <div class="nav-label">Main Menu</div>
 
   {% url 'dashboard' as dashboard_url %}
   <a href="{{ dashboard_url }}" class="nav-item {% if request.path == dashboard_url %}active{% endif %}">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <rect x="3" y="3" width="7" height="7" rx="2" />
-      <rect x="14" y="3" width="7" height="7" rx="2" />
-      <rect x="3" y="14" width="7" height="7" rx="2" />
-      <rect x="14" y="14" width="7" height="7" rx="2" />
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+      <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+      <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+      <rect x="14" y="14" width="7" height="7" rx="1.5"/>
     </svg>
     Dashboard
   </a>
 
   {% url 'inbox_dashboard' as inbox_url %}
   <a href="{{ inbox_url }}" class="nav-item {% if request.path == inbox_url %}active{% endif %}">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path d="M3 12h5l2 3h4l2-3h5" />
-      <path d="M5 6h14v10H5z" />
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
+      <path d="M2 7l10 7 10-7" stroke-linecap="round"/>
     </svg>
     Inbox
   </a>
 
   {% url 'broadcast_msg' as broadcast_url %}
   <a href="{{ broadcast_url }}" class="nav-item {% if request.path == broadcast_url %}active{% endif %}">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path d="M3 11v2a2 2 0 0 0 2 2h1l4 4v-7l-4 4H5a2 2 0 0 1-2-2z" />
-      <path d="M14 9l6-3v12l-6-3" />
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22 8.5c0 4.1-4.5 7.5-10 7.5a11.7 11.7 0 0 1-4-.7L3 17l1.3-3.5A6.8 6.8 0 0 1 2 8.5C2 4.4 6.5 1 12 1s10 3.4 10 7.5z" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8 9h8M8 12h5" stroke-linecap="round"/>
     </svg>
     Broadcast
   </a>
 
   {% url 'contact_dashboard' as contact_url %}
   <a href="{{ contact_url }}" class="nav-item {% if request.path == contact_url %}active{% endif %}">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20a8 8 0 0 1 16 0" />
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M3 21v-1a6 6 0 0 1 6-6v0a6 6 0 0 1 6 6v1" stroke-linecap="round"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke-linecap="round"/>
+      <path d="M21 21v-1a4 4 0 0 0-3-3.85" stroke-linecap="round"/>
     </svg>
     My Contacts
   </a>
 
   {% url 'settings' as settings_url %}
   <a href="{{ settings_url }}" class="nav-item {% if request.path == settings_url %}active{% endif %}">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     Settings
   </a>
