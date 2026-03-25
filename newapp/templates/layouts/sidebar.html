@@ -236,6 +236,16 @@
     My Contacts
   </a>
 
+  {% url 'pipeline_board' as pipeline_url %}
+  <a href="{{ pipeline_url }}" class="nav-item {% if '/pipeline/' in request.path %}active{% endif %}">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="5" height="18" rx="1.5"/>
+      <rect x="10" y="8" width="5" height="13" rx="1.5"/>
+      <rect x="17" y="5" width="5" height="16" rx="1.5"/>
+    </svg>
+    Pipeline
+  </a>
+
   {% url 'settings' as settings_url %}
   <a href="{{ settings_url }}" class="nav-item {% if request.path == settings_url %}active{% endif %}">
     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
