@@ -1098,7 +1098,7 @@ If the user's question relates to this document, answer based on your analysis a
                                 if api_responses:
                                     final_reply_text += "\n\n" + "\n".join(api_responses)
                                     
-                                webhook_logger.debug(f"Actions executed: {len(action_result.get('actions_executed', []))}")
+                                webhook_logger.debug(f"Action result: {action_result.get('actions_executed', [])}")
 
                                 # 2.5 Process Custom Field Tags (after action processing)
                                 from newapp.custom_field_processor import process_response_with_custom_fields
