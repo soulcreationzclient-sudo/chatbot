@@ -223,6 +223,9 @@ class Contactcontroller:
         # Delete associated data first
         UserTag.objects.filter(user=user).delete()
         Message.objects.filter(user_id=user).delete()
+        # Delete pipeline opportunities
+        from ..models import Opportunity
+        Opportunity.objects.filter(user=user).delete()
         
         # Hard delete the user record
         user.delete()

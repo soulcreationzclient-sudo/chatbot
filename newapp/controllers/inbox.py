@@ -210,8 +210,8 @@ class Inboxcontroller:
         user.save(update_fields=['is_in_inbox', 'archived_at', 'followup_count', 'bot_enabled'])
         
         # DELETE ALL ASSOCIATED DATA:
-        # Remove tags, messages, custom fields, logs, and follow-ups
-        from ..models import UserTag, Message, CustomFieldValue, UserLog, ScheduledFollowUp
+        # Remove tags, messages, custom fields, logs, follow-ups, and pipeline opportunities
+        from ..models import UserTag, Message, CustomFieldValue, UserLog, ScheduledFollowUp, Opportunity
         # 1. Remove all tags
         UserTag.objects.filter(user=user).delete()
         # 2. Delete message history (Message FK field is named 'user_id', not 'user')
@@ -222,6 +222,8 @@ class Inboxcontroller:
         UserLog.objects.filter(user=user).delete()
         # 5. Cancel scheduled follow-ups
         ScheduledFollowUp.objects.filter(user=user).delete()
+        # 6. Delete pipeline opportunities
+        Opportunity.objects.filter(user=user).delete()
         
         return JsonResponse({'success': True, 'msg': 'Contact archived and all data cleared'})
 

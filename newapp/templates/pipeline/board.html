@@ -293,6 +293,13 @@
     </div>
   </div>
   {% endfor %}
+
+  <!-- Add Stage Column -->
+  <div class="column add-stage-col" style="min-width:180px;max-width:180px;cursor:pointer;" onclick="addStage()">
+    <div class="col-header" style="background:#e5e7eb;color:#64748b;justify-content:center;">
+      <span style="font-size:20px;">+ Add Stage</span>
+    </div>
+  </div>
 </div>
 
 <!-- Add Opportunity Modal -->
@@ -653,6 +660,22 @@
       location.reload();
     } else {
       alert('Failed to save stage settings');
+    }
+  }
+
+  // ====== Add Stage ======
+  async function addStage() {
+    const name = prompt('Enter stage name:');
+    if (!name || !name.trim()) return;
+    const color = prompt('Enter stage color (hex, e.g. #3B82F6):', '#3B82F6') || '#3B82F6';
+    const res = await api(`/api/pipeline/{{ pipeline.id }}/stage/create/`, {
+      name: name.trim(),
+      color: color.trim()
+    });
+    if (res.ok) {
+      location.reload();
+    } else {
+      alert('Failed to create stage');
     }
   }
 
