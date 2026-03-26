@@ -179,8 +179,18 @@ def send_pipeline_stage_template(opportunity, new_stage):
     variables = dict(new_stage.template_variables) if new_stage.template_variables else {}
 
     # Auto-populate common variables if not explicitly set
+    # Only add params if the template body actually expects them (contains {{1}})
     if opportunity.user:
-        if '1' not in variables and opportunity.user.name:
+        template = new_stage.auto_send_template
+        template_components = template.components if isinstance(template.components, list) else json.loads(template.components) if template.components else []
+        body_has_params = False
+        for comp in template_components:
+            if comp.get('type', '').upper() == 'BODY':
+                body_text = comp.get('text', '')
+                if '{{1}}' in body_text:
+                    body_has_params = True
+                break
+        if body_has_params and '1' not in variables and opportunity.user.name:
             variables['1'] = opportunity.user.name  # First param often is customer name
 
     result = send_template_message(
