@@ -357,18 +357,18 @@ class whatsappcontroller:
                             else:
                                 # Ensure user is visible in inbox when they message
                                 existing_user.is_in_inbox = True
+                                existing_user.archived_at = None  # Clear archive flag
                                     
                             if wa_name:
                                 existing_user.name = wa_name
                             
-                            # BUG FIX: Only reset follow-up counter for actual human messages
-                            # This ensures follow-ups start from 1st again after user replies
-                            # Don't reset for system/bot messages to prevent loop issues
+                            # BUG FIX: Always save user state (is_in_inbox, name, etc.)
+                            # Reset follow-up counter for actual human messages
                             human_message_types = ['text', 'image', 'document', 'audio']
                             if msg_type in human_message_types:
                                 existing_user.followup_count = 0
-                                existing_user.save()
-                                webhook_logger.info(f"Reset follow-up counter for {phone}")
+                            existing_user.save()
+                            webhook_logger.info(f"User {phone} saved: inbox={existing_user.is_in_inbox} bot={existing_user.bot_enabled}")
 
                             
                             # ==================== IMAGE/DOCUMENT HANDLING ====================
@@ -717,6 +717,7 @@ If the user's question relates to this document, answer based on your analysis a
                                                 if prompt_obj and prompt_obj.prompt_text
                                                 else "Follow the admin's instructions to assist the user helpfully."
                                             )
+                                            webhook_logger.info(f"Using prompt: id={prompt_obj.id if prompt_obj else 'NONE'} name='{prompt_obj.name if prompt_obj else 'fallback'}' default={prompt_obj.is_default if prompt_obj else 'N/A'}")
                                         
                                         # Add document context to system prompt
                                         if context_prefix:
