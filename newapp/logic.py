@@ -2,6 +2,8 @@ import requests
 import json
 from .models import ExternalAPI
 from django.utils import timezone
+from newapp.logging_config import get_logger
+tag_logger = get_logger('webhook')
 
 # Global variable to track current user phone during request processing
 # This gets set in whatsapp.py before calling execute_tool
@@ -35,10 +37,6 @@ def apply_user_tag(tag_name, admin, phone=None):
     if not user_phone:
         return "Error: No user phone number available"
     
-    # Find the tag - check organization first, then admin
-    import logging
-    from newapp.logging_config import get_logger
-    tag_logger = get_logger('webhook')
     tag = None
     if _current_org:
         tag = Tag.objects.filter(organization=_current_org, name__iexact=tag_name).first()
