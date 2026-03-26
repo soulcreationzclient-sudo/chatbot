@@ -61,6 +61,15 @@ def apply_user_tag(tag_name, admin, phone=None):
     
     if created:
         print(f"[Tag] Applied '{tag_name}' to user {user_phone}")
+        
+        # Trigger pipeline automations on tag applied
+        try:
+            from .controllers.pipeline import run_pipeline_automations
+            run_pipeline_automations(user.id, 'tag_applied', tag_id=tag.id)
+            print(f"[Tag] Pipeline automations triggered for tag '{tag_name}'")
+        except Exception as e:
+            print(f"[Tag] Pipeline automation error (non-fatal): {e}")
+        
         return f"Success: Tag '{tag_name}' applied to user"
     else:
         return f"Info: User already has tag '{tag_name}'"
