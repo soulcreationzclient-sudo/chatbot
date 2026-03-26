@@ -196,9 +196,26 @@
         <button class="del-auto" onclick="deleteAuto({{ rule.id }})" title="Delete">✕</button>
       </span>
     </div>
-    {% empty %}
-    <div style="font-size:13px;color:var(--text-muted);padding:8px;">No automation rules yet.</div>
     {% endfor %}
+
+    <!-- Stage Auto-Send Rules -->
+    {% for stage in stages %}
+      {% if stage.auto_send_enabled and stage.auto_send_template %}
+      <div class="auto-rule">
+        <span>Opportunity moves to stage</span>
+        <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:12px;">📊 {{ stage.name }}</span>
+        <span class="arrow">→</span>
+        <span style="font-weight:600;">Send Template ({{ stage.auto_send_template.name }})</span>
+        <span class="rule-actions">
+          <button class="edit-auto" onclick="openStageSettings({{ stage.id }}, '{{ stage.name|escapejs }}', true, '{{ stage.auto_send_template_id }}')" title="Edit">✏️</button>
+        </span>
+      </div>
+      {% endif %}
+    {% endfor %}
+
+    {% if not automations and not stages %}
+    <div style="font-size:13px;color:var(--text-muted);padding:8px;">No automation rules yet.</div>
+    {% endif %}
   </div>
   <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
     <div class="form-group" style="margin:0;flex:1;min-width:120px;">
@@ -207,6 +224,7 @@
         <option value="tag_applied">Tag is applied</option>
         <option value="tag_removed">Tag is removed</option>
         <option value="custom_field_changed">Custom field changes</option>
+        <option value="stage_moved">Opportunity moves to stage</option>
       </select>
     </div>
     <div class="form-group" style="margin:0;flex:1;min-width:120px;" id="autoTagGroup">
@@ -217,7 +235,7 @@
         {% endfor %}
       </select>
     </div>
-    <div class="form-group" style="margin:0;flex:1;min-width:100;display:none;" id="autoFieldGroup">
+    <div class="form-group" style="margin:0;flex:1;min-width:100px;display:none;" id="autoFieldGroup">
       <label>Field Name</label>
       <select id="autoFieldName">
         <option value="">-- Select Field --</option>
@@ -226,15 +244,29 @@
         {% endfor %}
       </select>
     </div>
-    <div class="form-group" style="margin:0;flex:1;min-width:100;display:none;" id="autoFieldValueGroup">
+    <div class="form-group" style="margin:0;flex:1;min-width:100px;display:none;" id="autoFieldValueGroup">
       <label>Value</label>
       <input type="text" id="autoFieldValue" placeholder="value (or empty=any)">
     </div>
+    <div class="form-group" style="margin:0;flex:1;min-width:120px;display:none;" id="autoStageTriggerGroup">
+      <label>Stage Name</label>
+      <select id="autoStageTrigger">
+        {% for stage in stages %}
+        <option value="{{ stage.id }}">{{ stage.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
     <div class="form-group" style="margin:0;flex:1;min-width:120px;">
-      <label>Move to</label>
+      <label id="autoTargetLabel">Move to</label>
       <select id="autoTarget">
         {% for stage in stages %}
         <option value="{{ stage.id }}">{{ stage.name }}</option>
+        {% endfor %}
+      </select>
+      <select id="autoTemplateTarget" style="display:none;">
+        <option value="">-- Select Template --</option>
+        {% for tpl in templates %}
+        <option value="{{ tpl.id }}">{{ tpl.name }} ({{ tpl.language }})</option>
         {% endfor %}
       </select>
     </div>
@@ -556,10 +588,40 @@
     document.getElementById('autoTagGroup').style.display = v.startsWith('tag') ? 'block' : 'none';
     document.getElementById('autoFieldGroup').style.display = v === 'custom_field_changed' ? 'block' : 'none';
     document.getElementById('autoFieldValueGroup').style.display = v === 'custom_field_changed' ? 'block' : 'none';
+    document.getElementById('autoStageTriggerGroup').style.display = v === 'stage_moved' ? 'block' : 'none';
+    
+    // Change target selector
+    if (v === 'stage_moved') {
+        document.getElementById('autoTargetLabel').textContent = 'Action';
+        document.getElementById('autoTarget').style.display = 'none';
+        document.getElementById('autoTemplateTarget').style.display = 'block';
+    } else {
+        document.getElementById('autoTargetLabel').textContent = 'Move to';
+        document.getElementById('autoTarget').style.display = 'block';
+        document.getElementById('autoTemplateTarget').style.display = 'none';
+    }
   }
 
   async function addAutomation() {
     const trigger = document.getElementById('autoTrigger').value;
+    
+    // Handle Stage Moved to Template action
+    if (trigger === 'stage_moved') {
+        const stageId = document.getElementById('autoStageTrigger').value;
+        const templateId = document.getElementById('autoTemplateTarget').value;
+        if (!stageId || !templateId) {
+            alert('Please select both a Stage and a Template');
+            return;
+        }
+        const res = await api(`/api/pipeline/stage/${stageId}/settings/`, {
+            auto_send_enabled: true,
+            template_id: parseInt(templateId)
+        });
+        if (res.ok) location.reload();
+        else alert('Failed to create stage automation');
+        return;
+    }
+
     const data = {
       pipeline_id: {{ pipeline.id }},
       trigger_type: trigger,

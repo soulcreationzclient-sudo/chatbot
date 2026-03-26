@@ -434,6 +434,22 @@ class Inboxcontroller:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         if admin_id and str(user.admin_id_id) != str(admin_id):
             return JsonResponse({'error': 'Permission denied'}, status=403)
+            
+        # Handle standard fields
+        if field_name in ['phone_no', 'email', 'name']:
+            setattr(user, field_name, field_value)
+            user.save()
+            return JsonResponse({
+                'success': True,
+                'message': f"Updated {field_name}: {field_value}",
+                'custom_field': {
+                    'id': f'std_{field_name}',
+                    'name': field_name,
+                    'field_type': 'text',
+                    'description': f'Standard {field_name.title()}',
+                    'value': field_value
+                }
+            })
         
         # Find the custom field
         custom_field = None
@@ -525,6 +541,15 @@ class Inboxcontroller:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         if admin_id and str(user.admin_id_id) != str(admin_id):
             return JsonResponse({'error': 'Permission denied'}, status=403)
+            
+        # Handle standard fields
+        if field_name in ['phone_no', 'email', 'name']:
+            setattr(user, field_name, '')
+            user.save()
+            return JsonResponse({
+                'success': True,
+                'message': f"Cleared {field_name}"
+            })
         
         # Find the custom field
         custom_field = None

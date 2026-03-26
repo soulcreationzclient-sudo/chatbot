@@ -219,23 +219,38 @@
     </div>
 
     <script>
-        const API_BASE = '{{ api_base }}';
-        const ORG_ID = '{{ org_id }}';
-        const ADMIN_ID = '{{ admin_id }}';
+        // Support both Django rendering AND static HTML deployments
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Django template injects values, but if hosted raw, they stay as '{{ ... }}'
+        let rawApiBase = '{{ api_base }}';
+        let rawOrgId = '{{ org_id }}';
+        let rawAdminId = '{{ admin_id }}';
+        
+        let API_BASE = (rawApiBase && !rawApiBase.includes('{{')) ? rawApiBase : window.location.origin;
+        // If they specify api_base in URL, prioritize that (useful for external static hosting)
+        if (urlParams.has('api_base')) API_BASE = urlParams.get('api_base');
+        if (API_BASE === window.location.origin) API_BASE = ''; // Relative path if same domain
+        
+        // Use URL params if present, fallback to django injected, else null
+        const WIDGET_ID = urlParams.get('widget_id') || urlParams.get('w') || '';
+        const ORG_ID = urlParams.get('org_id') || (!(rawOrgId.includes('{{')) ? rawOrgId : null);
+        const ADMIN_ID = urlParams.get('admin_id') || (!(rawAdminId.includes('{{')) ? rawAdminId : null);
+
         let sessionId = null;
         let sending = false;
 
         async function startSession() {
             try {
+                const payload = { language: 'en', visitor_name: 'Web Visitor' };
+                if (ORG_ID) payload.organization_id = ORG_ID;
+                if (ADMIN_ID) payload.admin_id = ADMIN_ID;
+                if (WIDGET_ID) payload.widget_id = WIDGET_ID;
+
                 const res = await fetch(API_BASE + '/api/webchat/start/', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        organization_id: ORG_ID || null,
-                        admin_id: ADMIN_ID || null,
-                        language: 'en',
-                        visitor_name: 'Web Visitor'
-                    })
+                    body: JSON.stringify(payload)
                 });
                 const data = await res.json();
                 if (data.success) {

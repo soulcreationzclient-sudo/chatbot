@@ -323,6 +323,9 @@ def execute_tool(tool_name, arguments, admin):
             response = requests.get(target_url, headers=target_headers, params=final_payload, timeout=30)
         elif method == 'POST':
             if tool_config.body_type == 'form':
+                if len(final_payload) == 1 and "raw" in final_payload:
+                    import urllib.parse
+                    final_payload = dict(urllib.parse.parse_qsl(final_payload["raw"]))
                 response = requests.post(target_url, headers=target_headers, data=final_payload, timeout=30)
             else:
                 response = requests.post(target_url, headers=target_headers, json=final_payload, timeout=30)

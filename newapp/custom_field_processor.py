@@ -433,6 +433,34 @@ def format_custom_fields_for_inbox(user, admin, organization=None):
         ).select_related('custom_field').order_by('custom_field__name')
 
         result = []
+        
+        # Inject standard user fields
+        result.append({
+            'id': 'std_phone',
+            'field_name': 'phone_no',
+            'field_type': 'phone',
+            'description': 'Standard Phone Number',
+            'value': user.phone_no or '',
+            'updated_at': user.created_at
+        })
+        if getattr(user, 'email', None) or True:  # Always show email 
+            result.append({
+                'id': 'std_email',
+                'field_name': 'email',
+                'field_type': 'email',
+                'description': 'Standard Email',
+                'value': getattr(user, 'email', '') or '',
+                'updated_at': user.created_at
+            })
+        if getattr(user, 'name', None):
+            result.append({
+                'id': 'std_name',
+                'field_name': 'name',
+                'field_type': 'text',
+                'description': 'Standard Name',
+                'value': getattr(user, 'name', '') or '',
+                'updated_at': user.created_at
+            })
         for fv in field_values:
             result.append({
                 'id': fv.id,

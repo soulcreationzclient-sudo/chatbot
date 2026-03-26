@@ -6,6 +6,29 @@ import json
 import requests
 
 class Settingcontroller :
+
+    @staticmethod
+    def _check_permission(request, permission_name):
+        """
+        Inline RBAC check. Returns None if allowed, or a 403 JsonResponse/HttpResponseForbidden if denied.
+        Usage: denied = Settingcontroller._check_permission(request, 'can_manage_tags')
+               if denied: return denied
+        """
+        from ..decorators import get_org_user
+        org_user = get_org_user(request)
+        if org_user and not org_user.has_permission(permission_name):
+            from django.http import JsonResponse
+            # For AJAX requests, return JSON; for page views, return HTML
+            if request.headers.get('Content-Type') == 'application/json' or request.content_type == 'application/json':
+                return JsonResponse({'error': f'Permission denied. You need "{permission_name}" permission.'}, status=403)
+            from django.http import HttpResponseForbidden
+            return HttpResponseForbidden(
+                '<h1>403 Forbidden</h1>'
+                f'<p>You do not have the "{permission_name}" permission.</p>'
+                '<p><a href="/">Go to Home</a></p>'
+            )
+        return None
+
     def dashboard(request):
         # return HttpResponse('hi')
         return render(request,'set/dashboard.html')
@@ -141,6 +164,9 @@ class Settingcontroller :
     
     @staticmethod
     def external_api_create(request):
+        # RBAC: Only users with can_manage_settings can create APIs
+        denied = Settingcontroller._check_permission(request, 'can_manage_settings')
+        if denied: return denied
         from django.http import JsonResponse
         from ..models import ExternalAPI
         import json
@@ -184,6 +210,9 @@ class Settingcontroller :
     
     @staticmethod
     def external_api_update(request, api_id):
+        # RBAC: Only users with can_manage_settings can update APIs
+        denied = Settingcontroller._check_permission(request, 'can_manage_settings')
+        if denied: return denied
         from django.http import JsonResponse
         from ..models import ExternalAPI
         import json
@@ -233,6 +262,9 @@ class Settingcontroller :
     
     @staticmethod
     def external_api_delete(request, api_id):
+        # RBAC: Only users with can_manage_settings can delete APIs
+        denied = Settingcontroller._check_permission(request, 'can_manage_settings')
+        if denied: return denied
         from django.http import JsonResponse
         from ..models import ExternalAPI
         
@@ -873,6 +905,9 @@ class Settingcontroller :
     
     @staticmethod
     def tag_create(request):
+        # RBAC: Only users with can_manage_tags can create tags
+        denied = Settingcontroller._check_permission(request, 'can_manage_tags')
+        if denied: return denied
         from django.http import JsonResponse
         from ..models import Tag, Organization
         import json
@@ -935,6 +970,9 @@ class Settingcontroller :
     
     @staticmethod
     def tag_update(request, tag_id):
+        # RBAC: Only users with can_manage_tags can update tags
+        denied = Settingcontroller._check_permission(request, 'can_manage_tags')
+        if denied: return denied
         from django.http import JsonResponse
         from ..models import Tag, Organization
         import json
@@ -976,6 +1014,9 @@ class Settingcontroller :
     
     @staticmethod
     def tag_delete(request, tag_id):
+        # RBAC: Only users with can_manage_tags can delete tags
+        denied = Settingcontroller._check_permission(request, 'can_manage_tags')
+        if denied: return denied
         from django.http import JsonResponse
         from ..models import Tag, Organization
         
@@ -1407,6 +1448,9 @@ class Settingcontroller :
     @staticmethod
     def prompt_create(request):
         """Create a new prompt."""
+        # RBAC: Only users with can_manage_ai can create prompts
+        denied = Settingcontroller._check_permission(request, 'can_manage_ai')
+        if denied: return denied
         from ..models import ChatGPTPrompt, Organization, Admin
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -1440,6 +1484,9 @@ class Settingcontroller :
     @staticmethod
     def prompt_update(request, prompt_id):
         """Update a prompt."""
+        # RBAC: Only users with can_manage_ai can update prompts
+        denied = Settingcontroller._check_permission(request, 'can_manage_ai')
+        if denied: return denied
         from ..models import ChatGPTPrompt, Organization, Admin
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -1485,6 +1532,9 @@ class Settingcontroller :
     @staticmethod
     def prompt_delete(request, prompt_id):
         """Delete a prompt."""
+        # RBAC: Only users with can_manage_ai can delete prompts
+        denied = Settingcontroller._check_permission(request, 'can_manage_ai')
+        if denied: return denied
         from ..models import ChatGPTPrompt, Organization, Admin
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)

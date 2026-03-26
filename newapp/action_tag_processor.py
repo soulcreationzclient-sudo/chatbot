@@ -240,7 +240,7 @@ def process_response_actions(text, admin, phone, organization=None):
                 except Exception as track_err:
                     print(f"[ActionTag] Tracking error (non-fatal): {track_err}")
                 
-                # Cancel any pending follow-ups for this user
+                # Cancel any pending follow-ups for this user since link was served
                 try:
                     from .models import ScheduledFollowUp, User as UserModel
                     user_obj = UserModel.objects.filter(phone_no=phone).first()
@@ -399,6 +399,8 @@ def process_response_actions(text, admin, phone, organization=None):
                                 booking_token=booking_token,
                                 status='link_sent'
                             )
+                        else:
+                            print(f"[ActionTag] Warning: No user found for phone {phone}. Booking link may 404.")
                         
                         # Replace tag with booking page URL (absolute, for WhatsApp)
                         try:
@@ -412,10 +414,12 @@ def process_response_actions(text, admin, phone, organization=None):
                         )
                         outcome = f"GCal booking link generated: {booking_url}"
                     else:
-                        replacement_text = replacement_text.replace(tag, '')
+                        error_msg = f"[Calendar link unavailable: {name}]"
+                        replacement_text = replacement_text.replace(tag, error_msg)
                         outcome = f"Warning: Google Calendar link '{name}' not found"
                 except Exception as gcal_err:
-                    replacement_text = replacement_text.replace(tag, '')
+                    error_msg = f"[Error generating Calendar link: {name}]"
+                    replacement_text = replacement_text.replace(tag, error_msg)
                     outcome = f"Error generating GCal link: {str(gcal_err)}"
                     print(f"[ActionTag] {outcome}")
 

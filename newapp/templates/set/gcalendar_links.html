@@ -67,7 +67,7 @@
                 </div>
             </div>
             <div>
-                <button class="btn-edit" onclick="editLink({{ link.id }}, {{ link|safe }})">Edit</button>
+                <button class="btn-edit" onclick="editLink({{ link.id }}, '{{ link.name|escapejs }}', '{{ link.calendar_id|escapejs }}', '{{ link.description|escapejs }}', {{ link.duration_minutes|default:30 }}, {{ link.start_hour|default:9 }}, {{ link.end_hour|default:17 }}, '{{ link.timezone|escapejs }}', '{{ link.custom_field_name|escapejs }}', '{{ link.booking_message|escapejs }}', '{{ link.service_account_json|escapejs }}')">Edit</button>
                 <button class="btn-delete" onclick="deleteLink({{ link.id }}, '{{ link.name|escapejs }}')">Delete</button>
             </div>
         </div>
@@ -171,6 +171,22 @@
         navigator.clipboard.writeText(tag).then(() => {
             alert('Copied: ' + tag);
         });
+    }
+
+    function editLink(id, name, calendarId, desc, duration, sHour, eHour, tz, customField, msg, svcAcct) {
+        document.getElementById('modalTitle').textContent = 'Edit Google Calendar Link';
+        document.getElementById('editLinkId').value = id;
+        document.getElementById('linkName').value = name;
+        document.getElementById('linkCalendarId').value = calendarId;
+        document.getElementById('linkDescription').value = desc;
+        document.getElementById('linkDuration').value = duration;
+        document.getElementById('linkStartHour').value = sHour;
+        document.getElementById('linkEndHour').value = eHour;
+        document.getElementById('linkTimezone').value = tz;
+        document.getElementById('linkCustomField').value = customField;
+        document.getElementById('linkBookingMessage').value = msg;
+        document.getElementById('linkServiceAccount').value = svcAcct;
+        modal.show();
     }
 
     async function saveLink() {
