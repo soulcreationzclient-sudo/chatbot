@@ -462,6 +462,14 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
                 opp.stage = rule.target_stage
                 opp.save()
                 print(f"[Automation] Moved opp {opp.id} to stage '{rule.target_stage.name}'")
+                # Auto-send template message on stage move
+                if rule.target_stage.auto_send_enabled and rule.target_stage.auto_send_template:
+                    try:
+                        from ..template_message_sender import send_pipeline_stage_template
+                        send_pipeline_stage_template(opp, rule.target_stage)
+                        print(f"[Automation] Auto-sent template for stage '{rule.target_stage.name}'")
+                    except Exception as e:
+                        print(f"[Automation] Auto-send template error: {e}")
                 break
     else:
         # Auto-create opportunity in matching pipeline
@@ -493,6 +501,14 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
                     created_by='Automation'
                 )
                 print(f"[Automation] Created opp {opp.id} for user {user_id} in stage '{rule.target_stage.name}'")
+                # Auto-send template message on stage entry
+                if rule.target_stage.auto_send_enabled and rule.target_stage.auto_send_template:
+                    try:
+                        from ..template_message_sender import send_pipeline_stage_template
+                        send_pipeline_stage_template(opp, rule.target_stage)
+                        print(f"[Automation] Auto-sent template for stage '{rule.target_stage.name}'")
+                    except Exception as e:
+                        print(f"[Automation] Auto-send template error: {e}")
                 break  # Only create one opportunity
             except Exception as e:
                 print(f"[Automation] Error creating opportunity: {e}")
