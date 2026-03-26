@@ -135,11 +135,22 @@
       <label class="form-label">GPT Model <span style="font-weight:400;color:var(--text-muted);">(leave empty to use org default)</span></label>
       <select class="form-input" id="promptModel">
         <option value="">Use Organization Default</option>
-        <option value="gpt-4o">gpt-4o</option>
-        <option value="gpt-4o-mini">gpt-4o-mini</option>
-        <option value="gpt-4-turbo">gpt-4-turbo</option>
-        <option value="gpt-4">gpt-4</option>
-        <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+        <optgroup label="Latest Models">
+          <option value="gpt-4.1">gpt-4.1 (Best quality)</option>
+          <option value="gpt-4.1-mini">gpt-4.1-mini (Fast & smart)</option>
+          <option value="gpt-4.1-nano">gpt-4.1-nano (Ultra fast)</option>
+          <option value="o4-mini">o4-mini (Reasoning)</option>
+          <option value="o3-mini">o3-mini (Reasoning)</option>
+        </optgroup>
+        <optgroup label="GPT-4o Series">
+          <option value="gpt-4o">gpt-4o</option>
+          <option value="gpt-4o-mini">gpt-4o-mini</option>
+        </optgroup>
+        <optgroup label="Older Models">
+          <option value="gpt-4-turbo">gpt-4-turbo</option>
+          <option value="gpt-4">gpt-4</option>
+          <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+        </optgroup>
       </select>
     </div>
 
