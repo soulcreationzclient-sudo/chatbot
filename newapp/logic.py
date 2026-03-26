@@ -36,12 +36,21 @@ def apply_user_tag(tag_name, admin, phone=None):
         return "Error: No user phone number available"
     
     # Find the tag - check organization first, then admin
+    import logging
+    tag_logger = logging.getLogger('newapp')
     tag = None
     if _current_org:
         tag = Tag.objects.filter(organization=_current_org, name__iexact=tag_name).first()
+        tag_logger.info(f"[Tag] Org filter: org={_current_org.id}, tag_name={tag_name}, found={tag is not None}")
     if not tag and admin:
         tag = Tag.objects.filter(admin=admin, name__iexact=tag_name).first()
+        tag_logger.info(f"[Tag] Admin filter: admin={admin.id}, tag_name={tag_name}, found={tag is not None}")
     if not tag:
+        # Try without org/admin filter as fallback
+        tag = Tag.objects.filter(name__iexact=tag_name).first()
+        tag_logger.info(f"[Tag] Global filter: tag_name={tag_name}, found={tag is not None}")
+    if not tag:
+        tag_logger.warning(f"[Tag] Tag '{tag_name}' not found in any scope")
         return f"Error: Tag '{tag_name}' not found"
     
     # Find the user - check by organization first, then admin
@@ -62,10 +71,11 @@ def apply_user_tag(tag_name, admin, phone=None):
     # Always trigger pipeline automations when tag is applied (even if already existed)
     try:
         from .controllers.pipeline import run_pipeline_automations
+        tag_logger.info(f"[Tag] Calling run_pipeline_automations(user_id={user.id}, tag_id={tag.id}, tag_name={tag_name})")
         run_pipeline_automations(user.id, 'tag_applied', tag_id=tag.id)
-        print(f"[Tag] Pipeline automations triggered for tag '{tag_name}' on user {user_phone}")
+        tag_logger.info(f"[Tag] Pipeline automations completed for tag '{tag_name}' on user {user_phone}")
     except Exception as e:
-        print(f"[Tag] Pipeline automation error (non-fatal): {e}")
+        tag_logger.error(f"[Tag] Pipeline automation error: {e}", exc_info=True)
     
     if created:
         print(f"[Tag] Applied '{tag_name}' to user {user_phone}")

@@ -434,6 +434,10 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
     automation rule matches and auto-move the opportunity.
     Auto-creates an opportunity if none exists but a matching rule is found.
     """
+    import logging
+    auto_logger = logging.getLogger('newapp')
+    auto_logger.info(f"[Automation] START: user_id={user_id}, trigger={trigger_type}, tag_id={tag_id}")
+    
     opps = Opportunity.objects.filter(user_id=user_id, status='open')
     
     # Build the matching rules query
@@ -451,7 +455,10 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
                 models_Q(trigger_field_value='') | models_Q(trigger_field_value=field_value)
             )
     
+    auto_logger.info(f"[Automation] Rules found: {all_rules.count()}, Existing opps: {opps.count()}")
+    
     if not all_rules.exists():
+        auto_logger.info("[Automation] No matching rules, returning")
         return
     
     if opps.exists():
@@ -461,15 +468,15 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
             for rule in rules:
                 opp.stage = rule.target_stage
                 opp.save()
-                print(f"[Automation] Moved opp {opp.id} to stage '{rule.target_stage.name}'")
+                auto_logger.info(f"[Automation] Moved opp {opp.id} to stage '{rule.target_stage.name}'")
                 # Auto-send template message on stage move
                 if rule.target_stage.auto_send_enabled and rule.target_stage.auto_send_template:
                     try:
                         from ..template_message_sender import send_pipeline_stage_template
-                        send_pipeline_stage_template(opp, rule.target_stage)
-                        print(f"[Automation] Auto-sent template for stage '{rule.target_stage.name}'")
+                        result = send_pipeline_stage_template(opp, rule.target_stage)
+                        auto_logger.info(f"[Automation] Auto-sent template for stage '{rule.target_stage.name}': {result}")
                     except Exception as e:
-                        print(f"[Automation] Auto-send template error: {e}")
+                        auto_logger.error(f"[Automation] Auto-send template error: {e}", exc_info=True)
                 break
     else:
         # Auto-create opportunity in matching pipeline
@@ -491,6 +498,7 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
                     if not org:
                         org = Organization.objects.first()
                 
+                auto_logger.info(f"[Automation] Creating opp: pipeline={rule.pipeline.name}, stage={rule.target_stage.name}, user={user_id}, org={org}")
                 opp = Opportunity.objects.create(
                     pipeline=rule.pipeline,
                     stage=rule.target_stage,
@@ -500,15 +508,15 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
                     status='open',
                     created_by='Automation'
                 )
-                print(f"[Automation] Created opp {opp.id} for user {user_id} in stage '{rule.target_stage.name}'")
+                auto_logger.info(f"[Automation] Created opp {opp.id} for user {user_id} in stage '{rule.target_stage.name}'")
                 # Auto-send template message on stage entry
                 if rule.target_stage.auto_send_enabled and rule.target_stage.auto_send_template:
                     try:
                         from ..template_message_sender import send_pipeline_stage_template
-                        send_pipeline_stage_template(opp, rule.target_stage)
-                        print(f"[Automation] Auto-sent template for stage '{rule.target_stage.name}'")
+                        result = send_pipeline_stage_template(opp, rule.target_stage)
+                        auto_logger.info(f"[Automation] Auto-sent template for stage '{rule.target_stage.name}': {result}")
                     except Exception as e:
-                        print(f"[Automation] Auto-send template error: {e}")
+                        auto_logger.error(f"[Automation] Auto-send template error: {e}", exc_info=True)
                 break  # Only create one opportunity
             except Exception as e:
-                print(f"[Automation] Error creating opportunity: {e}")
+                auto_logger.error(f"[Automation] Error creating opportunity: {e}", exc_info=True)
