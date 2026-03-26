@@ -37,7 +37,8 @@ def apply_user_tag(tag_name, admin, phone=None):
     
     # Find the tag - check organization first, then admin
     import logging
-    tag_logger = logging.getLogger('newapp')
+    from newapp.logging_config import get_logger
+    tag_logger = get_logger('webhook')
     tag = None
     if _current_org:
         tag = Tag.objects.filter(organization=_current_org, name__iexact=tag_name).first()

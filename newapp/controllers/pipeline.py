@@ -435,7 +435,8 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
     Auto-creates an opportunity if none exists but a matching rule is found.
     """
     import logging
-    auto_logger = logging.getLogger('newapp')
+    from newapp.logging_config import get_logger
+    auto_logger = get_logger('webhook')
     auto_logger.info(f"[Automation] START: user_id={user_id}, trigger={trigger_type}, tag_id={tag_id}")
     
     opps = Opportunity.objects.filter(user_id=user_id, status='open')
