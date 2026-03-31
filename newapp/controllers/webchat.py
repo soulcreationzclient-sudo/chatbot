@@ -309,6 +309,8 @@ session=session,
                     client = OpenAI(api_key=openai_key)
                     
                     # Build conversation history from session messages
+                    # Note: the current user message was already saved to DB above,
+                    # so it is included in this query — no need to append it again.
                     messages_history = [{"role": "system", "content": system_prompt}]
                     past_messages = WebChatMessage.objects.filter(
                         session=session
@@ -320,9 +322,6 @@ session=session,
                             "role": role,
                             "content": past_msg.content or ""
                         })
-                    
-                    # Add current message
-                    messages_history.append({"role": "user", "content": message_content})
                     
                     response = client.chat.completions.create(
                         model=gpt_model,

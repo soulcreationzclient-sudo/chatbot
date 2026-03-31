@@ -632,6 +632,7 @@
         function init() {
             setupEventListeners();
             autoResizeTextarea();
+            loadSavedSession();
         }
 
         // Event Listeners
@@ -655,6 +656,38 @@
 
             // Voice input
             elements.voiceBtn.addEventListener('click', handleVoiceInput);
+        }
+
+        // Load saved session from localStorage
+        async function loadSavedSession() {
+            const savedSessionId = localStorage.getItem('webchatSessionId');
+            if (!savedSessionId) return;
+
+            try {
+                const response = await fetch(`${CONFIG.apiBaseUrl}/messages/${savedSessionId}/`);
+                const data = await response.json();
+
+                if (data.success && data.session && data.session.status === 'active') {
+                    state.sessionId = savedSessionId;
+                    state.welcomeShown = true;
+
+                    // Hide the static welcome placeholder
+                    elements.welcome.style.display = 'none';
+
+                    // Restore all past messages into the UI
+                    if (data.messages && data.messages.length > 0) {
+                        data.messages.forEach(msg => {
+                            addMessage(msg.content || '', msg.sender === 'user' ? 'user' : 'bot');
+                        });
+                    }
+                } else {
+                    // Session ended or invalid — clear it
+                    localStorage.removeItem('webchatSessionId');
+                }
+            } catch (error) {
+                console.error('Failed to restore session:', error);
+                localStorage.removeItem('webchatSessionId');
+            }
         }
 
         // Toggle chat window
@@ -693,6 +726,9 @@
                 if (data.success) {
                     state.sessionId = data.session.id;
                     state.welcomeShown = true;
+
+                    // Persist session ID so history survives page reloads
+                    localStorage.setItem('webchatSessionId', data.session.id);
 
                     // Hide welcome message and show bot's welcome
                     elements.welcome.style.display = 'none';
@@ -751,7 +787,7 @@
         function handleInputKeydown(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                if (!e.target.value.trim() && !elements.sendBtn.disabled) {
+                if (e.target.value.trim()) {
                     sendMessage();
                 }
             }
