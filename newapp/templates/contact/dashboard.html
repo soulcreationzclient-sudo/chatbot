@@ -209,6 +209,92 @@
     text-decoration: none;
   }
 
+  /* FLOATING TAG DROPDOWN (Abinav UI) */
+  .name-cell-inner {
+    position: relative;
+  }
+
+  .tags-applied-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+
+  .tags-applied-btn:hover {
+    background: #e2e8f0;
+  }
+
+  .tags-applied-btn .chevron {
+    font-size: 9px;
+    transition: transform 0.2s;
+    color: #94a3b8;
+  }
+
+  .tags-applied-btn.open .chevron {
+    transform: rotate(180deg);
+  }
+
+  .tags-float-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 200;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    padding: 12px 14px;
+    min-width: 220px;
+    max-width: 300px;
+  }
+
+  .tags-float-dropdown.open {
+    display: block;
+  }
+
+  .tags-float-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+  }
+
+  .tags-float-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .tag-float-pill {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+  }
+
+  .tag-float-pill.interested {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #bbf7d0;
+  }
+
   /* FILTER PANEL */
   .filter-panel {
     background: #fff;
@@ -362,22 +448,34 @@
           {{ u.name|slice:":1"|upper }}
           {% endif %}
         </div>
-        <div>
-          {{ u.name }}
-          {% if u.is_escalation %}
-          <span style="color: red; font-weight: bold; margin-left: 8px;">[Escalation]</span>
-          {% endif %}
+
+        <div class="name-cell-inner">
+          <div style="font-weight:600;">
+            {{ u.name }}
+            {% if u.is_escalation %}
+            <span style="color: red; font-weight: bold; margin-left: 8px;">[Escalation]</span>
+            {% endif %}
+          </div>
+
           {% if u.tags %}
-          <div class="contact-tags" style="margin-top: 4px;">
-            {% for tag in u.tags %}
-            <span
-              style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-right: 4px;">{{ tag|title }}</span>
-            {% endfor %}
+          <div class="tags-applied-btn" onclick="toggleFloatTags(this, event)">
+            Tags Applied ({{ u.tags|length }})
+            <span class="chevron">▼</span>
+          </div>
+
+          <div class="tags-float-dropdown">
+            <div class="tags-float-title">Applied Tags</div>
+            <div class="tags-float-pills">
+              {% for tag in u.tags %}
+              <span class="tag-float-pill {% if 'interested' in tag|lower %}interested{% endif %}">
+                {{ tag|title }}
+              </span>
+              {% endfor %}
+            </div>
           </div>
           {% endif %}
         </div>
       </div>
-
       <div class="phone muted">{{ u.phone_no }}</div>
       <div class="source muted">{{ u.source }}</div>
       <div class="entered muted">{{ u.last_seen|default:u.created_at }}</div>
@@ -463,6 +561,26 @@
 </div>
 
 <script>
+  function toggleFloatTags(btn, e) {
+    e.stopPropagation();
+    const dropdown = btn.nextElementSibling;
+    const isOpen = dropdown.classList.contains('open');
+
+    // Close all other open dropdowns first
+    document.querySelectorAll('.tags-float-dropdown.open').forEach(d => d.classList.remove('open'));
+    document.querySelectorAll('.tags-applied-btn.open').forEach(b => b.classList.remove('open'));
+
+    if (!isOpen) {
+      dropdown.classList.add('open');
+      btn.classList.add('open');
+    }
+  }
+
+  document.addEventListener('click', function () {
+    document.querySelectorAll('.tags-float-dropdown.open').forEach(d => d.classList.remove('open'));
+    document.querySelectorAll('.tags-applied-btn.open').forEach(b => b.classList.remove('open'));
+  });
+
   function applyContactFilter(tagId) {
     const url = new URL(window.location.href);
     if (tagId) url.searchParams.set('tag_id', tagId);
@@ -693,9 +811,6 @@
         url.searchParams.delete('start_date');
         url.searchParams.delete('end_date');
     }
-
-    // Keep Tag if exists (handled by ApplyContactFilter usually, but we overwrite url)
-    // Tag is in URL already if selected.
     
     window.location.href = url.toString();
   }

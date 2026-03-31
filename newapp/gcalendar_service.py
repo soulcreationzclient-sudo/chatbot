@@ -71,11 +71,13 @@ def get_available_slots(gcalendar_link, date_from=None, days_ahead=7):
         import pytz
         tz = pytz.timezone(gcalendar_link.timezone)
     except Exception:
-        from datetime import timezone as dt_tz
-        tz = dt_tz.utc
+        import pytz
+        tz = pytz.UTC
 
     if not date_from:
-        date_from = datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0)
+        # Use localize() to get the correct UTC offset for midnight (avoids DST issues)
+        today = datetime.now(tz).date()
+        date_from = tz.localize(datetime(today.year, today.month, today.day, 0, 0, 0))
 
     date_to = date_from + timedelta(days=days_ahead)
 

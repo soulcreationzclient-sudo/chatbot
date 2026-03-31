@@ -154,8 +154,8 @@ class CalendlyService:
         if questions_and_answers:
             payload["questions_and_answers"] = questions_and_answers
         
-        # Note: The create invitee endpoint requires specific API access
-        # Using the one-off scheduling endpoint
+        # Note: Calendly API v2 does not support direct booking creation.
+        # We create a single-use scheduling link and pre-fill invitee details via query params.
         result = self._make_request(
             "POST", 
             f"/scheduling_links",
@@ -166,8 +166,22 @@ class CalendlyService:
             }
         )
         
+        booking_url = result.get('resource', {}).get('booking_url', '')
+        
+        # Append invitee details as pre-fill query parameters
+        if booking_url and (invitee_name or invitee_email):
+            from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
+            parts = list(urlparse(booking_url))
+            query_params = parse_qs(parts[4])
+            if invitee_name:
+                query_params['name'] = [invitee_name]
+            if invitee_email:
+                query_params['email'] = [invitee_email]
+            parts[4] = urlencode(query_params, doseq=True)
+            booking_url = urlunparse(parts)
+        
         return {
-            "booking_url": result.get('resource', {}).get('booking_url'),
+            "booking_url": booking_url,
             "event_type": event_type.get('name'),
             "message": "Please use this link to complete your booking"
         }

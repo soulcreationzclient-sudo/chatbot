@@ -265,6 +265,25 @@ def get_user_custom_fields_for_ai(admin, phone=None):
 
     return "\n".join(lines)
 
+def _substitute_variables(obj, arguments):
+    """
+    Recursively replace {key}, {{key}}, and {{custom_field:key:value}} placeholders
+    inside dicts, lists and strings with the corresponding argument values.
+    This is JSON-safe because we never serialise/deserialise the structure.
+    """
+    if isinstance(obj, str):
+        for key, value in arguments.items():
+            obj = obj.replace("{" + key + "}", str(value))
+            obj = obj.replace("{{" + key + "}}", str(value))
+            obj = obj.replace("{{custom_field:" + key + ":value}}", str(value))
+        return obj
+    elif isinstance(obj, dict):
+        return {k: _substitute_variables(v, arguments) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_substitute_variables(item, arguments) for item in obj]
+    return obj
+
+
 def execute_tool(tool_name, arguments, admin):
     """
     Execute a defined ExternalAPI tool or built-in function.
@@ -297,24 +316,15 @@ def execute_tool(tool_name, arguments, admin):
         if not tool_config:
             return f"Error: Tool '{tool_name}' not configured."
 
-        # Prepare URL and Payload with variable substitution
+        # Prepare URL, Payload and Headers with variable substitution
         target_url = tool_config.url
-        target_payload = tool_config.payload or {}
-        target_headers = tool_config.headers or {}
-
-        # Replace in URL - handle both {key} and {{key}} formats
         for key, value in arguments.items():
             target_url = target_url.replace("{" + key + "}", str(value))
             target_url = target_url.replace("{{" + key + "}}", str(value))
 
-        # Replace in Payload - handle both formats
-        payload_str = json.dumps(target_payload)
-        for key, value in arguments.items():
-            payload_str = payload_str.replace("{" + key + "}", str(value))
-            payload_str = payload_str.replace("{{" + key + "}}", str(value))
-            payload_str = payload_str.replace("{{custom_field:" + key + ":value}}", str(value))
-            
-        final_payload = json.loads(payload_str)
+        # Safe recursive replacement (handles quotes and special chars)
+        final_payload = _substitute_variables(tool_config.payload or {}, arguments)
+        target_headers = _substitute_variables(tool_config.headers or {}, arguments)
 
         # Execute Request
         method = tool_config.method.upper()

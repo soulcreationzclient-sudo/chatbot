@@ -484,19 +484,10 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
             try:
                 user = User.objects.get(id=user_id)
                 display_name = getattr(user, 'name', '') or user.phone_no
-                # Get organization from user or pipeline
+                # Get organization from user first, then from the pipeline itself
                 org = getattr(user, 'organization', None)
                 if not org:
-                    org = rule.pipeline.opportunities.first()
-                    org = org.organization if org else None
-                if not org:
-                    # Try to get org from Organization model
-                    from newapp.models import Organization, Admin
-                    admin = getattr(user, 'admin_id', None)
-                    if admin:
-                        org = Organization.objects.filter(admin=admin).first()
-                    if not org:
-                        org = Organization.objects.first()
+                    org = rule.pipeline.organization
                 
                 auto_logger.info(f"[Automation] Creating opp: pipeline={rule.pipeline.name}, stage={rule.target_stage.name}, user={user_id}, org={org}")
                 opp = Opportunity.objects.create(
