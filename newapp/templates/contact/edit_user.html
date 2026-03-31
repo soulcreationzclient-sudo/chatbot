@@ -118,19 +118,21 @@
       {% csrf_token %}
       {{ form.as_p }}
 
-      <div class="form-actions">
-        
-        <hr class="my-4">
-        <h5>Custom Fields</h5>
+      <hr class="my-4" style="border:0; border-top:1px solid #e5e7eb; margin: 24px 0;">
+      <h5 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-main);">Custom Fields</h5>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
         {% for field in custom_fields %}
-        <div class="mb-3">
-            <label class="form-label">{{ field.name }}</label>
+        <div>
+            <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">{{ field.name }}</label>
             <input type="{{ field.field_type }}" class="form-control" name="custom_field_{{ field.id }}" 
-                   value="{{ field.value|default:'' }}">
+                   value="{{ field.value|default:'' }}" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-soft); margin-top: 4px;">
         </div>
         {% endfor %}
-            
-<button type="submit" class="btn btn-primary">Save</button>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save</button>
         <a href="{% url 'contact_dashboard' %}" class="btn btn-secondary">Cancel</a>
       </div>
     </form>
