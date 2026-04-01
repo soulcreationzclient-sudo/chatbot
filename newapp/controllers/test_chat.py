@@ -213,12 +213,14 @@ def test_chat_send(request):
         # Process {{calendly:name}} tags — replace with booking redirect URL
         try:
             import re as re_mod2
-            from newapp.models import CalendlyLink, CalendlyBookingTracker, Admin as AdminModel, Organization as OrgModel
-            calendly_matches = re_mod2.finditer(r'\{\{calendly:([a-zA-Z0-9_\-\s]+)\}\}', clean_text)
+            from newapp.models import CalendlyLink, CalendlyBookingTracker, User as UserModel, Admin as AdminModel, Organization as OrgModel
+            calendly_matches = list(re_mod2.finditer(r'\{\{calendly:([a-zA-Z0-9_\-\s]+)\}\}', clean_text))
             for match in calendly_matches:
                 cal_name = match.group(1).strip()
                 full_tag = match.group(0)
                 link = None
+                admin_obj = None
+                org_obj = None
                 if org_id:
                     org_obj = OrgModel.objects.filter(id=org_id).first()
                     if org_obj:
@@ -232,6 +234,26 @@ def test_chat_send(request):
                     booking_token = uuid.uuid4().hex[:16]
                     redirect_url = f"https://chatbotad.io/book/{booking_token}/"
                     clean_text = clean_text.replace(full_tag, redirect_url)
+                    
+                    # Create a test user and tracker record so /book/<token>/ works
+                    try:
+                        test_phone = f"test_{uuid.uuid4().hex[:8]}"
+                        test_user, _ = UserModel.objects.get_or_create(
+                            phone_no=test_phone,
+                            defaults={
+                                'name': 'Test Chat User',
+                                'admin_id': admin_obj,
+                                'organization': org_obj,
+                            }
+                        )
+                        CalendlyBookingTracker.objects.create(
+                            user=test_user,
+                            calendly_link=link,
+                            booking_token=booking_token,
+                            status='link_sent'
+                        )
+                    except Exception:
+                        pass
                 else:
                     clean_text = clean_text.replace(full_tag, f"[Calendly link '{cal_name}' not found]")
         except Exception:
