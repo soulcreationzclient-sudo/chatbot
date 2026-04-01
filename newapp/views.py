@@ -685,36 +685,165 @@ from django.shortcuts import render
 #     count=User.objects.count()
 #     return render(request, 'dashboard.html',{'count':count,'phone_id':user_phone})
 def dashboard_view(request):
+    import json as _json
+    from datetime import timedelta
+    from django.db.models import Count, Sum, Q
+    from django.db.models.functions import TruncDate
+    from .models import (
+        Organization, User as UserModel, Message,
+        Tag, UserTag, CalendlyBookingTracker,
+        Opportunity, WebChatSession,
+    )
+
     org_id = request.session.get('organization_id')
     admin_id = request.session.get('admin_id')
-    
+
     display_phone_number = ''
     whatsapp_connected = False
-    count = 0
-    
+
+    # Base querysets scoped by org/admin
+    user_qs = UserModel.objects.none()
+    msg_qs = Message.objects.none()
+    tag_qs = Tag.objects.none()
+    booking_qs = CalendlyBookingTracker.objects.none()
+    opp_qs = Opportunity.objects.none()
+
     if org_id:
-        # Organization-based auth
-        from .models import Organization
         org = Organization.objects.filter(id=org_id).first()
         if org:
             display_phone_number = ''.join((org.display_phone_no or '').split())
             whatsapp_connected = bool(org.whatsapp_token)
-            count = User.objects.filter(organization=org).count()
+            user_qs = UserModel.objects.filter(organization=org)
+            msg_qs = Message.objects.filter(user_id__organization=org)
+            tag_qs = Tag.objects.filter(organization_id=org_id)
+            booking_qs = CalendlyBookingTracker.objects.filter(user__organization=org)
+            opp_qs = Opportunity.objects.filter(organization=org)
     elif admin_id:
-        # Legacy admin-based auth
-        user = Admin.objects.filter(id=admin_id).first()
-        if user:
-            display_phone_number = ''.join((user.display_phone_no or '').split())
-            whatsapp_connected = bool(user.whatsapp_token)
-            count = User.objects.filter(admin_id=user).count()
-    
+        admin_obj = Admin.objects.filter(id=admin_id).first()
+        if admin_obj:
+            display_phone_number = ''.join((admin_obj.display_phone_no or '').split())
+            whatsapp_connected = bool(admin_obj.whatsapp_token)
+            user_qs = UserModel.objects.filter(admin_id=admin_obj)
+            msg_qs = Message.objects.filter(user_id__admin_id=admin_obj)
+            tag_qs = Tag.objects.filter(admin_id=admin_id)
+            booking_qs = CalendlyBookingTracker.objects.filter(user__admin_id=admin_obj)
+            opp_qs = Opportunity.objects.filter(organization__isnull=True)
+
+    now = timezone.now()
+    seven_days_ago = now - timedelta(days=7)
+    fourteen_days_ago = now - timedelta(days=14)
+
+    # ---------- KPI CARDS ----------
+    total_contacts = user_qs.count()
+    new_contacts_7d = user_qs.filter(created_at__gte=seven_days_ago).count()
+    new_contacts_prev_7d = user_qs.filter(created_at__gte=fourteen_days_ago, created_at__lt=seven_days_ago).count()
+
+    total_messages_7d = msg_qs.filter(created_at__gte=seven_days_ago).count()
+    total_messages_prev_7d = msg_qs.filter(created_at__gte=fourteen_days_ago, created_at__lt=seven_days_ago).count()
+
+    active_convos_7d = msg_qs.filter(created_at__gte=seven_days_ago, who='human').values('user_id').distinct().count()
+    active_convos_prev_7d = msg_qs.filter(created_at__gte=fourteen_days_ago, created_at__lt=seven_days_ago, who='human').values('user_id').distinct().count()
+
+    total_bookings = booking_qs.filter(status='booked').count()
+    try:
+        from .models import GoogleCalendarBooking
+        if org_id:
+            gcal_bookings = GoogleCalendarBooking.objects.filter(user__organization_id=org_id, status='booked').count()
+        elif admin_id:
+            gcal_bookings = GoogleCalendarBooking.objects.filter(user__admin_id=admin_id, status='booked').count()
+        else:
+            gcal_bookings = 0
+        total_bookings += gcal_bookings
+    except Exception:
+        pass
+
+    pipeline_value = opp_qs.filter(status='open').aggregate(total=Sum('opportunity_value'))['total'] or 0
+
+    def _pct_change(current, previous):
+        if previous == 0:
+            return 100 if current > 0 else 0
+        return round(((current - previous) / previous) * 100, 1)
+
+    # ---------- CHART DATA ----------
+
+    # 1) Messages over time (7 days) — bot vs user
+    date_range = [(now - timedelta(days=i)).date() for i in range(6, -1, -1)]
+    date_labels = [d.strftime('%b %d') for d in date_range]
+
+    msg_by_day_user = dict(
+        msg_qs.filter(created_at__gte=seven_days_ago, who='human')
+        .annotate(day=TruncDate('created_at'))
+        .values('day').annotate(c=Count('id')).values_list('day', 'c')
+    )
+    msg_by_day_bot = dict(
+        msg_qs.filter(created_at__gte=seven_days_ago, who='bot')
+        .annotate(day=TruncDate('created_at'))
+        .values('day').annotate(c=Count('id')).values_list('day', 'c')
+    )
+    chart_msg_user = [msg_by_day_user.get(d, 0) for d in date_range]
+    chart_msg_bot = [msg_by_day_bot.get(d, 0) for d in date_range]
+
+    # 2) New contacts over time (7 days)
+    contacts_by_day = dict(
+        user_qs.filter(created_at__gte=seven_days_ago)
+        .annotate(day=TruncDate('created_at'))
+        .values('day').annotate(c=Count('id')).values_list('day', 'c')
+    )
+    chart_new_contacts = [contacts_by_day.get(d, 0) for d in date_range]
+
+    # 3) Contacts by channel (WhatsApp vs WebChat)
+    webchat_count = user_qs.filter(phone_no__startswith='webchat_').count()
+    whatsapp_count = total_contacts - webchat_count
+
+    # 4) Tag distribution (top 8)
+    tag_data = list(
+        UserTag.objects.filter(tag__in=tag_qs)
+        .values('tag__name')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:8]
+    )
+    tag_labels = [t['tag__name'] for t in tag_data]
+    tag_counts = [t['count'] for t in tag_data]
+
+    # 5) Bookings over time (7 days)
+    bookings_by_day = dict(
+        booking_qs.filter(status='booked', created_at__gte=seven_days_ago)
+        .annotate(day=TruncDate('created_at'))
+        .values('day').annotate(c=Count('id')).values_list('day', 'c')
+    )
+    chart_bookings = [bookings_by_day.get(d, 0) for d in date_range]
+
+    # 6) Bot activity (enabled vs disabled)
+    bot_on = user_qs.filter(bot_enabled=True).count()
+    bot_off = user_qs.filter(bot_enabled=False).count()
+
     user_phone = f"https://wa.me/{display_phone_number}" if display_phone_number else "#"
 
     context = {
-        'count': count,
+        'count': total_contacts,
         'phone_id': user_phone,
         'whatsapp_connected': whatsapp_connected,
-        'active_contacts_count': 0,
+        # KPI Cards
+        'new_contacts_7d': new_contacts_7d,
+        'new_contacts_change': _pct_change(new_contacts_7d, new_contacts_prev_7d),
+        'total_messages_7d': total_messages_7d,
+        'messages_change': _pct_change(total_messages_7d, total_messages_prev_7d),
+        'active_convos_7d': active_convos_7d,
+        'active_convos_change': _pct_change(active_convos_7d, active_convos_prev_7d),
+        'total_bookings': total_bookings,
+        'pipeline_value': float(pipeline_value),
+        # Chart data (JSON)
+        'date_labels': _json.dumps(date_labels),
+        'chart_msg_user': _json.dumps(chart_msg_user),
+        'chart_msg_bot': _json.dumps(chart_msg_bot),
+        'chart_new_contacts': _json.dumps(chart_new_contacts),
+        'whatsapp_count': whatsapp_count,
+        'webchat_count': webchat_count,
+        'tag_labels': _json.dumps(tag_labels),
+        'tag_counts': _json.dumps(tag_counts),
+        'chart_bookings': _json.dumps(chart_bookings),
+        'bot_on': bot_on,
+        'bot_off': bot_off,
     }
     return render(request, 'dashboard.html', context)
 
