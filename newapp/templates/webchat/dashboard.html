@@ -916,7 +916,21 @@
                         container.innerHTML = '';
                         data.messages.forEach(m => {
                             addMessage(m.sender === 'user' ? 'user' : 'bot', m.content);
+                            // Restore tags/custom fields from stored ai_response
+                            if (m.sender === 'bot' && m.ai_response) {
+                                try {
+                                    const meta = JSON.parse(m.ai_response);
+                                    if (meta.tags) meta.tags.forEach(t => allSessionTags.add(t));
+                                    if (meta.custom_fields) meta.custom_fields.forEach(cf => {
+                                        allSessionFields[cf.name] = cf.value;
+                                    });
+                                } catch(e) {}
+                            }
                         });
+                        // Update sidebar with restored data
+                        if (allSessionTags.size > 0 || Object.keys(allSessionFields).length > 0) {
+                            updateSidebar(Array.from(allSessionTags), Object.entries(allSessionFields).map(([n,v]) => ({name:n, value:v})));
+                        }
                         if (data.messages.length === 0) {
                             container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><h3>Empty session</h3></div>';
                         }

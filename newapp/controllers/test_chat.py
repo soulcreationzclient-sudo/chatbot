@@ -298,12 +298,18 @@ def test_chat_send(request):
                 content_type='text',
             )
             
-            # Save bot message
+            # Save bot message (with tags/custom_fields in ai_response for persistence)
+            bot_meta = {}
+            if parsed['tags']:
+                bot_meta['tags'] = parsed['tags']
+            if parsed['custom_fields']:
+                bot_meta['custom_fields'] = parsed['custom_fields']
             WebChatMessage.objects.create(
                 session=chat_session,
                 content=clean_text,
                 sender='bot',
                 content_type='text',
+                ai_response=json.dumps(bot_meta) if bot_meta else None,
             )
             
             # Update message count

@@ -599,13 +599,16 @@ count=Count('id')
             
             messages_data = []
             for m in messages_list:
-                messages_data.append({
+                msg_entry = {
                     'id': m.id,
                     'content': m.content,
                     'sender': m.sender,
                     'content_type': m.content_type,
                     'created_at': m.created_at.strftime('%H:%M'),
-                })
+                }
+                if m.ai_response:
+                    msg_entry['ai_response'] = m.ai_response
+                messages_data.append(msg_entry)
             
             return JsonResponse({
                 'success': True,
