@@ -387,7 +387,6 @@ session=session,
                 try:
                     from ..image_tag_processor import parse_image_tags, get_image_asset
                     from ..models import Admin as AdminModel, ImageAsset
-                    import re
                     
                     image_tags = parse_image_tags(bot_response_text)
                     if image_tags:
