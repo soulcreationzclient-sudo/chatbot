@@ -751,6 +751,8 @@
         let allSessionTags = new Set();
         let allSessionFields = {};
         let currentSessionId = null;
+        let _pollTimer = null;
+        let _lastMsgCount = 0;
 
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -806,7 +808,12 @@
                         if (data.session_id) currentSessionId = data.session_id;
                         addMessage('bot', data.bot_message.content, data.bot_message.images || []);
                         updateSidebar(data.bot_message.tags || [], data.bot_message.custom_fields || []);
+                        _lastMsgCount = (document.querySelectorAll('#chat-messages .message').length);
                         loadSessions(); // Refresh session list
+                        // Start polling if booking link was sent
+                        if (data.bot_message.content && data.bot_message.content.includes('chatbotad.io/book/')) {
+                            _startBookingPoll();
+                        }
                     } else {
                         addMessage('system', 'Error: ' + data.message);
                     }
@@ -815,6 +822,40 @@
                     removeTyping();
                     addMessage('system', 'Connection error');
                 });
+        }
+
+        // --- Booking Confirmation Polling ---
+        function _startBookingPoll() {
+            if (_pollTimer) clearInterval(_pollTimer);
+            let _pollCount = 0;
+            _pollTimer = setInterval(() => {
+                _pollCount++;
+                if (_pollCount > 36 || !currentSessionId) { // Stop after 3 minutes
+                    clearInterval(_pollTimer);
+                    _pollTimer = null;
+                    return;
+                }
+                fetch(`/api/webchat/sessions/${currentSessionId}/messages/`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success && d.messages) {
+                            const currentCount = document.querySelectorAll('#chat-messages .message').length;
+                            if (d.messages.length > _lastMsgCount) {
+                                // New messages arrived — show only the new ones
+                                const newMsgs = d.messages.slice(_lastMsgCount);
+                                newMsgs.forEach(m => {
+                                    if (m.sender === 'bot') {
+                                        addMessage('bot', m.content);
+                                    }
+                                });
+                                _lastMsgCount = d.messages.length;
+                                clearInterval(_pollTimer);
+                                _pollTimer = null;
+                            }
+                        }
+                    })
+                    .catch(() => {});
+            }, 5000);
         }
 
         // --- Session Management ---
