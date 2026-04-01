@@ -328,6 +328,52 @@ session=session,
                         messages=messages_history
                     )
                     bot_response_text = response.choices[0].message.content
+                    
+                    # Extract clean text if AI returned JSON format
+                    if bot_response_text:
+                        stripped = bot_response_text.strip()
+                        # Strip markdown code fences
+                        if stripped.startswith('```'):
+                            stripped = re.sub(r'^```(?:json)?\s*', '', stripped)
+                            stripped = re.sub(r'\s*```$', '', stripped)
+                            stripped = stripped.strip()
+                        
+                        if stripped.startswith('{') or stripped.startswith('['):
+                            try:
+                                data_json = json.loads(stripped)
+                                text_parts = []
+                                # Handle {"messages": [...]}
+                                messages_list = data_json.get("messages", []) if isinstance(data_json, dict) else data_json if isinstance(data_json, list) else []
+                                if messages_list and isinstance(messages_list, list):
+                                    for msg_item in messages_list:
+                                        if isinstance(msg_item, dict):
+                                            t = msg_item.get("text")
+                                            if not t:
+                                                t = msg_item.get("message", {}).get("text", "")
+                                            if t and isinstance(t, str) and t.strip():
+                                                text_parts.append(t.strip())
+                                # Handle {"text": "..."}
+                                if not text_parts and isinstance(data_json, dict) and "text" in data_json:
+                                    t = data_json["text"]
+                                    if t and isinstance(t, str) and t.strip():
+                                        text_parts.append(t.strip())
+                                if text_parts:
+                                    bot_response_text = "\n\n".join(text_parts)
+                            except (json.JSONDecodeError, AttributeError, TypeError):
+                                # Try regex fallback
+                                text_matches = re.findall(r'"text"\s*:\s*"((?:[^"\\]|\\.)*)"', stripped)
+                                if text_matches:
+                                    extracted = []
+                                    for t in text_matches:
+                                        t = t.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                                        if t.strip():
+                                            extracted.append(t.strip())
+                                    if extracted:
+                                        bot_response_text = "\n\n".join(extracted)
+                        
+                        # Normalize escaped newlines
+                        bot_response_text = bot_response_text.replace('\\n', '\n')
+                        bot_response_text = re.sub(r'\n\s*\n\s*\n', '\n\n', bot_response_text)
                 else:
                     bot_response_text = "I'm sorry, the AI service is not configured yet. Please try again later."
                     
