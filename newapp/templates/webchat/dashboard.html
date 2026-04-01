@@ -856,6 +856,14 @@
             currentSessionId = sessionId;
             switchTab('test-chat');
 
+            // Reset sidebar state for new session
+            allSessionTags = new Set();
+            allSessionFields = {};
+            document.getElementById('sidebar-tags').innerHTML = '<span style="font-size: 13px; color: #94a3b8;">No tags detected yet</span>';
+            document.getElementById('sidebar-custom-fields').innerHTML = '<span style="font-size: 13px; color: #94a3b8;">No custom fields detected yet</span>';
+            document.getElementById('sidebar-all-tags').innerHTML = '<span style="font-size: 13px; color: #94a3b8;">—</span>';
+            document.getElementById('sidebar-all-fields').innerHTML = '<span style="font-size: 13px; color: #94a3b8;">—</span>';
+
             // Clear chat
             const container = document.getElementById('chat-messages');
             container.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">Loading...</div>';

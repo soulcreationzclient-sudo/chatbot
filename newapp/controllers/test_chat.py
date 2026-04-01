@@ -220,6 +220,7 @@ def test_chat_send(request):
             pass  # Silently fail if image processing fails
 
         # Process {{calendly:name}} tags — replace with booking redirect URL
+        _booking_test_user = None  # Will be linked to session after persist
         try:
             import re as re_mod2
             from newapp.models import CalendlyLink, CalendlyBookingTracker, User as UserModel, Admin as AdminModel, Organization as OrgModel
@@ -256,6 +257,7 @@ def test_chat_send(request):
                             bot_enabled=True,
                             created_at=timezone.now(),
                         )
+                        _booking_test_user = test_user
                         CalendlyBookingTracker.objects.create(
                             user=test_user,
                             calendly_link=link,
@@ -263,6 +265,7 @@ def test_chat_send(request):
                             status='link_sent'
                         )
                     except Exception as tracker_err:
+                        _booking_test_user = None
                         print(f"[TestChat] Error creating booking tracker: {tracker_err}")
                 else:
                     clean_text = clean_text.replace(full_tag, f"[Calendly link '{cal_name}' not found]")
@@ -306,6 +309,11 @@ def test_chat_send(request):
             # Update message count
             chat_session.message_count = WebChatMessage.objects.filter(session=chat_session).count()
             chat_session.save(update_fields=['message_count', 'last_activity'])
+            
+            # Link booking test user to this session for confirmation messages
+            if _booking_test_user and not chat_session.user_id:
+                chat_session.user = _booking_test_user
+                chat_session.save(update_fields=['user'])
         except Exception:
             pass  # Don't break chat if DB save fails
 
