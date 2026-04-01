@@ -1036,8 +1036,9 @@
             const div = document.createElement('div');
             div.className = `message ${role}`;
             if (role === 'bot') {
-                // Render line breaks properly for bot messages
-                let html = text.replace(/\n/g, '<br>');
+                // Auto-link URLs, then render line breaks
+                let html = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:#3b82f6; text-decoration:underline;">$1</a>');
+                html = html.replace(/\n/g, '<br>');
                 // Render images if present
                 if (images && images.length > 0) {
                     html += '<div style="margin-top: 8px;">';
