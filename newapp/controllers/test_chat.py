@@ -210,6 +210,33 @@ def test_chat_send(request):
         except Exception as img_err:
             pass  # Silently fail if image processing fails
 
+        # Process {{calendly:name}} tags — replace with booking redirect URL
+        try:
+            import re as re_mod2
+            from newapp.models import CalendlyLink, CalendlyBookingTracker, Admin as AdminModel, Organization as OrgModel
+            calendly_matches = re_mod2.finditer(r'\{\{calendly:([a-zA-Z0-9_\-\s]+)\}\}', clean_text)
+            for match in calendly_matches:
+                cal_name = match.group(1).strip()
+                full_tag = match.group(0)
+                link = None
+                if org_id:
+                    org_obj = OrgModel.objects.filter(id=org_id).first()
+                    if org_obj:
+                        link = CalendlyLink.objects.filter(organization=org_obj, name__iexact=cal_name).first()
+                if not link and admin_id:
+                    admin_obj = AdminModel.objects.filter(id=admin_id).first()
+                    if admin_obj:
+                        link = CalendlyLink.objects.filter(admin=admin_obj, name__iexact=cal_name).first()
+                
+                if link:
+                    booking_token = uuid.uuid4().hex[:16]
+                    redirect_url = f"https://chatbotad.io/book/{booking_token}/"
+                    clean_text = clean_text.replace(full_tag, redirect_url)
+                else:
+                    clean_text = clean_text.replace(full_tag, f"[Calendly link '{cal_name}' not found]")
+        except Exception:
+            pass
+
         # --- Persist to DB ---
         session_id_str = data.get('session_id', None)
         try:
