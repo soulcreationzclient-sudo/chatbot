@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 import json
 import re
 import uuid
@@ -74,6 +75,8 @@ def _parse_ai_response(raw_response):
     # Remove custom field markers from clean text
     clean_text = re.sub(r'\s*\{\{custom_field:[a-zA-Z0-9_]+:.+?\}\}\s*', '', clean_text).strip()
 
+    # --- Normalize escaped newlines (\\n -> real newline) ---
+    clean_text = clean_text.replace('\\n', '\n')
     # --- Clean up extra whitespace ---
     clean_text = re.sub(r'\n\s*\n\s*\n', '\n\n', clean_text)
 
@@ -245,6 +248,7 @@ def test_chat_send(request):
                             organization=org_obj,
                             source='webchat',
                             bot_enabled=True,
+                            created_at=timezone.now(),
                         )
                         CalendlyBookingTracker.objects.create(
                             user=test_user,
