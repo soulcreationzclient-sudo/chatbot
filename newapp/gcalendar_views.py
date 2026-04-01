@@ -116,33 +116,50 @@ def gcalendar_confirm_booking(request, token):
             except Exception:
                 pass
 
-        # Send confirmation via WhatsApp if booking_message is set
+        # Send confirmation via WhatsApp or Webchat if booking_message is set
         if booking.gcalendar_link.booking_message and booking.user:
             try:
-                from newapp.models import Organization
-                org = booking.gcalendar_link.organization
-                if org and org.whatsapp_phone_id and org.whatsapp_token:
-                    import requests as req
-                    message = booking.gcalendar_link.booking_message.replace(
-                        '{date}', slot_start.strftime('%B %d, %Y')
-                    ).replace('{time}', slot_start.strftime('%I:%M %p'))
+                message = booking.gcalendar_link.booking_message.replace(
+                    '{date}', slot_start.strftime('%B %d, %Y')
+                ).replace('{time}', slot_start.strftime('%I:%M %p'))
 
-                    req.post(
-                        f"https://graph.facebook.com/v22.0/{org.whatsapp_phone_id}/messages",
-                        headers={
-                            "Authorization": f"Bearer {org.whatsapp_token}",
-                            "Content-Type": "application/json"
-                        },
-                        json={
-                            "messaging_product": "whatsapp",
-                            "to": booking.user.phone_no,
-                            "type": "text",
-                            "text": {"body": message}
-                        },
-                        timeout=10
-                    )
+                if booking.user.phone_no and booking.user.phone_no.startswith('webchat_'):
+                    from newapp.models import WebChatSession, WebChatMessage
+                    from django.utils import timezone
+                    
+                    session = WebChatSession.objects.filter(user=booking.user).order_by('-last_activity').first()
+                    if session:
+                        WebChatMessage.objects.create(
+                            session=session,
+                            content=message,
+                            sender='bot',
+                            content_type='text'
+                        )
+                        session.last_activity = timezone.now()
+                        session.message_count += 1
+                        session.save(update_fields=['last_activity', 'message_count'])
+                else:
+                    from newapp.models import Organization
+                    org = booking.gcalendar_link.organization
+                    if org and org.whatsapp_phone_id and org.whatsapp_token:
+                        import requests as req
+
+                        req.post(
+                            f"https://graph.facebook.com/v22.0/{org.whatsapp_phone_id}/messages",
+                            headers={
+                                "Authorization": f"Bearer {org.whatsapp_token}",
+                                "Content-Type": "application/json"
+                            },
+                            json={
+                                "messaging_product": "whatsapp",
+                                "to": booking.user.phone_no,
+                                "type": "text",
+                                "text": {"body": message}
+                            },
+                            timeout=10
+                        )
             except Exception:
-                pass  # Don't fail booking if WhatsApp send fails
+                pass  # Don't fail booking if message send fails
 
         return JsonResponse({
             'success': True,

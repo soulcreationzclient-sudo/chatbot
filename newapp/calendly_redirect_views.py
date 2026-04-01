@@ -156,9 +156,29 @@ def booking_confirmed(request, token=None):
 
 
 def _send_whatsapp_confirmation(user, message, admin, org):
-    """Send a WhatsApp message to confirm the booking."""
-    from .models import Admin as AdminModel, Organization, Message
+    """Send a WhatsApp or Webchat message to confirm the booking."""
+    from .models import Admin as AdminModel, Organization, Message, WebChatSession, WebChatMessage
     from django.utils import timezone
+
+    if user.phone_no and user.phone_no.startswith('webchat_'):
+        try:
+            session = WebChatSession.objects.filter(user=user).order_by('-last_activity').first()
+            if session:
+                WebChatMessage.objects.create(
+                    session=session,
+                    content=message,
+                    sender='bot',
+                    content_type='text'
+                )
+                session.last_activity = timezone.now()
+                session.message_count += 1
+                session.save(update_fields=['last_activity', 'message_count'])
+                print(f"[CalendlyRedirect] Sent webchat confirmation to {user.phone_no}")
+            else:
+                print(f"[CalendlyRedirect] No active webchat session found for {user.phone_no}")
+        except Exception as e:
+            print(f"[CalendlyRedirect] Error sending webchat confirmation: {e}")
+        return
 
     # Get WhatsApp credentials
     phone_id = None
@@ -188,8 +208,11 @@ def _send_whatsapp_confirmation(user, message, admin, org):
         "text": {"body": message}
     }
 
-    response = requests.post(url, headers=headers, json=payload, timeout=10)
-    print(f"[CalendlyRedirect] WhatsApp API response {response.status_code}: {response.text[:200]}")
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        print(f"[CalendlyRedirect] WhatsApp API response {response.status_code}: {response.text[:200]}")
+    except Exception as e:
+        print(f"[CalendlyRedirect] Error calling WhatsApp API: {e}")
 
     # Save message to conversation history
     try:
