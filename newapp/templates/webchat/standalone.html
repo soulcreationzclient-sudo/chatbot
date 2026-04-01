@@ -239,8 +239,46 @@
 
         let sessionId = null;
         let sending = false;
+        const STORAGE_KEY = 'speedbot_session_' + (ORG_ID || ADMIN_ID || 'default');
+
+        function showSessionBadge(sid) {
+            const badge = document.getElementById('sessionBadge');
+            const shortId = sid.substring(0, 8).toUpperCase();
+            badge.textContent = 'ID: ' + shortId;
+            badge.classList.add('visible');
+            badge.onclick = function() {
+                navigator.clipboard.writeText(sid).then(() => {
+                    badge.textContent = 'Copied!';
+                    setTimeout(() => { badge.textContent = 'ID: ' + shortId; }, 1500);
+                });
+            };
+        }
+
+        async function resumeSession(storedId) {
+            try {
+                const res = await fetch(API_BASE + '/api/webchat/messages/' + storedId + '/');
+                const data = await res.json();
+                if (data.success && data.messages) {
+                    sessionId = storedId;
+                    showSessionBadge(sessionId);
+                    data.messages.forEach(m => {
+                        addMessage(m.content, m.sender === 'user' ? 'user' : 'bot', m.created_at);
+                    });
+                    return true;
+                }
+            } catch(e) { /* fall through to new session */ }
+            return false;
+        }
 
         async function startSession() {
+            // Try to resume existing session from localStorage
+            const storedId = localStorage.getItem(STORAGE_KEY);
+            if (storedId) {
+                const resumed = await resumeSession(storedId);
+                if (resumed) return;
+                localStorage.removeItem(STORAGE_KEY);
+            }
+
             try {
                 const payload = { language: 'en', visitor_name: 'Web Visitor' };
                 if (ORG_ID) payload.organization_id = ORG_ID;
@@ -255,17 +293,8 @@
                 const data = await res.json();
                 if (data.success) {
                     sessionId = data.session.id;
-                    // Show session ID badge
-                    const badge = document.getElementById('sessionBadge');
-                    const shortId = sessionId.substring(0, 8).toUpperCase();
-                    badge.textContent = 'ID: ' + shortId;
-                    badge.classList.add('visible');
-                    badge.onclick = function() {
-                        navigator.clipboard.writeText(sessionId).then(() => {
-                            badge.textContent = 'Copied!';
-                            setTimeout(() => { badge.textContent = 'ID: ' + shortId; }, 1500);
-                        });
-                    };
+                    localStorage.setItem(STORAGE_KEY, sessionId);
+                    showSessionBadge(sessionId);
                     if (data.welcome_message) {
                         addMessage(data.welcome_message.content, 'bot');
                     }
@@ -315,17 +344,24 @@
             document.getElementById('sendBtn').disabled = false;
         }
 
-        function addMessage(text, sender) {
+        function addMessage(text, sender, timestamp) {
             const container = document.getElementById('chatMessages');
             const div = document.createElement('div');
             div.className = 'message ' + sender;
-            // Simple markdown-like formatting
-            let html = text.replace(/\n/g, '<br>');
+            // Auto-link URLs
+            let html = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:' + (sender === 'user' ? '#fff' : '#3b82f6') + '; text-decoration:underline;">$1</a>');
+            html = html.replace(/\n/g, '<br>');
             html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            const now = new Date();
-            const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-            div.innerHTML = html + '<span class="time">' + time + '</span>';
+            let timeStr;
+            if (timestamp) {
+                const d = new Date(timestamp);
+                timeStr = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+            } else {
+                const now = new Date();
+                timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+            }
+            div.innerHTML = html + '<span class="time">' + timeStr + '</span>';
             container.appendChild(div);
             scrollToBottom();
         }
