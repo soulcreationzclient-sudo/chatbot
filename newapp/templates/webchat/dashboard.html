@@ -427,6 +427,12 @@
             font-size: 15px;
             outline: none;
             color: var(--text-main);
+            resize: none;
+            max-height: 120px;
+            min-height: 44px;
+            line-height: 1.4;
+            font-family: inherit;
+            overflow-y: auto;
         }
 
         .icon-btn {
@@ -679,8 +685,8 @@
 
                         <div class="chat-input-wrapper">
                             <div class="chat-input-container">
-                                <input type="text" class="chat-input" id="chat-input"
-                                    placeholder="Type a message to test..." onkeypress="handleKeyPress(event)">
+                                <textarea class="chat-input" id="chat-input" rows="1"
+                                    placeholder="Type a message to test... (Shift+Enter for new line)" onkeydown="handleKeyDown(event)"></textarea>
                                 <button class="icon-btn send-btn" onclick="sendMessage()">➤</button>
                             </div>
                         </div>
@@ -761,8 +767,16 @@
             else if (tabName === 'test-chat') navItems[1].classList.add('active');
         }
 
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') sendMessage();
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+            // Auto-resize textarea
+            setTimeout(() => {
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+            }, 0);
         }
 
         function sendMessage() {

@@ -148,13 +148,27 @@ def test_chat_send(request):
             try:
                 from openai import OpenAI
                 client = OpenAI(api_key=openai_key)
+
+                # Build conversation history from existing session
+                openai_messages = [{"role": "system", "content": system_prompt}]
+
+                session_id_str = data.get('session_id', None)
+                if session_id_str:
+                    chat_session = WebChatSession.objects.filter(session_id=session_id_str).first()
+                    if chat_session:
+                        past_msgs = WebChatMessage.objects.filter(
+                            session=chat_session
+                        ).order_by('sent_at')
+                        for m in past_msgs:
+                            role = 'user' if m.sender == 'user' else 'assistant'
+                            openai_messages.append({"role": role, "content": m.content})
+
+                # Append the current user message
+                openai_messages.append({"role": "user", "content": user_message})
                 
                 response = client.chat.completions.create(
                     model=gpt_model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_message}
-                    ]
+                    messages=openai_messages
                 )
                 ai_response = response.choices[0].message.content
             except Exception as e:
