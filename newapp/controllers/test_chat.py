@@ -158,7 +158,7 @@ def test_chat_send(request):
                     if chat_session:
                         past_msgs = WebChatMessage.objects.filter(
                             session=chat_session
-                        ).order_by('sent_at')
+                        ).order_by('created_at')
                         for m in past_msgs:
                             role = 'user' if m.sender == 'user' else 'assistant'
                             openai_messages.append({"role": role, "content": m.content})
