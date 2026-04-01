@@ -238,13 +238,13 @@ def test_chat_send(request):
                     # Create a test user and tracker record so /book/<token>/ works
                     try:
                         test_phone = f"test_{uuid.uuid4().hex[:8]}"
-                        test_user, _ = UserModel.objects.get_or_create(
+                        test_user = UserModel.objects.create(
                             phone_no=test_phone,
-                            defaults={
-                                'name': 'Test Chat User',
-                                'admin_id': admin_obj,
-                                'organization': org_obj,
-                            }
+                            name='Test Chat User',
+                            admin_id=admin_obj,
+                            organization=org_obj,
+                            source='webchat',
+                            bot_enabled=True,
                         )
                         CalendlyBookingTracker.objects.create(
                             user=test_user,
@@ -252,8 +252,8 @@ def test_chat_send(request):
                             booking_token=booking_token,
                             status='link_sent'
                         )
-                    except Exception:
-                        pass
+                    except Exception as tracker_err:
+                        print(f"[TestChat] Error creating booking tracker: {tracker_err}")
                 else:
                     clean_text = clean_text.replace(full_tag, f"[Calendly link '{cal_name}' not found]")
         except Exception:
