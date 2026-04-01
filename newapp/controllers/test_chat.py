@@ -37,8 +37,9 @@ def _parse_ai_response(raw_response):
     if stripped.startswith('{') or stripped.startswith('['):
         try:
             data_json = json.loads(stripped)
-            messages = data_json.get("messages", [])
             text_parts = []
+            # Handle {"messages": [...]}
+            messages = data_json.get("messages", []) if isinstance(data_json, dict) else data_json if isinstance(data_json, list) else []
             if messages and isinstance(messages, list):
                 for msg_item in messages:
                     if isinstance(msg_item, dict):
@@ -47,10 +48,15 @@ def _parse_ai_response(raw_response):
                             t = msg_item.get("message", {}).get("text", "")
                         if t and isinstance(t, str) and t.strip():
                             text_parts.append(t.strip())
+            # Handle {"text": "..."}
+            if not text_parts and isinstance(data_json, dict) and "text" in data_json:
+                t = data_json["text"]
+                if t and isinstance(t, str) and t.strip():
+                    text_parts.append(t.strip())
             if text_parts:
                 clean_text = "\n\n".join(text_parts)
-        except (json.JSONDecodeError, AttributeError):
-            # Try regex fallback
+        except (json.JSONDecodeError, AttributeError, TypeError):
+            # Try regex fallback — extract all "text" values from malformed JSON
             text_matches = re.findall(r'"text"\s*:\s*"((?:[^"\\]|\\.)*)"', stripped)
             if text_matches:
                 extracted = []
@@ -240,7 +246,7 @@ def test_chat_send(request):
                     
                     # Create a test user and tracker record so /book/<token>/ works
                     try:
-                        test_phone = f"test_{uuid.uuid4().hex[:8]}"
+                        test_phone = f"webchat_test_{uuid.uuid4().hex[:8]}"
                         test_user = UserModel.objects.create(
                             phone_no=test_phone,
                             name='Test Chat User',
