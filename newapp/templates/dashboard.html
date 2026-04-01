@@ -222,11 +222,7 @@
             <h3><i class="fas fa-share-nodes" style="color:#f5576c;margin-right:8px;"></i>Contacts by Channel</h3>
             <canvas id="channelChart"></canvas>
         </div>
-        <!-- 4. Tag Distribution -->
-        <div class="chart-card">
-            <h3><i class="fas fa-tags" style="color:#43e97b;margin-right:8px;"></i>Top Tags</h3>
-            <canvas id="tagsChart"></canvas>
-        </div>
+
 
         <!-- 6. Bot Activity -->
         <div class="chart-card">
@@ -311,27 +307,6 @@
         options: { ...baseOpts, cutout: '65%' }
     });
 
-    // 4) Tag Distribution
-    const tagLabels = {{ tag_labels|safe }};
-    const tagCounts = {{ tag_counts|safe }};
-    const tagColors = ['#667eea','#f5576c','#4facfe','#43e97b','#fa709a','#a18cd1','#fbc2eb','#fee140'];
-    new Chart(document.getElementById('tagsChart'), {
-        type: 'bar',
-        data: {
-            labels: tagLabels,
-            datasets: [{
-                label: 'Contacts',
-                data: tagCounts,
-                backgroundColor: tagColors.slice(0, tagLabels.length),
-                borderWidth: 0, borderRadius: 6, borderSkipped: false
-            }]
-        },
-        options: {
-            ...lineOpts,
-            indexAxis: 'y',
-            plugins: { ...baseOpts.plugins, legend: { display: false } }
-        }
-    });
 
 
     // 6) Bot Status
