@@ -650,8 +650,8 @@ def webchat_standalone_page(request, widget_id):
         if admin_obj and not org:
             org_name = admin_obj.assistant_name or 'Chat'
 
-    # Build API base URL (protocol + host without trailing slash)
-    api_base = request.build_absolute_uri('/').rstrip('/')
+    # Use empty api_base so JS fetches use relative paths (avoids http/https mismatch behind proxy)
+    api_base = ''
 
     return render(request, 'webchat/standalone.html', {
         'widget': widget,
