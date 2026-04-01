@@ -444,6 +444,12 @@ session=session,
                 except Exception as tag_error:
                     logger.error(f"Action tag processing error: {str(tag_error)}")
             
+            # Strip any remaining metadata tags not meant for end users
+            if bot_response_text:
+                bot_response_text = re.sub(r'\{\{custom_field:[^}]*\}\}', '', bot_response_text)
+                bot_response_text = re.sub(r'\{\{tag:(add|remove):[^}]*\}\}', '', bot_response_text)
+                bot_response_text = re.sub(r'\n\s*\n\s*\n', '\n\n', bot_response_text).strip()
+
             # Create bot message
             bot_message = WebChatMessage.objects.create(
                 session=session,
