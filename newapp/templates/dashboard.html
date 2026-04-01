@@ -197,11 +197,7 @@
             <div class="kpi-label">Active Conversations</div>
             <span class="kpi-trend {% if active_convos_change >= 0 %}up{% else %}down{% endif %}">{{ active_convos_change }}%</span>
         </div>
-        <div class="kpi-card" style="background: var(--gradient-5);">
-            <i class="fas fa-calendar-check kpi-icon"></i>
-            <div class="kpi-value">{{ total_bookings }}</div>
-            <div class="kpi-label">Confirmed Bookings</div>
-        </div>
+
         <div class="kpi-card" style="background: var(--gradient-6);">
             <i class="fas fa-dollar-sign kpi-icon"></i>
             <div class="kpi-value">${{ pipeline_value|floatformat:0 }}</div>
@@ -231,11 +227,7 @@
             <h3><i class="fas fa-tags" style="color:#43e97b;margin-right:8px;"></i>Top Tags</h3>
             <canvas id="tagsChart"></canvas>
         </div>
-        <!-- 5. Bookings Over Time -->
-        <div class="chart-card">
-            <h3><i class="fas fa-calendar-alt" style="color:#fa709a;margin-right:8px;"></i>Bookings (7 Days)</h3>
-            <canvas id="bookingsChart"></canvas>
-        </div>
+
         <!-- 6. Bot Activity -->
         <div class="chart-card">
             <h3><i class="fas fa-robot" style="color:#a18cd1;margin-right:8px;"></i>Bot Status</h3>
@@ -341,21 +333,6 @@
         }
     });
 
-    // 5) Bookings
-    new Chart(document.getElementById('bookingsChart'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Bookings',
-                data: {{ chart_bookings|safe }},
-                backgroundColor: 'rgba(250,112,154,0.7)',
-                borderColor: '#fa709a',
-                borderWidth: 1, borderRadius: 6, borderSkipped: false
-            }]
-        },
-        options: lineOpts
-    });
 
     // 6) Bot Status
     new Chart(document.getElementById('botChart'), {

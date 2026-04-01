@@ -691,7 +691,7 @@ def dashboard_view(request):
     from django.db.models.functions import TruncDate
     from .models import (
         Organization, User as UserModel, Message,
-        Tag, UserTag, CalendlyBookingTracker,
+        Tag, UserTag,
         Opportunity, WebChatSession,
     )
 
@@ -705,7 +705,6 @@ def dashboard_view(request):
     user_qs = UserModel.objects.none()
     msg_qs = Message.objects.none()
     tag_qs = Tag.objects.none()
-    booking_qs = CalendlyBookingTracker.objects.none()
     opp_qs = Opportunity.objects.none()
 
     if org_id:
@@ -716,7 +715,6 @@ def dashboard_view(request):
             user_qs = UserModel.objects.filter(organization=org)
             msg_qs = Message.objects.filter(user_id__organization=org)
             tag_qs = Tag.objects.filter(organization_id=org_id)
-            booking_qs = CalendlyBookingTracker.objects.filter(user__organization=org)
             opp_qs = Opportunity.objects.filter(organization=org)
     elif admin_id:
         admin_obj = Admin.objects.filter(id=admin_id).first()
@@ -726,7 +724,6 @@ def dashboard_view(request):
             user_qs = UserModel.objects.filter(admin_id=admin_obj)
             msg_qs = Message.objects.filter(user_id__admin_id=admin_obj)
             tag_qs = Tag.objects.filter(admin_id=admin_id)
-            booking_qs = CalendlyBookingTracker.objects.filter(user__admin_id=admin_obj)
             opp_qs = Opportunity.objects.filter(organization__isnull=True)
 
     now = timezone.now()
@@ -744,18 +741,7 @@ def dashboard_view(request):
     active_convos_7d = msg_qs.filter(created_at__gte=seven_days_ago, who='human').values('user_id').distinct().count()
     active_convos_prev_7d = msg_qs.filter(created_at__gte=fourteen_days_ago, created_at__lt=seven_days_ago, who='human').values('user_id').distinct().count()
 
-    total_bookings = booking_qs.filter(status='booked').count()
-    try:
-        from .models import GoogleCalendarBooking
-        if org_id:
-            gcal_bookings = GoogleCalendarBooking.objects.filter(user__organization_id=org_id, status='booked').count()
-        elif admin_id:
-            gcal_bookings = GoogleCalendarBooking.objects.filter(user__admin_id=admin_id, status='booked').count()
-        else:
-            gcal_bookings = 0
-        total_bookings += gcal_bookings
-    except Exception:
-        pass
+    total_bookings = 0  # Kept for KPI card but not charted
 
     pipeline_value = opp_qs.filter(status='open').aggregate(total=Sum('opportunity_value'))['total'] or 0
 
@@ -795,23 +781,16 @@ def dashboard_view(request):
     webchat_count = user_qs.filter(phone_no__startswith='webchat_').count()
     whatsapp_count = total_contacts - webchat_count
 
-    # 4) Tag distribution (top 8)
+    # 4) Tag distribution (top 8) — count users per tag from actual UserTag table
+    user_ids_in_scope = user_qs.values_list('id', flat=True)
     tag_data = list(
-        UserTag.objects.filter(tag__in=tag_qs)
+        UserTag.objects.filter(user_id__in=user_ids_in_scope)
         .values('tag__name')
-        .annotate(count=Count('id'))
+        .annotate(count=Count('user_id', distinct=True))
         .order_by('-count')[:8]
     )
     tag_labels = [t['tag__name'] for t in tag_data]
     tag_counts = [t['count'] for t in tag_data]
-
-    # 5) Bookings over time (7 days)
-    bookings_by_day = dict(
-        booking_qs.filter(status='booked', created_at__gte=seven_days_ago)
-        .annotate(day=TruncDate('created_at'))
-        .values('day').annotate(c=Count('id')).values_list('day', 'c')
-    )
-    chart_bookings = [bookings_by_day.get(d, 0) for d in date_range]
 
     # 6) Bot activity (enabled vs disabled)
     bot_on = user_qs.filter(bot_enabled=True).count()
@@ -841,7 +820,7 @@ def dashboard_view(request):
         'webchat_count': webchat_count,
         'tag_labels': _json.dumps(tag_labels),
         'tag_counts': _json.dumps(tag_counts),
-        'chart_bookings': _json.dumps(chart_bookings),
+
         'bot_on': bot_on,
         'bot_off': bot_off,
     }
