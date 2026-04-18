@@ -1,12 +1,7 @@
+{% extends 'layouts/base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Assets</title>
-    <style>
+{% block head_css %}
+<style>
         :root {
             --sidebar-w: 250px;
             --bg-page: #f8fafc;
@@ -363,13 +358,10 @@
             }
         }
     </style>
-</head>
+{% endblock %}
 
-<body>
-    {% include 'layouts/sidebar.html' %}
-
-    <main class="main">
-        <a href="{% url 'settings' %}" class="back-link">← Back to Settings</a>
+{% block content %}
+<a href="{% url 'settings' %}" class="back-link">← Back to Settings</a>
 
         <div class="page-header">
             <h1 class="page-title">Image Assets</h1>
@@ -412,7 +404,7 @@
             <button class="btn" style="margin-top: 16px;" onclick="openAddModal()">+ Add Your First Image</button>
         </div>
         {% endif %}
-    </main>
+    
 
     <!-- Modal -->
     <div class="modal-overlay" id="imageModal">
@@ -638,6 +630,4 @@
             }
         });
     </script>
-</body>
-
-</html>
+{% endblock %}
