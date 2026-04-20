@@ -1,0 +1,541 @@
+{% load static %}
+{% verbatim %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Setup Guide - SpeedBots</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f8fb; --card: #ffffff; --ink: #111827;
+      --muted: #6b7280; --line: #e5e7eb; --fill: #f3f4f6;
+      --primary: #667eea; --primary-press: #5a67d8;
+      --primary-light: #eef2ff; --radius: 18px;
+      --shadow: 0 20px 50px rgba(0,0,0,.08);
+      --success: #16a34a; --success-bg: #f0fdf4;
+      --warning: #d97706; --warning-bg: #fffbeb;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--ink);
+      padding: 32px 16px; line-height: 1.6;
+    }
+    .container { width: min(820px, 96vw); margin: 0 auto; }
+
+    /* Header */
+    .guide-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: var(--radius); padding: 36px 40px;
+      color: white; margin-bottom: 28px;
+      box-shadow: 0 12px 40px rgba(102,126,234,.3);
+    }
+    .guide-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .guide-header p { font-size: 15px; opacity: 0.9; }
+
+    /* Section cards */
+    .section {
+      background: var(--card); border-radius: var(--radius);
+      box-shadow: var(--shadow); margin-bottom: 20px;
+      overflow: hidden; transition: transform .2s;
+    }
+    .section:hover { transform: translateY(-2px); }
+
+    .section-header {
+      display: flex; align-items: center; gap: 14px;
+      padding: 20px 28px; cursor: pointer;
+      border-bottom: 1px solid transparent;
+      transition: border-color .2s;
+      user-select: none;
+    }
+    .section.open .section-header { border-bottom-color: var(--line); }
+
+    .section-num {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--primary-light); color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 15px; flex-shrink: 0;
+    }
+    .section-title { font-size: 17px; font-weight: 600; flex: 1; }
+    .section-arrow {
+      transition: transform .3s; color: var(--muted);
+    }
+    .section.open .section-arrow { transform: rotate(180deg); }
+
+    .section-body {
+      max-height: 0; overflow: hidden;
+      transition: max-height .4s ease;
+    }
+    .section.open .section-body { max-height: 3000px; }
+
+    .section-content { padding: 20px 28px 24px; }
+    .section-content p { font-size: 14px; color: #475569; margin-bottom: 12px; }
+    .section-content h4 { font-size: 15px; font-weight: 600; margin: 16px 0 8px; color: #1e293b; }
+    .section-content ol, .section-content ul {
+      font-size: 14px; color: #475569; padding-left: 20px; margin-bottom: 12px;
+    }
+    .section-content li { margin-bottom: 6px; }
+
+    /* Code blocks */
+    .code-block {
+      background: #1e293b; color: #e2e8f0; border-radius: 10px;
+      padding: 14px 18px; font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 13px; overflow-x: auto; margin: 10px 0 14px;
+      line-height: 1.6;
+    }
+    .code-inline {
+      background: var(--fill); color: #c7254e; font-family: Consolas, monospace;
+      padding: 2px 7px; border-radius: 5px; font-size: 13px;
+    }
+
+    /* Tip / Warning boxes */
+    .tip, .warning {
+      border-radius: 10px; padding: 14px 18px; margin: 12px 0;
+      font-size: 13px; display: flex; align-items: flex-start; gap: 10px;
+    }
+    .tip { background: var(--success-bg); color: #166534; border: 1px solid #bbf7d0; }
+    .warning { background: var(--warning-bg); color: #92400e; border: 1px solid #fde68a; }
+    .tip-icon, .warning-icon { font-size: 18px; flex-shrink: 0; }
+
+    /* Table */
+    .guide-table {
+      width: 100%; border-collapse: collapse; margin: 12px 0;
+      font-size: 13px; border-radius: 10px; overflow: hidden;
+    }
+    .guide-table th {
+      background: var(--primary-light); color: var(--primary);
+      text-align: left; padding: 10px 14px; font-weight: 600;
+    }
+    .guide-table td {
+      padding: 10px 14px; border-bottom: 1px solid var(--line); color: #475569;
+    }
+    .guide-table tr:last-child td { border-bottom: 0; }
+    .guide-table code { background: var(--fill); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+
+    /* Checklist */
+    .checklist { list-style: none; padding: 0; margin: 16px 0; }
+    .checklist li {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 10px;
+      margin-bottom: 6px; font-size: 14px;
+      background: var(--fill); transition: background .2s;
+    }
+    .checklist li:hover { background: var(--primary-light); }
+    .checklist input[type="checkbox"] {
+      width: 18px; height: 18px; accent-color: var(--primary);
+      cursor: pointer; flex-shrink: 0;
+    }
+    .checklist label { cursor: pointer; flex: 1; }
+
+    /* Footer */
+    .guide-footer {
+      text-align: center; padding: 28px; color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* Dashboard button */
+    .btn-dashboard {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--primary); color: white; text-decoration: none;
+      padding: 12px 28px; border-radius: 12px; font-weight: 600;
+      font-size: 15px; transition: all .2s; margin-top: 8px;
+    }
+    .btn-dashboard:hover { background: var(--primary-press); transform: translateY(-1px); }
+
+    @media (max-width: 600px) {
+      body { padding: 16px 8px; }
+      .guide-header { padding: 24px 20px; }
+      .section-header { padding: 16px 18px; }
+      .section-content { padding: 16px 18px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="guide-header">
+      <div style="display:flex;align-items:center;gap:20px;margin-bottom:12px;">
+        <div style="background:white;border-radius:16px;padding:8px 12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.15);">
+          <img src="{% endverbatim %}{% static 'images/speedbot_logo.png' %}{% verbatim %}" alt="SpeedBot" style="height:52px;" />
+        </div>
+        <h1 style="margin:0;font-size:28px;">SpeedBot Setup Guide</h1>
+      </div>
+      <p>Everything you need to set up and start using your AI-powered chatbot platform.</p>
+    </div>
+
+    <!-- Section 1: Getting Started -->
+    <div class="section open">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">1</span>
+        <span class="section-title">Getting Started</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <ol>
+            <li><strong>Log in</strong> to your SpeedBot dashboard using the login URL, ID, and password provided by the SpeedBot team.</li>
+            <li>Once logged in, you'll see the <strong>Inbox</strong> — the main dashboard.</li>
+          </ol>
+          <div class="tip"><span class="tip-icon">💡</span> <span><strong>First things to do:</strong> Connect your WhatsApp number, add your OpenAI API key, and set up your AI system prompt.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: WhatsApp -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">2</span>
+        <span class="section-title">Connecting Your WhatsApp Account</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <div class="tip"><span class="tip-icon">🤝</span> <span><strong>Our team will help you with this.</strong> We'll connect your WhatsApp account for you during onboarding. No action needed from your side!</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: OpenAI API Key -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">3</span>
+        <span class="section-title">Adding Your OpenAI API Key</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <h4>How to Get an OpenAI API Key:</h4>
+          <ol>
+            <li>Go to <a href="https://platform.openai.com/signup" target="_blank">platform.openai.com/signup</a> and create an account.</li>
+            <li>Navigate to <strong>API Keys</strong> → <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a>.</li>
+            <li>Click <strong>"Create new secret key"</strong>.</li>
+            <li><strong>Copy the key</strong> immediately — it won't be shown again.</li>
+            <li>Add billing/credits at <a href="https://platform.openai.com/account/billing" target="_blank">OpenAI Billing</a>.</li>
+          </ol>
+          <h4>Adding the Key to SpeedBot:</h4>
+          <ol>
+            <li>Go to <strong>Settings → Integration</strong>.</li>
+            <li>Paste your API key in the <strong>OpenAI API Key</strong> field.</li>
+            <li>Click <strong>Save</strong>.</li>
+          </ol>
+          <div class="warning"><span class="warning-icon">⚠️</span> <span>Make sure your OpenAI account has <strong>credits/billing enabled</strong>. Without credits, the chatbot cannot generate responses.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: GPT Model -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">4</span>
+        <span class="section-title">Selecting a GPT Model</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <ol>
+            <li>Go to <strong>Settings → Integration</strong>.</li>
+            <li>Find the <strong>GPT Model</strong> dropdown.</li>
+            <li>Select your preferred model and click <strong>Save</strong>.</li>
+          </ol>
+          <table class="guide-table">
+            <tr><th>Model</th><th>Best For</th><th>Cost</th></tr>
+            <tr><td><code>gpt-4o</code></td><td>Complex conversations (recommended)</td><td>Higher</td></tr>
+            <tr><td><code>gpt-4o-mini</code></td><td>Simple Q&A bots, testing</td><td>Lower</td></tr>
+            <tr><td><code>gpt-4-turbo</code></td><td>High capability, faster</td><td>Medium</td></tr>
+            <tr><td><code>gpt-3.5-turbo</code></td><td>Basic use, most affordable</td><td>Lowest</td></tr>
+          </table>
+          <div class="tip"><span class="tip-icon">💡</span> <span>Start with <code>gpt-4o-mini</code> for testing (lower cost), then switch to <code>gpt-4o</code> for production.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 5: System Prompt -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">5</span>
+        <span class="section-title">Writing Your AI Prompt (System Prompt)</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <p>The <strong>System Prompt</strong> tells the AI who it is, how to behave, and what to do. Go to <strong>Settings → ChatGPT Prompt</strong>.</p>
+          <h4>Example Prompt:</h4>
+          <div class="code-block">You are a friendly and professional customer support assistant for [Your Company Name].
+
+## YOUR ROLE
+- Help customers with product inquiries, order status, and general questions.
+- Be polite, concise, and helpful at all times.
+
+## COMPANY INFORMATION
+- Company: [Your Company Name]
+- Products: [List your products/services]
+- Working Hours: Monday to Friday, 9 AM – 6 PM
+
+## CONVERSATION RULES
+1. Always greet the customer warmly.
+2. Keep responses concise — no more than 2-3 short paragraphs.
+3. Never make up information.
+
+## USING TAGS
+- When a customer asks about pricing → {{tag:add:PRICING_INQUIRY}}
+- When a customer makes a purchase → {{tag:add:CUSTOMER}}
+
+## USING CUSTOM FIELDS
+- When you learn the customer's name → {{custom_field:customer_name:THE_NAME}}
+- When you learn their email → {{custom_field:customer_email:THE_EMAIL}}
+
+## SENDING IMAGES
+- When a customer asks about products → {{image:product_catalog}}
+
+## BOOKING APPOINTMENTS (if Calendly is set up)
+- When a customer wants to schedule → {{calendly:booking_link}}
+- NEVER generate your own booking URLs.</div>
+
+          <h4>Key Syntax Reference:</h4>
+          <table class="guide-table">
+            <tr><th>Feature</th><th>Syntax</th><th>Example</th></tr>
+            <tr><td><strong>Add Tag</strong></td><td><code>{{tag:add:TAG_NAME}}</code></td><td><code>{{tag:add:NEW_LEAD}}</code></td></tr>
+            <tr><td><strong>Remove Tag</strong></td><td><code>{{tag:remove:TAG_NAME}}</code></td><td><code>{{tag:remove:NEW_LEAD}}</code></td></tr>
+            <tr><td><strong>Save Custom Field</strong></td><td><code>{{custom_field:name:value}}</code></td><td><code>{{custom_field:customer_name:John}}</code></td></tr>
+            <tr><td><strong>Send Image</strong></td><td><code>{{image:asset_name}}</code></td><td><code>{{image:product_catalog}}</code></td></tr>
+            <tr><td><strong>Calendly Link</strong></td><td><code>{{calendly:link_name}}</code></td><td><code>{{calendly:booking_link}}</code></td></tr>
+            <tr><td><strong>External API</strong></td><td><code>{{api:api_name}}</code></td><td><code>{{api:check_order}}</code></td></tr>
+          </table>
+          <div class="warning"><span class="warning-icon">⚠️</span> <span>Tag names, custom field names, and image asset names must <strong>exactly match</strong> what you create in the dashboard (case-sensitive).</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 6: Tags -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">6</span>
+        <span class="section-title">Creating Tags</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <p>Tags help you categorize and segment your contacts (e.g., "New Lead", "Customer", "VIP").</p>
+          <ol>
+            <li>Go to <strong>Settings → Tags</strong>.</li>
+            <li>Click <strong>"Add New Tag"</strong>.</li>
+            <li>Enter the <strong>Tag Name</strong> (e.g., <span class="code-inline">NEW_LEAD</span>, <span class="code-inline">CUSTOMER</span>).</li>
+            <li>Optionally set a <strong>Keyword</strong> for auto-tagging.</li>
+            <li>Click <strong>Save</strong>.</li>
+          </ol>
+          <p>In your prompt, instruct the AI: <span class="code-inline">{{tag:add:PRICING_INQUIRY}}</span></p>
+          <p>Tags appear in the <strong>Inbox</strong> right panel and <strong>Contacts</strong> page for filtering.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 7: Custom Fields -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">7</span>
+        <span class="section-title">Creating Custom Fields</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <p>Custom fields store specific data about each contact (name, email, product interest, etc.).</p>
+          <ol>
+            <li>Go to <strong>Settings → Custom Fields</strong>.</li>
+            <li>Click <strong>"Add New Field"</strong>.</li>
+            <li>Enter the <strong>Field Name</strong> and select the <strong>Field Type</strong>.</li>
+            <li>Click <strong>Save</strong>.</li>
+          </ol>
+          <h4>Available Field Types:</h4>
+          <table class="guide-table">
+            <tr><th>Type</th><th>Use For</th></tr>
+            <tr><td>Text</td><td>Short text like names, IDs</td></tr>
+            <tr><td>Long Text</td><td>Addresses, notes</td></tr>
+            <tr><td>Number</td><td>Quantities, amounts</td></tr>
+            <tr><td>Email</td><td>Email addresses</td></tr>
+            <tr><td>Phone</td><td>Phone numbers</td></tr>
+            <tr><td>Date / Date & Time</td><td>Dates and timestamps</td></tr>
+            <tr><td>Dropdown / Multi-Select</td><td>Predefined choices</td></tr>
+            <tr><td>Yes/No</td><td>Toggle fields</td></tr>
+          </table>
+          <p>In your prompt: <span class="code-inline">{{custom_field:customer_name:John Smith}}</span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 8: Follow-Ups -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">8</span>
+        <span class="section-title">Setting Up Follow-Up Messages</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <p>Follow-ups automatically re-engage contacts who haven't replied.</p>
+          <ol>
+            <li>Go to <strong>Settings → Follow-Up Messages</strong>.</li>
+            <li>Toggle <strong>Enable Follow-Ups</strong> to ON.</li>
+            <li>Click <strong>"Add Follow-Up Step"</strong>.</li>
+            <li>Set the <strong>Message</strong>, <strong>Delay (minutes)</strong>, and <strong>Active</strong> toggle.</li>
+            <li>Click <strong>Save</strong>.</li>
+          </ol>
+          <h4>Example Sequence:</h4>
+          <table class="guide-table">
+            <tr><th>Step</th><th>Delay</th><th>Message</th></tr>
+            <tr><td>1</td><td>10 min</td><td>Hi! 👋 Did you have any other questions?</td></tr>
+            <tr><td>2</td><td>60 min</td><td>Hey! Would you like more details about our products?</td></tr>
+            <tr><td>3</td><td>24 hrs</td><td>Hi again! 🌟 We're here whenever you're ready.</td></tr>
+          </table>
+          <div class="tip"><span class="tip-icon">💡</span> <span>If the user replies, all pending follow-ups are <strong>automatically cancelled</strong>.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 9: External APIs -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">9</span>
+        <span class="section-title">Setting Up External APIs</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <p>External APIs let your chatbot fetch or send data to third-party services.</p>
+          <ol>
+            <li>Go to <strong>Settings → External APIs</strong>.</li>
+            <li>Click <strong>"Add New API"</strong>.</li>
+            <li>Configure: <strong>Name</strong>, <strong>URL</strong>, <strong>Method</strong> (GET/POST), <strong>Headers</strong>, and <strong>Payload</strong>.</li>
+            <li>Click <strong>Save</strong>.</li>
+          </ol>
+          <p>In your prompt: <span class="code-inline">{{api:check_order}}</span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 10: Calendly -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">10</span>
+        <span class="section-title">Setting Up Calendly Integration</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <h4>Connect Calendly:</h4>
+          <ol>
+            <li>Go to <strong>Settings → Integration</strong>.</li>
+            <li>Click <strong>"Connect Calendly"</strong> and log in.</li>
+          </ol>
+          <h4>Set Up Booking Links:</h4>
+          <ol>
+            <li>Go to <strong>Settings → Calendly Booking Links</strong>.</li>
+            <li>Click <strong>"Add Booking Link"</strong>.</li>
+            <li>Set: <strong>Name</strong>, <strong>URL</strong>, optional <strong>Custom Field</strong>, and <strong>Booking Message</strong>.</li>
+            <li>Click <strong>Save</strong>.</li>
+          </ol>
+          <h4>In Your Prompt:</h4>
+          <div class="code-block">## APPOINTMENT BOOKING RULES
+1. When a customer wants to book → ALWAYS use {{calendly:booking_link}}
+2. NEVER ask for name, phone, email manually — Calendly handles it.
+3. NEVER generate your own URLs — always use the tag.</div>
+          <div class="tip"><span class="tip-icon">💡</span> <span>When a user books via Calendly, SpeedBot automatically updates their contact with booking status.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 11: Image Assets -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">11</span>
+        <span class="section-title">Uploading Image Assets</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <p>Image assets let your chatbot send images (product photos, menus, brochures).</p>
+          <ol>
+            <li>Go to <strong>Settings → Image Assets</strong>.</li>
+            <li>Click <strong>"Upload Image"</strong>.</li>
+            <li>Enter the <strong>Asset Name</strong> (e.g., <span class="code-inline">product_catalog</span>).</li>
+            <li>Select the image file and click <strong>Upload</strong>.</li>
+          </ol>
+          <p>In your prompt: <span class="code-inline">{{image:product_catalog}}</span></p>
+          <div class="warning"><span class="warning-icon">⚠️</span> <span>Asset name must <strong>exactly match</strong> — use lowercase with underscores, no spaces.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 12: Test Chat -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">12</span>
+        <span class="section-title">Test Chat</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <p>Test your prompt before going live:</p>
+          <ol>
+            <li>Go to <strong>Test Chat</strong> in the sidebar.</li>
+            <li>Type a message and press Send.</li>
+            <li>Verify responses, tags, custom fields, images, and Calendly links work correctly.</li>
+          </ol>
+          <div class="tip"><span class="tip-icon">💡</span> <span>Test greetings, product inquiries, edge cases, and objections for a complete check.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Start Checklist -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-num">✅</span>
+        <span class="section-title">Quick Setup Checklist</span>
+        <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="section-body">
+        <div class="section-content">
+          <ul class="checklist">
+            <li><input type="checkbox" id="c1"><label for="c1">Logged in to SpeedBot dashboard</label></li>
+            <li><input type="checkbox" id="c2"><label for="c2">WhatsApp number connected</label></li>
+            <li><input type="checkbox" id="c3"><label for="c3">OpenAI API key added (with billing enabled)</label></li>
+            <li><input type="checkbox" id="c4"><label for="c4">GPT model selected</label></li>
+            <li><input type="checkbox" id="c5"><label for="c5">System prompt written and saved</label></li>
+            <li><input type="checkbox" id="c6"><label for="c6">Tags created (matching your prompt)</label></li>
+            <li><input type="checkbox" id="c7"><label for="c7">Custom fields created (matching your prompt)</label></li>
+            <li><input type="checkbox" id="c8"><label for="c8">Image assets uploaded (if using images)</label></li>
+            <li><input type="checkbox" id="c9"><label for="c9">Follow-up messages configured (if needed)</label></li>
+            <li><input type="checkbox" id="c10"><label for="c10">Calendly connected and booking links added (if needed)</label></li>
+            <li><input type="checkbox" id="c11"><label for="c11">External APIs configured (if needed)</label></li>
+
+            <li><input type="checkbox" id="c12"><label for="c12">Test Chat completed — all features working ✅</label></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Go to Dashboard -->
+    <div style="text-align:center; margin: 24px 0;">
+      <a href="/dashboard/" class="btn-dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Go to Dashboard
+      </a>
+    </div>
+
+    <!-- Footer -->
+    <div class="guide-footer">
+      Need help? Email us at <a href="mailto:nithi@soulcreationz.com" style="color:var(--primary);font-weight:600;">nithi@soulcreationz.com</a><br>
+      <small>© SpeedBot — AI-Powered Chatbot Platform</small>
+    </div>
+  </div>
+
+  <script>
+    function toggleSection(header) {
+      const section = header.parentElement;
+      section.classList.toggle('open');
+    }
+  </script>
+</body>
+</html>
+{% endverbatim %}

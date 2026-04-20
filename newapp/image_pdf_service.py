@@ -86,7 +86,8 @@ def download_whatsapp_media(media_id: str, access_token: str) -> Optional[bytes]
         url = f"https://graph.facebook.com/v17.0/{media_id}"
         headers = {"Authorization": f"Bearer {access_token}"}
         
-        response = requests.get(url, headers=headers)
+        # BUG FIX: Add timeout to prevent hanging
+        response = requests.get(url, headers=headers, timeout=30)
         if response.status_code != 200:
             print(f"Failed to get media URL: {response.text}")
             return None
@@ -123,13 +124,29 @@ def convert_pdf_to_images(pdf_bytes: bytes) -> List[str]:
         from pdf2image import convert_from_bytes
         import platform
         
-        # Set Poppler path for Windows
+        # Set Poppler path for Windows (configurable via environment variable)
         poppler_path = None
         if platform.system() == 'Windows':
-            poppler_path = r"C:\Users\Meet\.gemini\poppler-25.12.0\Library\bin"
+            poppler_path = os.environ.get('POPPLER_PATH', r"C:\Users\Meet\.gemini\poppler-25.12.0\Library\bin")
         
-        # Convert PDF to images (one per page)
-        images = convert_from_bytes(pdf_bytes, dpi=150, poppler_path=poppler_path)
+        # Convert PDF to images (limit to first 5 pages to avoid API overload)
+        # Make page limit configurable via environment variable
+        max_pages = int(os.environ.get('MAX_PDF_PAGES', '5'))
+        
+        # BUG FIX: Handle password-protected PDFs
+        try:
+            images = convert_from_bytes(pdf_bytes, dpi=150, poppler_path=poppler_path, first_page=1, last_page=max_pages)
+        except Exception as pdf_error:
+            error_msg = str(pdf_error).lower()
+            if 'password' in error_msg or 'encrypted' in error_msg:
+                print("[ImageService] ERROR: PDF is password-protected")
+                return []
+            # Re-raise other errors
+            raise
+        
+        # Log if PDF has more pages than analyzed
+        if len(images) >= max_pages:
+            print(f"[ImageService] Warning: PDF has {max_pages}+ pages, analyzing first {max_pages} only")
         
         base64_images = []
         for img in images:
@@ -246,10 +263,12 @@ def analyze_images_with_vision(
         })
         
         # Call OpenAI Vision API
+        # Scale max_tokens based on number of images (more pages = more tokens needed)
+        tokens = min(1500 * len(base64_images), 4096)
         response = client.chat.completions.create(
             model="gpt-4o",  # GPT-4o has vision capabilities
             messages=messages,
-            max_tokens=1500
+            max_tokens=tokens
         )
         
         return response.choices[0].message.content
@@ -266,7 +285,10 @@ def analyze_media_message(
     media_type: str,
     user_question: str,
     admin,  # Admin model instance
-    mime_type: str = None
+    mime_type: str = None,
+    openai_key: str = None,
+    whatsapp_token: str = None,
+    organization=None  # Organization model instance
 ) -> str:
     """
     Main function to analyze media (image or PDF) from WhatsApp.
@@ -277,22 +299,46 @@ def analyze_media_message(
         user_question: The user's question/caption
         admin: Admin model instance with API keys
         mime_type: MIME type of the document (for PDFs)
+        openai_key: Optional OpenAI API key (preferred over admin's key)
+        whatsapp_token: Optional WhatsApp token (preferred over admin's token)
+        organization: Optional Organization model instance
         
     Returns:
         Analysis response string
     """
-    # Get API keys from admin
-    if not admin or not admin.openai_api_key:
+    # Get API keys - prefer passed-in keys (from org/creds), fall back to org, then admin
+    api_key = openai_key
+    wa_token = whatsapp_token
+    
+    if not api_key and organization:
+        api_key = getattr(organization, 'openai_api_key', None)
+        wa_token = wa_token or getattr(organization, 'whatsapp_token', None)
+    if not api_key and admin:
+        api_key = getattr(admin, 'openai_api_key', None)
+        wa_token = wa_token or getattr(admin, 'whatsapp_token', None)
+    
+    if not api_key:
         return "Sorry, I cannot analyze images right now. The AI service is not configured."
     
-    if not admin.whatsapp_token:
+    if not wa_token:
         return "Sorry, I cannot download your media. WhatsApp is not configured."
     
     # Download the media
     try:
-        media_bytes = download_whatsapp_media(media_id, admin.whatsapp_token)
+        # BUG FIX: Add size validation
+        MAX_MEDIA_SIZE_MB = 16
+        media_bytes = download_whatsapp_media(media_id, wa_token)
+        
+        if not media_bytes:
+            return "Sorry, I couldn't download your file. Please try sending it again."
+        
+        # Check file size
+        media_size_mb = len(media_bytes) / (1024 * 1024)
+        if media_size_mb > MAX_MEDIA_SIZE_MB:
+            return f"Sorry, the file is too large (max {MAX_MEDIA_SIZE_MB}MB). Please send a smaller file."
+        
         with open('debug_log.txt', 'a') as f:
-            f.write(f"[Vision] Downloaded media bytes: {len(media_bytes)}\n")
+            f.write(f"[Vision] Downloaded media bytes: {len(media_bytes)} ({media_size_mb:.2f}MB)\n")
     except Exception as e:
         with open('debug_log.txt', 'a') as f:
             f.write(f"[Vision] Download check failed: {str(e)}\n")
@@ -335,22 +381,32 @@ def analyze_media_message(
     if not base64_images:
         return "Sorry, I couldn't extract any images to analyze."
     
-    # Get system prompt if available
+    # Get system prompt — Feature 1: prefer is_default prompt per org/admin
     from .models import ChatGPTPrompt
-    prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
+    prompt_obj = None
+    if organization:
+        prompt_obj = ChatGPTPrompt.objects.filter(organization=organization, is_default=True).first()
+        if not prompt_obj:
+            prompt_obj = ChatGPTPrompt.objects.filter(organization=organization).order_by('-updated_at').first()
+    if not prompt_obj and admin:
+        prompt_obj = ChatGPTPrompt.objects.filter(admin=admin, is_default=True).first()
+        if not prompt_obj:
+            prompt_obj = ChatGPTPrompt.objects.filter(admin=admin).order_by('-updated_at').first()
+    if not prompt_obj:
+        prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
     system_prompt = prompt_obj.prompt_text if prompt_obj else ""
     
     # Add context for image analysis
     enhanced_prompt = system_prompt
     if not enhanced_prompt:
         enhanced_prompt = "You are a helpful assistant that analyzes images and documents."
-    enhanced_prompt += "\n\nWhen analyzing images or documents, be specific and detailed. If asked about specific information (like IDs, dates, amounts), extract and provide that exact information."
+    enhanced_prompt += "\n\nWhen analyzing images or documents, respond in the context of the conversation. If the image is a screenshot of a booking confirmation, appointment, or receipt, acknowledge it and extract relevant details. Be specific and detailed. If asked about specific information (like IDs, dates, amounts), extract and provide that exact information."
     
     # Analyze with Vision API
     response = analyze_images_with_vision(
         base64_images,
         user_question,
-        admin.openai_api_key,
+        api_key,
         enhanced_prompt
     )
     
@@ -358,6 +414,76 @@ def analyze_media_message(
         f.write(f"\n[Vision] OpenAI Response:\n{response}\n")
         
     return response
+
+
+def transcribe_audio(media_id: str, openai_key: str, whatsapp_token: str) -> Optional[str]:
+    """
+    Download audio from WhatsApp and transcribe using OpenAI Whisper.
+    Supports: ogg/opus (WhatsApp voice), mp3, m4a, wav, webm
+    
+    Args:
+        media_id: WhatsApp media ID
+        openai_key: OpenAI API key
+        whatsapp_token: WhatsApp API access token
+        
+    Returns:
+        Transcription text, or None if failed
+    """
+    if not openai_key:
+        print("[Audio] No OpenAI key for transcription")
+        return None
+    
+    if not whatsapp_token:
+        print("[Audio] No WhatsApp token for media download")
+        return None
+    
+    # Download audio from WhatsApp
+    audio_bytes = download_whatsapp_media(media_id, whatsapp_token)
+    if not audio_bytes:
+        print("[Audio] Failed to download audio")
+        return None
+    
+    # Save to temp file (Whisper API needs a file object)
+    temp_path = None
+    try:
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.ogg', delete=False) as f:
+            f.write(audio_bytes)
+            temp_path = f.name
+        
+        # Transcribe with OpenAI Whisper
+        from openai import OpenAI
+        client = OpenAI(api_key=openai_key)
+        
+        with open(temp_path, 'rb') as audio_file:
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                prompt="This is a voice message from a WhatsApp conversation."
+            )
+        
+        with open('debug_log.txt', 'a', encoding='utf-8') as f:
+            f.write(f"[Audio] Transcribed: {transcript.text[:200] if transcript.text else 'EMPTY'}\n")
+        
+        transcribed_text = transcript.text.strip() if transcript.text else None
+        if transcribed_text:
+            print(f"[Audio] Transcribed: {transcribed_text[:100]}...")
+        else:
+            print("[Audio] Whisper returned empty transcription")
+        
+        return transcribed_text
+        
+    except Exception as e:
+        print(f"[Audio] Transcription error: {e}")
+        with open('debug_log.txt', 'a') as f:
+            f.write(f"[Audio] Transcription error: {e}\n")
+        return None
+    finally:
+        if temp_path:
+            try:
+                os.unlink(temp_path)
+            except Exception as cleanup_error:
+                print(f"[Audio] Warning: Could not delete temp file: {cleanup_error}")
 
 
 def save_chat_media(media_id: str, access_token: str) -> Optional[str]:

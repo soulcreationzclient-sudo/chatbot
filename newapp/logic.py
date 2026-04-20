@@ -2,6 +2,8 @@ import requests
 import json
 from .models import ExternalAPI
 from django.utils import timezone
+from newapp.logging_config import get_logger
+tag_logger = get_logger('webhook')
 
 # Global variable to track current user phone during request processing
 # This gets set in whatsapp.py before calling execute_tool
@@ -35,13 +37,19 @@ def apply_user_tag(tag_name, admin, phone=None):
     if not user_phone:
         return "Error: No user phone number available"
     
-    # Find the tag - check organization first, then admin
     tag = None
     if _current_org:
         tag = Tag.objects.filter(organization=_current_org, name__iexact=tag_name).first()
+        tag_logger.info(f"[Tag] Org filter: org={_current_org.id}, tag_name={tag_name}, found={tag is not None}")
     if not tag and admin:
         tag = Tag.objects.filter(admin=admin, name__iexact=tag_name).first()
+        tag_logger.info(f"[Tag] Admin filter: admin={admin.id}, tag_name={tag_name}, found={tag is not None}")
     if not tag:
+        # Try without org/admin filter as fallback
+        tag = Tag.objects.filter(name__iexact=tag_name).first()
+        tag_logger.info(f"[Tag] Global filter: tag_name={tag_name}, found={tag is not None}")
+    if not tag:
+        tag_logger.warning(f"[Tag] Tag '{tag_name}' not found in any scope")
         return f"Error: Tag '{tag_name}' not found"
     
     # Find the user - check by organization first, then admin
@@ -58,6 +66,15 @@ def apply_user_tag(tag_name, admin, phone=None):
     
     # Apply the tag (create if not exists)
     user_tag, created = UserTag.objects.get_or_create(user=user, tag=tag)
+    
+    # Always trigger pipeline automations when tag is applied (even if already existed)
+    try:
+        from .controllers.pipeline import run_pipeline_automations
+        tag_logger.info(f"[Tag] Calling run_pipeline_automations(user_id={user.id}, tag_id={tag.id}, tag_name={tag_name})")
+        run_pipeline_automations(user.id, 'tag_applied', tag_id=tag.id)
+        tag_logger.info(f"[Tag] Pipeline automations completed for tag '{tag_name}' on user {user_phone}")
+    except Exception as e:
+        tag_logger.error(f"[Tag] Pipeline automation error: {e}", exc_info=True)
     
     if created:
         print(f"[Tag] Applied '{tag_name}' to user {user_phone}")
@@ -182,6 +199,19 @@ def apply_custom_field_value(field_name, field_value, admin, phone=None):
 
     action = "Set" if created else "Updated"
     print(f"[CustomField] {action} '{field_name}' to '{field_value}' for user {user_phone}")
+    
+    # Trigger pipeline automations on custom field change
+    try:
+        from .controllers.pipeline import run_pipeline_automations
+        run_pipeline_automations(
+            user.id,
+            'custom_field_changed',
+            field_name=field_name,
+            field_value=field_value.strip()
+        )
+    except Exception as e:
+        print(f"[CustomField] Pipeline automation error: {e}")
+    
     return f"Success: {action} custom field '{field_name}' to '{field_value}'"
 
 
@@ -235,6 +265,25 @@ def get_user_custom_fields_for_ai(admin, phone=None):
 
     return "\n".join(lines)
 
+def _substitute_variables(obj, arguments):
+    """
+    Recursively replace {key}, {{key}}, and {{custom_field:key:value}} placeholders
+    inside dicts, lists and strings with the corresponding argument values.
+    This is JSON-safe because we never serialise/deserialise the structure.
+    """
+    if isinstance(obj, str):
+        for key, value in arguments.items():
+            obj = obj.replace("{" + key + "}", str(value))
+            obj = obj.replace("{{" + key + "}}", str(value))
+            obj = obj.replace("{{custom_field:" + key + ":value}}", str(value))
+        return obj
+    elif isinstance(obj, dict):
+        return {k: _substitute_variables(v, arguments) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_substitute_variables(item, arguments) for item in obj]
+    return obj
+
+
 def execute_tool(tool_name, arguments, admin):
     """
     Execute a defined ExternalAPI tool or built-in function.
@@ -258,41 +307,56 @@ def execute_tool(tool_name, arguments, admin):
             field_value = arguments.get("field_value", "")
             return apply_custom_field_value(field_name, field_value, admin)
         
-        # Find the tool config from ExternalAPI
-        tool_config = ExternalAPI.objects.filter(admin=admin, name=tool_name).first()
+        # Find the tool config from ExternalAPI - check org first, then admin
+        tool_config = None
+        if _current_org:
+            tool_config = ExternalAPI.objects.filter(organization=_current_org, name=tool_name).first()
+        if not tool_config and admin:
+            tool_config = ExternalAPI.objects.filter(admin=admin, name=tool_name).first()
         if not tool_config:
             return f"Error: Tool '{tool_name}' not configured."
 
-        # Prepare URL and Payload with variable substitution
-        # We use simple string replacement for {{variable}} style placeholders
-        
+        # Prepare URL, Payload and Headers with variable substitution
         target_url = tool_config.url
-        target_payload = tool_config.payload or {}
-        target_headers = tool_config.headers or {}
-
-        # Replace in URL
         for key, value in arguments.items():
-            placeholder = "{{" + key + "}}"
-            target_url = target_url.replace(placeholder, str(value))
+            target_url = target_url.replace("{" + key + "}", str(value))
+            target_url = target_url.replace("{{" + key + "}}", str(value))
 
-        # Replace in Payload (recursively if needed, but let's stick to simple string dump for now)
-        # Convert payload to string, replace, then parse back to JSON could be unsafe but easiest for flexible schemas
-        payload_str = json.dumps(target_payload)
-        for key, value in arguments.items():
-            placeholder = "{{" + key + "}}"
-            payload_str = payload_str.replace(placeholder, str(value))
-            
-        final_payload = json.loads(payload_str)
+        # Safe recursive replacement (handles quotes and special chars)
+        final_payload = _substitute_variables(tool_config.payload or {}, arguments)
+        target_headers = _substitute_variables(tool_config.headers or {}, arguments)
 
         # Execute Request
         method = tool_config.method.upper()
         
         if method == 'GET':
-            response = requests.get(target_url, headers=target_headers, params=final_payload)
+            response = requests.get(target_url, headers=target_headers, params=final_payload, timeout=30)
         elif method == 'POST':
-            response = requests.post(target_url, headers=target_headers, json=final_payload)
+            if tool_config.body_type == 'form':
+                if len(final_payload) == 1 and "raw" in final_payload:
+                    import urllib.parse
+                    final_payload = dict(urllib.parse.parse_qsl(final_payload["raw"]))
+                response = requests.post(target_url, headers=target_headers, data=final_payload, timeout=30)
+            else:
+                response = requests.post(target_url, headers=target_headers, json=final_payload, timeout=30)
+        elif method == 'PUT':
+            response = requests.put(target_url, headers=target_headers, json=final_payload, timeout=30)
+        elif method == 'PATCH':
+            response = requests.patch(target_url, headers=target_headers, json=final_payload, timeout=30)
+        elif method == 'DELETE':
+            response = requests.delete(target_url, headers=target_headers, timeout=30)
         else:
             return f"Error: Unsupported method {method}"
+
+        # Process response mapping - save fields to custom fields
+        response_data = None
+        try:
+            response_data = response.json()
+        except:
+            pass
+        
+        if response_data and tool_config.response_mapping:
+            _process_response_mapping(tool_config.response_mapping, response_data, admin)
 
         # Return results
         try:
@@ -302,4 +366,39 @@ def execute_tool(tool_name, arguments, admin):
 
     except Exception as e:
         return f"Error executing tool {tool_name}: {str(e)}"
+
+
+def _process_response_mapping(mappings, response_data, admin):
+    """
+    Process response mapping: extract fields from API response and save to custom fields.
+    
+    Args:
+        mappings: List of {"jsonpath": "field.path", "custom_field": "field_name"} dicts
+        response_data: The API response data (dict or list)
+        admin: Admin instance
+    """
+    for mapping in mappings:
+        jsonpath = mapping.get('jsonpath', '').strip()
+        field_name = mapping.get('custom_field', '').strip()
+        
+        if not jsonpath or not field_name:
+            continue
+        
+        # Simple dot-path traversal (e.g., "data.balance" or "result.name")
+        try:
+            value = response_data
+            for key in jsonpath.split('.'):
+                if isinstance(value, dict):
+                    value = value.get(key)
+                elif isinstance(value, list) and key.isdigit():
+                    value = value[int(key)]
+                else:
+                    value = None
+                    break
+            
+            if value is not None:
+                apply_custom_field_value(field_name, str(value), admin)
+                print(f"[ResponseMapping] Saved '{jsonpath}' → '{field_name}' = '{value}'")
+        except Exception as e:
+            print(f"[ResponseMapping] Error mapping '{jsonpath}' → '{field_name}': {e}")
 

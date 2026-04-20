@@ -69,7 +69,22 @@ class Inboxcontroller:
 
         if selected_user_id:
             selected_user = User.objects.filter(id=selected_user_id).first()
-            messages = Message.objects.filter(user_id=selected_user_id).order_by('created_at', 'id')
+            
+            # SECURITY: Verify selected user belongs to current org/admin
+            if selected_user:
+                # BUG FIX: Add null check for organization_id
+                if org_id and selected_user.organization_id and selected_user.organization_id != org_id:
+                    selected_user = None  # Don't show cross-tenant data
+                elif admin_id:
+                    # Handle both admin_id as integer and as Admin object
+                    user_admin_id = getattr(selected_user, 'admin_id_id', None)
+                    if user_admin_id and str(user_admin_id) != str(admin_id):
+                        selected_user = None
+            
+            if selected_user:
+                messages = Message.objects.filter(user_id=selected_user_id).order_by('created_at', 'id')
+            else:
+                messages = []
             
             # Check 24-hour window for selected user
             if selected_user:
@@ -110,6 +125,16 @@ class Inboxcontroller:
         
         if not user_id:
             return JsonResponse({'error': 'Missing user_id'}, status=400)
+        
+        # SECURITY: Verify user belongs to current org/admin
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        user = User.objects.filter(id=user_id).first()
+        if user:
+            if org_id and user.organization_id != org_id:
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+            if admin_id and str(user.admin_id_id) != str(admin_id):
+                return JsonResponse({'error': 'Permission denied'}, status=403)
             
         new_msgs = Message.objects.filter(
             user_id=user_id, 
@@ -133,7 +158,10 @@ class Inboxcontroller:
             f = request.FILES['file']
             # Save to specific folder
             path = default_storage.save(f'chat_uploads/{f.name}', ContentFile(f.read()))
-            url = os.path.join(settings.MEDIA_URL, path).replace('\\', '/')
+            relative_url = os.path.join(settings.MEDIA_URL, path).replace('\\', '/')
+            
+            # Build full absolute URL so it works when sent via WhatsApp API
+            full_url = request.build_absolute_uri(relative_url)
             
             # Determine type
             ftype = 'file'
@@ -141,8 +169,13 @@ class Inboxcontroller:
                 ftype = 'image'
             elif f.content_type.startswith('video'):
                 ftype = 'video'
+            elif f.content_type in ('application/pdf', 'application/msword', 
+                                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                     'application/vnd.ms-excel',
+                                     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'):
+                ftype = 'document'
                 
-            return JsonResponse({'url': url, 'type': ftype})
+            return JsonResponse({'url': full_url, 'type': ftype})
         return JsonResponse({'error': 'No file provided'}, status=400)
 
     @csrf_exempt
@@ -169,20 +202,30 @@ class Inboxcontroller:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
         # SOFT DELETE: Archive from inbox instead of deleting
-        # Contact remains in All Contacts view and all data is preserved
+        # Contact record is kept but all associated data is wiped clean
         user.is_in_inbox = False
         user.archived_at = timezone.now()
-        user.save(update_fields=['is_in_inbox', 'archived_at'])
+        user.followup_count = 0
+        user.bot_enabled = True
+        user.save(update_fields=['is_in_inbox', 'archived_at', 'followup_count', 'bot_enabled'])
         
-        # CUSTOM DELETE LOGIC:
-        # User requested: Remove tags and delete history, but keep contact.
-        from ..models import UserTag, Message
+        # DELETE ALL ASSOCIATED DATA:
+        # Remove tags, messages, custom fields, logs, follow-ups, and pipeline opportunities
+        from ..models import UserTag, Message, CustomFieldValue, UserLog, ScheduledFollowUp, Opportunity
         # 1. Remove all tags
         UserTag.objects.filter(user=user).delete()
-        # 2. Delete message history
-        Message.objects.filter(user=user).delete()
+        # 2. Delete message history (Message FK field is named 'user_id', not 'user')
+        Message.objects.filter(user_id=user).delete()
+        # 3. Delete custom field values
+        CustomFieldValue.objects.filter(user=user).delete()
+        # 4. Delete user logs
+        UserLog.objects.filter(user=user).delete()
+        # 5. Cancel scheduled follow-ups
+        ScheduledFollowUp.objects.filter(user=user).delete()
+        # 6. Delete pipeline opportunities
+        Opportunity.objects.filter(user=user).delete()
         
-        return JsonResponse({'success': True, 'msg': 'Contact archived from inbox'})
+        return JsonResponse({'success': True, 'msg': 'Contact archived and all data cleared'})
 
     @csrf_exempt
     def restore_user(request, user_id):
@@ -391,6 +434,22 @@ class Inboxcontroller:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         if admin_id and str(user.admin_id_id) != str(admin_id):
             return JsonResponse({'error': 'Permission denied'}, status=403)
+            
+        # Handle standard fields
+        if field_name in ['phone_no', 'email', 'name']:
+            setattr(user, field_name, field_value)
+            user.save()
+            return JsonResponse({
+                'success': True,
+                'message': f"Updated {field_name}: {field_value}",
+                'custom_field': {
+                    'id': f'std_{field_name}',
+                    'name': field_name,
+                    'field_type': 'text',
+                    'description': f'Standard {field_name.title()}',
+                    'value': field_value
+                }
+            })
         
         # Find the custom field
         custom_field = None
@@ -420,6 +479,16 @@ class Inboxcontroller:
                     'updated_at': timezone.now()
                 }
             )
+            
+            # Trigger pipeline automations on field change
+            try:
+                from newapp.controllers.pipeline import run_pipeline_automations
+                run_pipeline_automations(
+                    user.id, 'custom_field_changed',
+                    field_name=field_name, field_value=str(field_value)
+                )
+            except Exception:
+                pass  # Don't break custom field flow
             
             action = "Created" if created else "Updated"
             return JsonResponse({
@@ -472,6 +541,15 @@ class Inboxcontroller:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         if admin_id and str(user.admin_id_id) != str(admin_id):
             return JsonResponse({'error': 'Permission denied'}, status=403)
+            
+        # Handle standard fields
+        if field_name in ['phone_no', 'email', 'name']:
+            setattr(user, field_name, '')
+            user.save()
+            return JsonResponse({
+                'success': True,
+                'message': f"Cleared {field_name}"
+            })
         
         # Find the custom field
         custom_field = None
@@ -640,3 +718,47 @@ class Inboxcontroller:
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
+    @staticmethod
+    def export_chat_csv(request, user_id):
+        """Export a contact's chat history as CSV file."""
+        import csv
+
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+
+        if not org_id and not admin_id:
+            return HttpResponse('Not authenticated', status=401)
+
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return HttpResponse('User not found', status=404)
+
+        # Security check
+        if org_id and user.organization_id != org_id:
+            return HttpResponse('Permission denied', status=403)
+        if admin_id and str(user.admin_id_id) != str(admin_id):
+            return HttpResponse('Permission denied', status=403)
+
+        msgs = Message.objects.filter(user_id=user).order_by('created_at', 'id')
+
+        contact_name = user.name or user.phone_no or f'user_{user_id}'
+        safe_name = "".join(c for c in contact_name if c.isalnum() or c in (' ', '-', '_')).strip()
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="chat_{safe_name}.csv"'
+        response.write('\ufeff')  # UTF-8 BOM for Excel
+
+        writer = csv.writer(response)
+        writer.writerow(['Date', 'Time', 'From', 'Message'])
+
+        for m in msgs:
+            created = m.created_at
+            sender = 'Bot/Agent' if m.who == 'bot' else 'Customer'
+            writer.writerow([
+                created.strftime('%Y-%m-%d'),
+                created.strftime('%H:%M:%S'),
+                sender,
+                m.messages or ''
+            ])
+
+        return response

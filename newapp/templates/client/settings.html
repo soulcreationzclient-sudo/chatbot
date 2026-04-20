@@ -205,6 +205,15 @@
         </div>
         {% endif %}
 
+        <!-- Setup Guide Link -->
+        <div class="card" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border:none;color:white;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+                <h3 style="font-size:18px;font-weight:600;margin-bottom:4px;">📘 SpeedBot Setup Guide</h3>
+                <p style="font-size:14px;opacity:.85;margin:0;">Step-by-step guide to set up your AI chatbot platform</p>
+            </div>
+            <a href="/guide/" target="_blank" style="background:white;color:#667eea;padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap;">Open Setup Guide →</a>
+        </div>
+
         <form method="post" action="{% url 'client_settings_update' %}">
             {% csrf_token %}
 

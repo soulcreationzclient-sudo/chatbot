@@ -133,6 +133,27 @@ def organization_create(request):
                 is_active=True,
             )
             
+            # Seed default data for the new organization
+            try:
+                from ..models import ChatGPTPrompt, Tag
+                
+                # Default ChatGPT prompt so the bot works immediately
+                ChatGPTPrompt.objects.create(
+                    organization=org,
+                    prompt_text="You are a helpful customer service assistant. Answer questions politely and concisely. If you don't know the answer, let the customer know you'll connect them with a human agent."
+                )
+                
+                # Default tags for common use
+                for tag_name in ['New Lead', 'Interested', 'Not Interested']:
+                    Tag.objects.create(
+                        organization=org,
+                        name=tag_name,
+                    )
+            except Exception as seed_err:
+                # Don't fail org creation if seeding fails
+                import logging
+                logging.getLogger(__name__).warning(f"Default data seeding failed for org {org.id}: {seed_err}")
+            
             messages.success(request, f'Organization "{name}" created with admin user "{admin_username}"!')
             return redirect('organization_list')
             
@@ -172,6 +193,14 @@ def organization_update(request, pk):
     org.whatsapp_token = request.POST.get('whatsapp_token', org.whatsapp_token)
     org.openai_api_key = request.POST.get('openai_api_key', org.openai_api_key)
     org.is_active = request.POST.get('is_active') == 'on'
+    
+    # Feature flag / canary deployment settings
+    org.is_beta_tester = request.POST.get('is_beta_tester') == 'on'
+    org.app_version = request.POST.get('app_version', org.app_version)
+    
+    # Branding settings
+    org.hide_logo = request.POST.get('hide_logo') == 'on'
+    
     org.save()
     
     messages.success(request, f'Organization "{org.name}" updated successfully!')

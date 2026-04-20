@@ -132,6 +132,58 @@
         margin-top: 4px;
     }
 
+    .template-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        color: #c2410c;
+        font-family: monospace;
+        font-size: 12px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        margin-left: 10px;
+        cursor: pointer;
+    }
+
+    .template-tag:hover {
+        background: #ffedd5;
+    }
+
+    .template-tag .copy-icon {
+        font-size: 11px;
+        opacity: 0.7;
+    }
+
+    .usage-box {
+        background: #fffbeb;
+        border: 2px solid #fbbf24;
+        border-radius: 14px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
+    }
+
+    .usage-box h3 {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .usage-box p {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+    }
+
+    .usage-box code {
+        background: #fef3c7;
+        color: #92400e;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 13px;
+    }
+
     .status-badge {
         padding: 4px 10px;
         border-radius: 20px;
@@ -258,6 +310,16 @@
 
     <div id="alertContainer"></div>
 
+    <!-- Template Tag Usage Docs -->
+    <div class="usage-box">
+        <h3>🤖 Use Templates in AI Prompt</h3>
+        <p>Add these tags to your ChatGPT prompt to make the AI send template messages automatically:</p>
+        <p style="margin-bottom: 4px;"><code>{% templatetag openvariable %}template:template_name{% templatetag closevariable %}</code> — sends a WhatsApp template message</p>
+        <p style="font-size: 12px; color: #92400e;">Example prompt instruction: <em>"When user confirms booking, respond with: {% templatetag openvariable %}template:hello_world{% templatetag closevariable %}"</em></p>
+        <p style="margin-top: 8px;"><strong>⚡ Manual Rule Mode:</strong></p>
+        <p style="margin-bottom: 0;">Copy the tag from each template below and paste into your AI prompt.</p>
+    </div>
+
     <!-- Templates Section -->
     <div class="section">
         <div class="section-title">
@@ -272,7 +334,13 @@
             {% for tpl in templates %}
             <div class="template-item">
                 <div>
-                    <div class="template-name">{{ tpl.name }}</div>
+                    <div class="template-name">
+                        {{ tpl.name }}
+                        <span class="template-tag" onclick="copyTemplateTag('{{ tpl.name }}')" title="Click to copy">
+                            {% templatetag openvariable %}template:{{ tpl.name }}{% templatetag closevariable %}
+                            <span class="copy-icon">📋</span>
+                        </span>
+                    </div>
                     <div class="template-meta">{{ tpl.category }} • {{ tpl.language }}</div>
                 </div>
                 <span class="status-badge status-{{ tpl.status|lower }}">{{ tpl.status }}</span>
@@ -373,6 +441,32 @@
                 }
             })
             .catch(err => showAlert('error', '❌ Network error'));
+    }
+
+    function copyTemplateTag(name) {
+        const tag = '{% templatetag openvariable %}template:' + name + '{% templatetag closevariable %}';
+        navigator.clipboard.writeText(tag).then(() => {
+            // Visual feedback
+            const btn = event.currentTarget;
+            const original = btn.innerHTML;
+            btn.innerHTML = '✅ Copied!';
+            btn.style.background = '#dcfce7';
+            btn.style.borderColor = '#22c55e';
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.style.background = '';
+                btn.style.borderColor = '';
+            }, 1500);
+        }).catch(() => {
+            // Fallback
+            const textArea = document.createElement('textarea');
+            textArea.value = tag;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            alert('Copied: ' + tag);
+        });
     }
 
     function createBroadcast(e) {

@@ -453,33 +453,190 @@ def calendly_webhook(request):
             message += f"📅 *Event:* {event_name}\n"
             message += f"🕐 *Time:* {formatted_time}\n"
             
-            # Send WhatsApp notification to admin
+            # Try to match booking to a CalendlyLink and process custom field + message
             try:
-                from newapp.models import Admin
-                admin = Admin.objects.first()
-                if admin and admin.whatsapp_phone_id and admin.whatsapp_token:
-                    # Use a known working phone number for notifications
-                    # You can change this to any number you want to receive notifications
-                    notify_phone = "919327606510"  # Your WhatsApp number
+                from newapp.models import Admin, Organization, CalendlyLink, User, CustomField, CustomFieldValue, CalendlyBookingTracker
+                import requests
+                
+                # Find matching CalendlyLink by URL
+                event_uri = scheduled_event.get('event_type', '')
+                scheduling_url = ''
+                
+                # Try to extract scheduling URL from the event type
+                if event_uri:
+                    # Calendly event_type URI format: https://api.calendly.com/event_types/UUID
+                    service = get_service()
+                    try:
+                        headers_cal = {
+                            'Authorization': f'Bearer {CALENDLY_ACCESS_TOKEN}',
+                            'Content-Type': 'application/json'
+                        }
+                        et_resp = requests.get(event_uri, headers=headers_cal, timeout=10)
+                        if et_resp.status_code == 200:
+                            scheduling_url = et_resp.json().get('resource', {}).get('scheduling_url', '')
+                    except:
+                        pass
+                
+                # Find CalendlyLink matching this URL
+                matched_link = None
+                if scheduling_url:
+                    matched_link = CalendlyLink.objects.filter(url__icontains=scheduling_url.split('/')[-1]).first()
+                if not matched_link:
+                    # Try matching by event name
+                    matched_link = CalendlyLink.objects.filter(description__icontains=event_name).first()
+                
+                # If we found a matching link, process custom field + confirmation message
+                if matched_link:
+                    print(f"[Calendly Webhook] Matched CalendlyLink: {matched_link.name}")
                     
-                    print(f"[Calendly Webhook] Sending notification to: {notify_phone}")
+                    # ==================== IMPROVED USER MATCHING ====================
+                    # Priority 1: Use CalendlyBookingTracker (most reliable - tracks who received the link)
+                    user_obj = None
+                    try:
+                        tracker = CalendlyBookingTracker.objects.filter(
+                            calendly_link=matched_link,
+                            status='link_sent'
+                        ).order_by('-created_at').first()
+                        if tracker:
+                            user_obj = tracker.user
+                            tracker.status = 'booked'
+                            tracker.save(update_fields=['status', 'updated_at'])
+                            print(f"[Calendly Webhook] Matched user via tracker: {user_obj.phone_no}")
+                    except Exception as tracker_err:
+                        print(f"[Calendly Webhook] Tracker lookup error: {tracker_err}")
                     
-                    import requests
-                    whatsapp_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
-                    headers = {
-                        "Authorization": f"Bearer {admin.whatsapp_token}",
-                        "Content-Type": "application/json"
-                    }
-                    payload_wa = {
-                        "messaging_product": "whatsapp",
-                        "to": notify_phone,
-                        "type": "text",
-                        "text": {"body": message}
-                    }
-                    r = requests.post(whatsapp_url, json=payload_wa, headers=headers)
-                    print(f"[Calendly Webhook] WhatsApp notification sent: {r.status_code}")
-                    if r.status_code != 200:
-                        print(f"[Calendly Webhook] WhatsApp error response: {r.text}")
+                    # Priority 2: Try phone number from Calendly questions/answers
+                    if not user_obj:
+                        try:
+                            questions = payload.get('questions_and_answers', [])
+                            for qa in questions:
+                                answer = qa.get('answer', '')
+                                # Check if answer looks like a phone number
+                                clean_phone = answer.replace('+', '').replace(' ', '').replace('-', '')
+                                if clean_phone.isdigit() and len(clean_phone) >= 10:
+                                    user_obj = User.objects.filter(phone_no__endswith=clean_phone[-10:]).first()
+                                    if user_obj:
+                                        print(f"[Calendly Webhook] Matched user via Q&A phone: {user_obj.phone_no}")
+                                        break
+                        except Exception as qa_err:
+                            print(f"[Calendly Webhook] Q&A phone lookup error: {qa_err}")
+                    
+                    # Priority 3: Try matching by email in CustomFieldValues
+                    if not user_obj and invitee_email and invitee_email != 'Unknown':
+                        try:
+                            cfv = CustomFieldValue.objects.filter(
+                                value__iexact=invitee_email,
+                                custom_field__name__icontains='email'
+                            ).first()
+                            if cfv:
+                                user_obj = cfv.user
+                                print(f"[Calendly Webhook] Matched user via custom field email: {user_obj.phone_no}")
+                        except Exception as cf_email_err:
+                            print(f"[Calendly Webhook] Custom field email lookup error: {cf_email_err}")
+                    
+                    # Priority 4: Fallback to name matching (least reliable)
+                    if not user_obj and invitee_name and invitee_name != 'Unknown':
+                        user_obj = User.objects.filter(name__iexact=invitee_name).first()
+                        if user_obj:
+                            print(f"[Calendly Webhook] Matched user via name: {user_obj.phone_no}")
+                    
+                    if not user_obj:
+                        print(f"[Calendly Webhook] WARNING: Could not match booking to any user. Name={invitee_name}, Email={invitee_email}")
+                    # ==================== END USER MATCHING ====================
+                    
+                    # Update custom field if configured
+                    if matched_link.custom_field_name and user_obj:
+                        try:
+                            org = matched_link.organization
+                            admin = matched_link.admin
+                            cf = None
+                            if org:
+                                cf = CustomField.objects.filter(organization=org, name=matched_link.custom_field_name).first()
+                            if not cf and admin:
+                                cf = CustomField.objects.filter(admin=admin, name=matched_link.custom_field_name).first()
+                            
+                            if cf:
+                                cfv, created = CustomFieldValue.objects.update_or_create(
+                                    user=user_obj, custom_field=cf,
+                                    defaults={'value': f'Booked - {event_name} on {formatted_time}'}
+                                )
+                                print(f"[Calendly Webhook] Updated custom field '{matched_link.custom_field_name}' for user {user_obj.phone_no}")
+                            else:
+                                print(f"[Calendly Webhook] Custom field '{matched_link.custom_field_name}' not found in DB")
+                        except Exception as cf_err:
+                            print(f"[Calendly Webhook] Custom field error: {cf_err}")
+                    
+                    # Send custom confirmation message if configured
+                    if matched_link.booking_message and user_obj and user_obj.phone_no:
+                        try:
+                            org = matched_link.organization
+                            admin = matched_link.admin
+                            phone_id = None
+                            token = None
+                            
+                            if org:
+                                phone_id = org.whatsapp_phone_id
+                                token = org.whatsapp_token
+                            elif admin:
+                                phone_id = admin.whatsapp_phone_id
+                                token = admin.whatsapp_token
+                            
+                            if phone_id and token:
+                                # Replace placeholders in the message
+                                confirm_msg = matched_link.booking_message
+                                confirm_msg = confirm_msg.replace('{name}', invitee_name)
+                                confirm_msg = confirm_msg.replace('{event}', event_name)
+                                confirm_msg = confirm_msg.replace('{time}', formatted_time)
+                                confirm_msg = confirm_msg.replace('{email}', invitee_email)
+                                
+                                whatsapp_url = f"https://graph.facebook.com/v17.0/{phone_id}/messages"
+                                headers_wa = {
+                                    "Authorization": f"Bearer {token}",
+                                    "Content-Type": "application/json"
+                                }
+                                payload_wa = {
+                                    "messaging_product": "whatsapp",
+                                    "to": user_obj.phone_no,
+                                    "type": "text",
+                                    "text": {"body": confirm_msg}
+                                }
+                                r = requests.post(whatsapp_url, json=payload_wa, headers=headers_wa)
+                                print(f"[Calendly Webhook] Sent confirmation to {user_obj.phone_no}: {r.status_code}")
+                            else:
+                                print(f"[Calendly Webhook] No WhatsApp credentials found for confirmation message")
+                        except Exception as msg_err:
+                            print(f"[Calendly Webhook] Confirmation message error: {msg_err}")
+                    
+                    # Cancel any pending follow-ups for this user after booking
+                    if user_obj:
+                        try:
+                            from newapp.models import ScheduledFollowUp
+                            cancelled = ScheduledFollowUp.objects.filter(
+                                user=user_obj, status='pending'
+                            ).update(status='cancelled')
+                            if cancelled:
+                                print(f"[Calendly Webhook] Cancelled {cancelled} pending follow-ups for {user_obj.phone_no} (booking confirmed)")
+                        except Exception as fu_err:
+                            print(f"[Calendly Webhook] Follow-up cancel error: {fu_err}")
+                
+                # Notify admins about the booking
+                admins_notified = []
+                for admin in Admin.objects.exclude(whatsapp_phone_id='').exclude(whatsapp_token=''):
+                    if admin.whatsapp_phone_id and admin.whatsapp_token and admin.display_phone_no:
+                        notify_phone = admin.display_phone_no.replace(' ', '').replace('+', '')
+                        whatsapp_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
+                        headers_wa = {
+                            "Authorization": f"Bearer {admin.whatsapp_token}",
+                            "Content-Type": "application/json"
+                        }
+                        payload_wa = {
+                            "messaging_product": "whatsapp",
+                            "to": notify_phone,
+                            "type": "text",
+                            "text": {"body": message}
+                        }
+                        r = requests.post(whatsapp_url, json=payload_wa, headers=headers_wa)
+                        admins_notified.append(admin.id)
             except Exception as wa_err:
                 print(f"[Calendly Webhook] WhatsApp error: {wa_err}")
             
@@ -492,23 +649,23 @@ def calendly_webhook(request):
             
             try:
                 from newapp.models import Admin
-                admin = Admin.objects.first()
-                if admin and admin.whatsapp_phone_id and admin.whatsapp_token:
-                    admin_phone = admin.display_phone_no.replace(' ', '').replace('+', '')
-                    
-                    import requests
-                    whatsapp_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
-                    headers = {
-                        "Authorization": f"Bearer {admin.whatsapp_token}",
-                        "Content-Type": "application/json"
-                    }
-                    payload_wa = {
-                        "messaging_product": "whatsapp",
-                        "to": admin_phone,
-                        "type": "text",
-                        "text": {"body": message}
-                    }
-                    requests.post(whatsapp_url, json=payload_wa, headers=headers)
+                import requests
+                
+                for admin in Admin.objects.exclude(whatsapp_phone_id='').exclude(whatsapp_token=''):
+                    if admin.whatsapp_phone_id and admin.whatsapp_token and admin.display_phone_no:
+                        admin_phone = admin.display_phone_no.replace(' ', '').replace('+', '')
+                        whatsapp_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
+                        headers = {
+                            "Authorization": f"Bearer {admin.whatsapp_token}",
+                            "Content-Type": "application/json"
+                        }
+                        payload_wa = {
+                            "messaging_product": "whatsapp",
+                            "to": admin_phone,
+                            "type": "text",
+                            "text": {"body": message}
+                        }
+                        requests.post(whatsapp_url, json=payload_wa, headers=headers)
             except Exception as wa_err:
                 print(f"[Calendly Webhook] WhatsApp error: {wa_err}")
             

@@ -141,11 +141,20 @@ class Contactcontroller:
                 messages.warning(request, error)
                 return redirect(request.META.get("HTTP_REFERER", "contact/add"))
             
-            if(not User.objects.filter(phone_no=phone_no)):
-                # Support both organization and admin auth
-                org_id = request.session.get('organization_id')
-                admin_id = request.session.get('admin_id')
-                
+            # Support both organization and admin auth
+            org_id = request.session.get('organization_id')
+            admin_id = request.session.get('admin_id')
+
+            # Check duplicate within the SAME org/admin only (not globally)
+            if org_id:
+                phone_exists = User.objects.filter(phone_no=phone_no, organization_id=org_id).exists()
+            elif admin_id:
+                phone_exists = User.objects.filter(phone_no=phone_no, admin_id=admin_id).exists()
+            else:
+                messages.error(request, 'Not authenticated')
+                return redirect('/login')
+
+            if not phone_exists:
                 if org_id:
                     from ..models import Organization
                     org = Organization.objects.filter(id=org_id).first()
@@ -153,10 +162,10 @@ class Contactcontroller:
                         organization=org,
                         name=name,
                         phone_no=phone_no,
-                        created_at=datetime.now(),
+                        created_at=timezone.now(),
                         is_in_inbox=True
                     )
-                elif admin_id:
+                else:
                     admin = Admin.objects.filter(id=admin_id).first()
                     if not admin:
                         messages.error(request, 'Admin not found')
@@ -165,12 +174,9 @@ class Contactcontroller:
                         admin_id=admin,
                         name=name,
                         phone_no=phone_no,
-                        created_at=datetime.now(),
+                        created_at=timezone.now(),
                         is_in_inbox=True
                     )
-                else:
-                    messages.error(request, 'Not authenticated')
-                    return redirect('/login')
                     
                 messages.success(request,'successfully inserted')
                 return redirect(request.META.get("HTTP_REFERER", "contact/add"))
@@ -211,21 +217,21 @@ class Contactcontroller:
         return render(request, 'contact/edit_user.html', {'form': form, 'user': user, 'custom_fields': custom_fields})
 
     def delete_user(request, id):
-        """Soft-delete a user - archive instead of permanent deletion"""
+        """Delete a user and all associated data"""
         user = get_object_or_404(User, id=id)
 
-        # SOFT DELETE: Archive from inbox instead of deleting
-        # Contact remains in All Contacts view but data is RESET (tags/history cleared)
-        user.is_in_inbox = False
-        user.archived_at = timezone.now()
-        user.save(update_fields=['is_in_inbox', 'archived_at'])
-
-        # CUSTOM DELETE LOGIC:
+        # Delete associated data first
         UserTag.objects.filter(user=user).delete()
-        Message.objects.filter(user=user).delete()
+        Message.objects.filter(user_id=user).delete()
+        # Delete pipeline opportunities
+        from ..models import Opportunity
+        Opportunity.objects.filter(user=user).delete()
+        
+        # Hard delete the user record
+        user.delete()
 
-        # Redirect to user listing page
-        return redirect('show_people')  # replace 'show_people' with your actual user listing url name
+        # Redirect to My Contacts page
+        return redirect('contact_dashboard')
 
     @staticmethod
     def add_user_tag(request):
@@ -261,7 +267,15 @@ class Contactcontroller:
                 return JsonResponse({'error': 'User or Tag not found'}, status=404)
             
             # Create if not exists
-            UserTag.objects.get_or_create(user=user, tag=tag)
+            obj, created = UserTag.objects.get_or_create(user=user, tag=tag)
+            
+            # Trigger pipeline automations if tag was newly applied
+            if created:
+                try:
+                    from newapp.controllers.pipeline import run_pipeline_automations
+                    run_pipeline_automations(user.id, 'tag_applied', tag_id=tag.id)
+                except Exception:
+                    pass  # Don't break tag flow if automation fails
             
             return JsonResponse({'success': True})
         except Exception as e:

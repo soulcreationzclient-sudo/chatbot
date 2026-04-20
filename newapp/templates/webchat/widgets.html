@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shareable Chat Links - Chatbot Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .page-title { font-size: 24px; font-weight: 600; }
+        .page-subtitle { color: #666; font-size: 14px; margin-top: 4px; }
+        .btn-create { background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-create:hover { background: #0056b3; }
+        .link-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 20px 24px; margin-bottom: 16px; }
+        .link-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .link-name { font-size: 18px; font-weight: 600; }
+        .link-status { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-active { background: #d4edda; color: #155724; }
+        .share-row { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #eef6ff; border: 1px solid #bee3f8; border-radius: 8px; }
+        .share-url { flex: 1; font-size: 14px; font-family: monospace; color: #2563eb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .btn-copy { padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+        .btn-copy:hover { background: #1d4ed8; }
+        .btn-open { padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; text-decoration: none; }
+        .btn-open:hover { background: #218838; }
+        .btn-delete { padding: 6px 12px; background: transparent; color: #dc3545; border: 1px solid #dc3545; border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .btn-delete:hover { background: #dc3545; color: white; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .empty-state h3 { font-size: 18px; color: #666; margin-bottom: 8px; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: white; border-radius: 12px; width: 100%; max-width: 400px; padding: 24px; }
+        .modal h3 { font-size: 18px; margin-bottom: 16px; }
+        .modal input { width: 100%; padding: 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 16px; }
+        .modal input:focus { outline: none; border-color: #007bff; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+        .modal .btn-cancel { padding: 10px 20px; background: #e9ecef; color: #495057; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+        .nav-tabs { display: flex; gap: 4px; background: white; padding: 8px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .nav-tab { padding: 10px 20px; border: none; background: transparent; font-size: 14px; font-weight: 500; color: #666; cursor: pointer; border-radius: 8px; text-decoration: none; }
+        .nav-tab:hover { background: #f0f0f0; }
+        .nav-tab.active { background: #007bff; color: white; }
+        .created-date { font-size: 12px; color: #999; margin-top: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-tabs">
+            <a href="/webchat/dashboard/" class="nav-tab">💬 Sessions</a>
+            <a href="/webchat/analytics/" class="nav-tab">📊 Analytics</a>
+            <a href="/webchat/widgets/" class="nav-tab active">🔗 Shareable Links</a>
+        </div>
+
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">🔗 Shareable Chat Links</h1>
+                <p class="page-subtitle">Create chat links you can share with anyone to test or use your chatbot</p>
+            </div>
+            <button class="btn-create" onclick="openModal()">+ Create Link</button>
+        </div>
+
+        {% if widgets %}
+        {% for widget in widgets %}
+        <div class="link-card">
+            <div class="link-header">
+                <span class="link-name">{{ widget.name }}</span>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span class="link-status status-active">Active</span>
+                    <button class="btn-delete" onclick="deleteLink({{ widget.id }})">Delete</button>
+                </div>
+            </div>
+            <div class="share-row">
+                <span>🔗</span>
+                <span class="share-url" id="url-{{ widget.id }}">{{ request.scheme }}://{{ request.get_host }}/webchat/w/{{ widget.id }}/</span>
+                <button class="btn-copy" onclick="copyUrl({{ widget.id }})">📋 Copy</button>
+                <a class="btn-open" href="/webchat/w/{{ widget.id }}/" target="_blank">Open</a>
+            </div>
+            <div class="created-date">Created: {{ widget.created_at|date:"M d, Y" }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <h3>No chat links yet</h3>
+            <p>Click "Create Link" to generate a shareable chat URL</p>
+            <button class="btn-create" style="margin-top: 16px;" onclick="openModal()">+ Create Link</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Simple Create Modal -->
+    <div class="modal-overlay" id="createModal">
+        <div class="modal">
+            <h3>Create Chat Link</h3>
+            <input type="text" id="linkName" placeholder="Enter a name (e.g. My Chat, Test Bot)" autofocus>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-create" onclick="createLink()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal() {
+            document.getElementById('createModal').classList.add('active');
+            document.getElementById('linkName').value = '';
+            document.getElementById('linkName').focus();
+        }
+        function closeModal() {
+            document.getElementById('createModal').classList.remove('active');
+        }
+
+        async function createLink() {
+            const name = document.getElementById('linkName').value.trim();
+            if (!name) { alert('Please enter a name'); return; }
+
+            try {
+                const res = await fetch('/api/webchat/widget/create/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        display_mode: 'button',
+                        theme: 'light',
+                        primary_color: '#007bff',
+                        welcome_en: 'Welcome! How can we help you today?',
+                        welcome_ar: '',
+                        show_language_selector: false,
+                        file_uploads_enabled: false,
+                        voice_input_enabled: false
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown'));
+                }
+            } catch(e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function deleteLink(id) {
+            if (!confirm('Delete this chat link?')) return;
+            try {
+                const res = await fetch('/api/webchat/widget/' + id + '/delete/', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) location.reload();
+                else alert('Error: ' + (data.error || 'Unknown'));
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        function copyUrl(id) {
+            const url = document.getElementById('url-' + id).textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                const btn = event.currentTarget;
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => { btn.textContent = '📋 Copy'; }, 1500);
+            });
+        }
+
+        // Enter key to create
+        document.getElementById('linkName').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') createLink();
+        });
+
+        // Close modal on outside click
+        document.getElementById('createModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+    </script>
+</body>
+</html>

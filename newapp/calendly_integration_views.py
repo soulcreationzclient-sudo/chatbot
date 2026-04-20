@@ -20,12 +20,21 @@ def connect_calendly(request):
     """
     try:
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
+        admin = None
+        org = None
         
-        admin = Admin.objects.filter(id=admin_id).first()
-        if not admin:
-            return JsonResponse({'success': False, 'error': 'Admin not found'}, status=404)
+        if org_id:
+            from .models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+        
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org and org.whatsapp_phone_id:
+            admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
+        
+        if not admin and not org:
+            return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
         
         data = json.loads(request.body)
         calendly_token = data.get('calendly_token', '').strip()
@@ -51,10 +60,16 @@ def connect_calendly(request):
                 'error': 'Invalid Calendly token. Please check and try again.'
             }, status=400)
         
-        # Save the credentials
-        admin.calendly_token = calendly_token
-        admin.calendly_scheduling_url = scheduling_url
-        admin.save()
+        # Save the credentials — to Organization (if org user) AND Admin (for legacy)
+        if org:
+            org.calendly_token = calendly_token
+            org.calendly_scheduling_url = scheduling_url
+            org.save()
+        
+        if admin:
+            admin.calendly_token = calendly_token
+            admin.calendly_scheduling_url = scheduling_url
+            admin.save()
         
         return JsonResponse({
             'success': True,
@@ -75,16 +90,31 @@ def disconnect_calendly(request):
     """
     try:
         admin_id = request.session.get('admin_id')
-        if not admin_id:
+        org_id = request.session.get('organization_id')
+        admin = None
+        org = None
+        
+        if org_id:
+            from .models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+        
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org and org.whatsapp_phone_id:
+            admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
+        
+        if not admin and not org:
             return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
         
-        admin = Admin.objects.filter(id=admin_id).first()
-        if not admin:
-            return JsonResponse({'success': False, 'error': 'Admin not found'}, status=404)
+        if org:
+            org.calendly_token = None
+            org.calendly_scheduling_url = None
+            org.save()
         
-        admin.calendly_token = None
-        admin.calendly_scheduling_url = None
-        admin.save()
+        if admin:
+            admin.calendly_token = None
+            admin.calendly_scheduling_url = None
+            admin.save()
         
         return JsonResponse({
             'success': True,
@@ -103,12 +133,19 @@ def update_followup_settings(request):
     """
     try:
         admin_id = request.session.get('admin_id')
-        if not admin_id:
-            return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
+        org_id = request.session.get('organization_id')
+        admin = None
         
-        admin = Admin.objects.filter(id=admin_id).first()
+        if admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+        elif org_id:
+            from .models import Organization
+            org = Organization.objects.filter(id=org_id).first()
+            if org and org.whatsapp_phone_id:
+                admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
+        
         if not admin:
-            return JsonResponse({'success': False, 'error': 'Admin not found'}, status=404)
+            return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
         
         data = json.loads(request.body)
         

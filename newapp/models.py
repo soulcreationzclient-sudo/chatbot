@@ -21,6 +21,19 @@ class Organization(models.Model):
     
     # OpenAI Configuration
     openai_api_key = models.TextField(blank=True, null=True)
+    GPT_MODEL_CHOICES = (
+        ('gpt-5.2', 'GPT-5.2 (Most Powerful)'),
+        ('gpt-5', 'GPT-5 (Advanced)'),
+        ('gpt-5-mini', 'GPT-5 Mini (Fast & Smart)'),
+        ('gpt-5-nano', 'GPT-5 Nano (Fastest & Cheapest)'),
+        ('o3-mini', 'o3-mini (Reasoning)'),
+        ('gpt-4.1', 'GPT-4.1 (Reliable)'),
+        ('gpt-4.1-mini', 'GPT-4.1 Mini (Affordable)'),
+        ('gpt-4.1-nano', 'GPT-4.1 Nano (Ultra Fast)'),
+        ('gpt-4o-mini', 'GPT-4o Mini (Legacy)'),
+        ('gpt-4-turbo', 'GPT-4 Turbo (Legacy)'),
+    )
+    gpt_model = models.CharField(max_length=50, default='gpt-4o-mini')
     assistant_name = models.CharField(max_length=100, null=True, blank=True, default='')
     CHATGPT_MODE_CHOICES = (
         ('prompt', 'Prompt'),
@@ -41,6 +54,26 @@ class Organization(models.Model):
     
     # Google Calendar
     google_calendar = models.TextField(blank=True, default='')
+
+    # Organization Logo (shown in topbar)
+    logo = models.ImageField(upload_to='org_logos/', blank=True, null=True, help_text="Custom logo for the topbar")
+    hide_logo = models.BooleanField(default=False, help_text="If True, hides the SpeedBots logo in the sidebar for this org")
+    # Feature Flag / Canary Deployment
+    is_beta_tester = models.BooleanField(
+        default=False,
+        help_text="If True, this org sees new features before general rollout"
+    )
+    APP_VERSION_CHOICES = (
+        ('stable', 'Stable'),
+        ('beta', 'Beta'),
+        ('canary', 'Canary'),
+    )
+    app_version = models.CharField(
+        max_length=20,
+        choices=APP_VERSION_CHOICES,
+        default='stable',
+        help_text="Which version of features this org uses"
+    )
 
     class Meta:
         db_table = 'organizations'
@@ -164,6 +197,8 @@ class OrganizationUser(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True, related_name='members')
     role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name='users')
     is_active = models.BooleanField(default=True)
+    terms_accepted = models.BooleanField(default=False, help_text="Whether user has accepted Terms & Conditions")
+    terms_accepted_at = models.DateTimeField(null=True, blank=True, help_text="When T&C were accepted")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -225,13 +260,15 @@ class User(models.Model):
     admin_id = models.ForeignKey(Admin, on_delete=models.DO_NOTHING, db_column='admin_id', null=True, blank=True)
     # New organization field for multi-tenant support
     organization = models.ForeignKey(
-        Organization, 
-        on_delete=models.CASCADE, 
-        null=True, 
-        blank=True, 
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='contacts',
         db_column='organization_id'
     )
+    contact_id = models.CharField(max_length=20, unique=True, null=True, blank=True,
+                                  help_text='Unique contact ID in SB-XXXX format')
     name = models.CharField(max_length=100)
     phone_no = models.CharField(max_length=20)
     created_at = models.DateTimeField()
@@ -244,8 +281,32 @@ class User(models.Model):
     is_in_inbox = models.BooleanField(default=True)
     archived_at = models.DateTimeField(null=True, blank=True)
 
+    def save(self, *args, **kwargs):
+        if not self.contact_id:
+            # Auto-generate next SB-XXXX contact_id
+            last = User.objects.filter(contact_id__isnull=False).order_by('-contact_id').first()
+            if last and last.contact_id:
+                try:
+                    num = int(last.contact_id.split('-')[1]) + 1
+                except (IndexError, ValueError):
+                    num = 1
+            else:
+                num = 1
+            self.contact_id = f'SB-{num:04d}'
+        super().save(*args, **kwargs)
+
     class Meta:
         db_table = 'users'
+        indexes = [
+            models.Index(fields=['organization_id']),
+            models.Index(fields=['admin_id']),
+            models.Index(fields=['is_in_inbox']),
+            models.Index(fields=['phone_no']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['contact_id']),
+        ]
+
+
 
 class Message(models.Model):
     WHO_CHOICES=[
@@ -261,7 +322,11 @@ class Message(models.Model):
 
     class Meta:
         managed = True
-        db_table = 'conversations' 
+        db_table = 'conversations'
+        indexes = [
+            models.Index(fields=['created_at']),
+            models.Index(fields=['user_id']),
+        ]
 
 
 # Create your models here.
@@ -283,8 +348,11 @@ class Tag(models.Model):
 
     class Meta:
         db_table = 'tags'
-        # Note: unique_together with nullable fields needs careful handling
-        # Django allows multiple NULL values in unique_together
+        indexes = [
+            models.Index(fields=['keyword']),
+            models.Index(fields=['organization_id']),
+            models.Index(fields=['admin_id']),
+        ]
 
 
 
@@ -299,45 +367,41 @@ class UserTag(models.Model):
         db_table = 'user_tags'  # New table for user-tag relationships
         unique_together = ('user', 'tag')  # prevent duplicate mappings
 
-# class User(models.Model):
-#     id = models.AutoField(primary_key=True)
-#     admin_id = models.ForeignKey(Admin, on_delete=models.DO_NOTHING, db_column='admin_id')
-#     name = models.CharField(max_length=100)
-#     phone_no = models.CharField(max_length=20)
-#     created_at = models.DateTimeField()
 
-#     class Meta:
-#         managed = False
-#         db_table = 'users'
 
-#     def __str__(self):
-#         return f"{self.name} ({self.phone_no})"
-     
 class ChatGPTPrompt(models.Model):
+    name = models.CharField(max_length=100, default='Default Prompt', help_text="Prompt name (e.g. Sales Agent, Support Agent)")
     prompt_text = models.TextField()
     updated_at = models.DateTimeField(auto_now=True)
     organization = models.ForeignKey('Organization', on_delete=models.CASCADE, null=True, blank=True)
     admin = models.ForeignKey('Admin', on_delete=models.CASCADE, null=True, blank=True)
+    gpt_model = models.CharField(max_length=50, blank=True, default='', help_text="Override GPT model for this prompt (empty = use org default)")
+    is_default = models.BooleanField(default=False, help_text="If true, this prompt is used for incoming messages")
 
     class Meta:
         db_table = 'chatgpt_prompts'
 
     def __str__(self):
-        return f"ChatGPT Prompt (updated {self.updated_at})"
+        default_label = " ⭐" if self.is_default else ""
+        return f"{self.name}{default_label} (updated {self.updated_at})"
     
 class AIAgentConfig(models.Model):
-    admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, null=True, blank=True)
+    name = models.CharField(max_length=100, default='Default Agent', help_text="Agent name (e.g. Sales Agent, Support Agent)")
     pdf_file = models.FileField(upload_to='ai_agent_pdfs/')  # PDFs will be uploaded to MEDIA_ROOT/ai_agent_pdfs/
     instruction = models.TextField(blank=True)
     pdf_text = models.TextField(blank=True, null=True)               
-    is_active = models.BooleanField(default=True)            
+    is_active = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False, help_text="If true, this agent is used for incoming messages")
     uploaded_at = models.DateTimeField(auto_now_add=True)    
 
     class Meta:
         db_table = 'ai_agent_config'
         
     def __str__(self):
-        return f"AI Agent Config - {self.pdf_file.name} - Active: {self.is_active}"  
+        default_label = " ⭐ DEFAULT" if self.is_default else ""
+        return f"AI Agent: {self.name}{default_label}"  
     
 from django import forms
 from .models import AIAgentConfig
@@ -372,12 +436,74 @@ class ExternalAPI(models.Model):
     body_type = models.CharField(max_length=20, choices=BODY_TYPE_CHOICES, default='json')
     payload = models.JSONField(default=dict, blank=True, help_text="JSON payload with {{placeholders}}")
     response_mapping = models.JSONField(default=list, blank=True, help_text="List of {jsonpath, custom_field} mappings")
+    # API Chaining (Feature 5: Invoice creation)
+    depends_on = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
+                                    related_name='dependents',
+                                    help_text="Run this API after the referenced API completes")
+    execution_order = models.IntegerField(default=0, help_text="Order for chained execution (lower runs first)")
 
     def __str__(self):
         return f"{self.name} ({self.admin.assistant_name if self.admin else 'No Admin'})"
 
     class Meta:
         db_table = 'external_apis'
+
+
+class CalendlyLink(models.Model):
+    """
+    Named Calendly booking links that can be referenced in AI prompts
+    using the {{calendly:link_name}} tag syntax.
+    """
+    id = models.AutoField(primary_key=True)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True, related_name='calendly_links')
+    name = models.CharField(max_length=100, help_text="Tag name used in prompt (e.g., quick_call)")
+    description = models.TextField(blank=True, help_text="Description (e.g., 30 minute consultation)")
+    url = models.URLField(max_length=500, help_text="Calendly scheduling URL")
+    custom_field_name = models.CharField(max_length=100, blank=True, default='', help_text="Custom field to update when booking is confirmed (e.g., appointment_status)")
+    booking_message = models.TextField(blank=True, default='', help_text="Custom message to send when booking is confirmed")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} → {self.url}"
+
+    class Meta:
+        db_table = 'calendly_links'
+
+
+class CalendlyBookingTracker(models.Model):
+    """
+    Tracks which Calendly link was sent to which WhatsApp user.
+    Uses booking_token for redirect-based booking detection (no paid Calendly plan required).
+    Flow: User clicks /book/<token>/ -> redirects to Calendly -> books -> redirected to /booking-confirmed/<token>/
+    """
+    STATUS_CHOICES = [
+        ('link_sent', 'Link Sent'),
+        ('clicked', 'Link Clicked'),
+        ('booked', 'Booked'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='calendly_bookings')
+    calendly_link = models.ForeignKey(CalendlyLink, on_delete=models.CASCADE, related_name='bookings')
+    booking_token = models.CharField(max_length=64, unique=True, null=True, blank=True,
+                                     help_text='UUID token for redirect-based booking tracking')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='link_sent')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.phone_no} -> {self.calendly_link.name} ({self.status})"
+
+    class Meta:
+        db_table = 'calendly_booking_tracker'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['calendly_link', 'status']),
+            models.Index(fields=['booking_token']),
+        ]
 
 
 class ImageAsset(models.Model):
@@ -415,6 +541,12 @@ class FollowUpMessage(models.Model):
     tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True, help_text="Only send to users with this tag (optional)")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Template Message support (Feature 2)
+    use_template = models.BooleanField(default=False, help_text="Use WhatsApp template instead of plain text")
+    template = models.ForeignKey('WhatsAppTemplate', null=True, blank=True, on_delete=models.SET_NULL,
+                                  help_text="WhatsApp template to send (when use_template=True)")
+    template_variables = models.JSONField(default=dict, blank=True,
+                                          help_text="Variable mapping for template parameters")
 
     def __str__(self):
         return f"Step {self.step} - {self.delay_minutes}min ({self.admin.assistant_name if self.admin else 'No Admin'})"
@@ -636,6 +768,7 @@ class ScheduledFollowUp(models.Model):
     """
     STATUS_CHOICES = [
         ('pending', 'Pending'),
+        ('processing', 'Processing'),  # Locked for sending
         ('sent', 'Sent'),
         ('cancelled', 'Cancelled'),  # User replied before follow-up
         ('failed', 'Failed'),
@@ -664,3 +797,461 @@ class ScheduledFollowUp(models.Model):
         indexes = [
             models.Index(fields=['status', 'scheduled_for']),
         ]
+
+
+# ==================== WEBCHAT MODELS ====================
+
+class WebChatSession(models.Model):
+    """
+    Manages web chat sessions.
+    Each session represents a single conversation on a website.
+    """
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('ended', 'Ended'),
+        ('abandoned', 'Abandoned'),
+    ]
+    
+    LANGUAGE_CHOICES = [
+        ('en', 'English'),
+        ('ar', 'Arabic'),
+        ('both', 'Both (Bilingual)'),
+    ]
+    
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='webchat_sessions',
+        null=True,
+        blank=True
+    )
+    anonymous_id = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True,
+        help_text="Temporary ID for users not yet in the system"
+    )
+    session_id = models.CharField(
+        max_length=100, 
+        unique=True,
+        help_text="Unique session identifier for the widget"
+    )
+    
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(
+        'Organization', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True
+    )
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='en')
+    
+    visitor_name = models.CharField(max_length=100, blank=True, null=True)
+    visitor_email = models.EmailField(blank=True, null=True)
+    
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    user_agent = models.TextField(blank=True, null=True)
+    
+    started_at = models.DateTimeField(auto_now_add=True)
+    last_activity = models.DateTimeField(auto_now=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    
+    message_count = models.IntegerField(default=0)
+    
+    def __str__(self):
+        if self.visitor_name:
+            return f"Session {self.session_id} - {self.visitor_name}"
+        elif self.user:
+            return f"Session {self.session_id} - {self.user.name}"
+        return f"Session {self.session_id} (Anonymous)"
+
+    class Meta:
+        db_table = 'webchat_sessions'
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['session_id']),
+            models.Index(fields=['status', 'last_activity']),
+            models.Index(fields=['user', 'started_at']),
+        ]
+
+
+class WebChatMessage(models.Model):
+    """
+    Stores individual messages in a web chat session.
+    """
+    SENDER_CHOICES = [
+        ('user', 'User/Visitor'),
+        ('bot', 'Bot'),
+        ('agent', 'Live Agent'),
+    ]
+    
+    CONTENT_TYPE_CHOICES = [
+        ('text', 'Text'),
+        ('image', 'Image'),
+        ('file', 'File'),
+        ('audio', 'Audio'),
+        ('system', 'System Message'),
+    ]
+    
+    id = models.AutoField(primary_key=True)
+    session = models.ForeignKey(
+        WebChatSession, 
+        on_delete=models.CASCADE, 
+        related_name='messages'
+    )
+    
+    content = models.TextField(help_text="The message text")
+    content_type = models.CharField(
+        max_length=20, 
+        choices=CONTENT_TYPE_CHOICES, 
+        default='text'
+    )
+    
+    sender = models.CharField(max_length=20, choices=SENDER_CHOICES, default='user')
+    ai_response = models.TextField(blank=True, null=True)
+    
+    attachment_url = models.URLField(blank=True, null=True)
+    attachment_name = models.CharField(max_length=255, blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    parent = models.ForeignKey(
+        'self', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        related_name='replies'
+    )
+    
+    def __str__(self):
+        preview = self.content[:30] + '...' if len(self.content) > 30 else self.content
+        return f"Msg in {self.session.session_id}: {preview}"
+
+    class Meta:
+        db_table = 'webchat_messages'
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['session', 'created_at']),
+            models.Index(fields=['sender', 'created_at']),
+        ]
+
+
+class WebChatWidget(models.Model):
+    """
+    Configuration for the web chat widget.
+    Each organization can have multiple widgets for different websites.
+    """
+    DISPLAY_CHOICES = [
+        ('button', 'Floating Button'),
+        ('embedded', 'Embedded Chat'),
+        ('popup', 'Popup Chat'),
+    ]
+    
+    THEME_CHOICES = [
+        ('light', 'Light'),
+        ('dark', 'Dark'),
+        ('custom', 'Custom Colors'),
+    ]
+    
+    id = models.AutoField(primary_key=True)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(
+        'Organization', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True
+    )
+    
+    name = models.CharField(
+        max_length=100, 
+        help_text="Internal name for this widget"
+    )
+    website_url = models.URLField(
+        max_length=500, 
+blank=True, 
+        null=True,
+        help_text="URL where this widget will be embedded"
+    )
+    
+    display_mode = models.CharField(
+        max_length=20, 
+        choices=DISPLAY_CHOICES, 
+        default='button'
+    )
+    theme = models.CharField(
+        max_length=20, 
+        choices=THEME_CHOICES, 
+        default='light'
+    )
+    
+    primary_color = models.CharField(max_length=7, default='#007bff')
+    secondary_color = models.CharField(max_length=7, default='#6c757d')
+    text_color = models.CharField(max_length=7, default='#000000')
+    background_color = models.CharField(max_length=7, default='#ffffff')
+    
+    position = models.CharField(
+        max_length=20, 
+        choices=[('bottom-right', 'Bottom Right'), ('bottom-left', 'Bottom Left')],
+        default='bottom-right'
+    )
+    
+    initial_greeting = models.TextField(blank=True, null=True)
+    offline_message = models.TextField(blank=True, null=True)
+    
+    welcome_en = models.TextField(
+        default="Welcome! How can we help you today?",
+        help_text="English welcome message"
+    )
+    welcome_ar = models.TextField(
+        default="مرحبا! كيف يمكننا مساعدتك اليوم؟",
+        help_text="Arabic welcome message"
+    )
+    
+    show_language_selector = models.BooleanField(default=True)
+    default_language = models.CharField(max_length=10, default='en')
+    
+    file_uploads_enabled = models.BooleanField(default=True)
+    voice_input_enabled = models.BooleanField(default=True)
+    
+    is_active = models.BooleanField(default=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    embed_code = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.admin.assistant_name if self.admin else self.organization.name if self.organization else 'No Org'})"
+
+    class Meta:
+        db_table = 'webchat_widgets'
+        unique_together = [('admin', 'name'), ('organization', 'name')]
+
+
+class WebChatAnalytics(models.Model):
+    """
+    Track analytics and metrics for web chat.
+    """
+    id = models.AutoField(primary_key=True)
+    session = models.ForeignKey(
+        WebChatSession, 
+        on_delete=models.CASCADE, 
+        related_name='analytics'
+    )
+    
+    response_time_seconds = models.IntegerField(null=True, blank=True)
+    message_count = models.IntegerField(default=0)
+    session_duration_seconds = models.IntegerField(null=True, blank=True)
+    
+    was_escalated = models.BooleanField(default=False)
+    user_feedback = models.CharField(
+        max_length=20, 
+        choices=[
+            ('positive', 'Positive'),
+            ('neutral', 'Neutral'),
+            ('negative', 'Negative'),
+            ('', 'No Feedback'),
+        ],
+        blank=True,
+        default=''
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Analytics for {self.session.session_id}"
+
+    class Meta:
+        db_table = 'webchat_analytics'
+        ordering = ['-created_at']
+
+
+# ==================== PIPELINE CRM MODELS ====================
+
+class Pipeline(models.Model):
+    """Multiple pipelines per organization (e.g., 'Sales Leads', 'Support Tickets')."""
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='pipelines')
+    name = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'pipelines'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name
+
+
+class PipelineStage(models.Model):
+    """Columns in the Kanban board."""
+    pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='stages')
+    name = models.CharField(max_length=100)
+    order = models.IntegerField(default=0)
+    color = models.CharField(max_length=7, default='#3b82f6', help_text="Hex color for column header")
+    # Auto-message on stage move (Feature 3)
+    auto_send_enabled = models.BooleanField(default=False, help_text="Automatically send template when lead moves to this stage")
+    auto_send_template = models.ForeignKey('WhatsAppTemplate', null=True, blank=True, on_delete=models.SET_NULL,
+                                            related_name='pipeline_stages',
+                                            help_text="Template to auto-send when lead enters this stage")
+    template_variables = models.JSONField(default=dict, blank=True,
+                                          help_text="Variable mapping for template parameters")
+
+    class Meta:
+        db_table = 'pipeline_stages'
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.pipeline.name} → {self.name}"
+
+
+class Opportunity(models.Model):
+    """Contact cards on the Kanban board."""
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('won', 'Won'),
+        ('lost', 'Lost'),
+        ('abandoned', 'Abandoned'),
+    ]
+
+    pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='opportunities')
+    stage = models.ForeignKey(PipelineStage, on_delete=models.CASCADE, related_name='opportunities')
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='opportunities', null=True, blank=True)
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='opportunities')
+    title = models.CharField(max_length=200, blank=True, default='')
+    opportunity_value = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    description = models.TextField(blank=True, default='')
+    due_date = models.DateField(null=True, blank=True)
+    created_by = models.CharField(max_length=100, default='Manual')
+    moved_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'opportunities'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        name = self.user.name if self.user and self.user.name else self.title or f"Opp #{self.id}"
+        return f"{name} - {self.stage.name}"
+
+
+class OpportunityComment(models.Model):
+    """Comments on an opportunity."""
+    opportunity = models.ForeignKey(Opportunity, on_delete=models.CASCADE, related_name='comments')
+    author = models.CharField(max_length=100, default='Admin')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'opportunity_comments'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Comment on {self.opportunity} by {self.author}"
+
+
+class PipelineAutomation(models.Model):
+    """Automation rules: when trigger fires, move opportunity to target stage."""
+    TRIGGER_CHOICES = [
+        ('tag_applied', 'When tag is applied'),
+        ('tag_removed', 'When tag is removed'),
+        ('custom_field_changed', 'When custom field value changes'),
+    ]
+
+    pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='automations')
+    trigger_type = models.CharField(max_length=30, choices=TRIGGER_CHOICES)
+    # For tag triggers
+    trigger_tag = models.ForeignKey('Tag', on_delete=models.CASCADE, null=True, blank=True,
+                                     help_text="Tag that triggers the automation")
+    # For custom field triggers
+    trigger_field_name = models.CharField(max_length=100, blank=True, default='',
+                                           help_text="Custom field name to watch")
+    trigger_field_value = models.CharField(max_length=200, blank=True, default='',
+                                            help_text="Value that triggers the move (empty = any change)")
+    # Target
+    target_stage = models.ForeignKey(PipelineStage, on_delete=models.CASCADE,
+                                      help_text="Move opportunity to this stage")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'pipeline_automations'
+
+    def __str__(self):
+        return f"{self.get_trigger_type_display()} → {self.target_stage.name}"
+
+
+class GoogleCalendarLink(models.Model):
+    """
+    Named Google Calendar booking links that can be referenced in AI prompts
+    using the {{gcalendar:link_name}} tag syntax.
+    Similar to CalendlyLink but uses Google Calendar API directly.
+    """
+    id = models.AutoField(primary_key=True)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True, related_name='gcalendar_links')
+    name = models.CharField(max_length=100, help_text="Tag name used in prompt (e.g., consultation)")
+    description = models.TextField(blank=True, help_text="Description (e.g., 30 minute consultation)")
+    calendar_id = models.CharField(max_length=300, help_text="Google Calendar ID (e.g., primary or abc@group.calendar.google.com)")
+    duration_minutes = models.IntegerField(default=30, help_text="Appointment duration in minutes")
+    service_account_json = models.TextField(blank=True, default='', help_text="Google service account JSON credentials")
+    custom_field_name = models.CharField(max_length=100, blank=True, default='', help_text="Custom field to update when booking is confirmed")
+    booking_message = models.TextField(blank=True, default='', help_text="Custom message to send when booking is confirmed")
+    # Availability settings
+    available_days = models.JSONField(default=list, blank=True, help_text="Days available [0=Mon..6=Sun], empty=all")
+    start_hour = models.IntegerField(default=9, help_text="Earliest bookable hour (24h format)")
+    end_hour = models.IntegerField(default=17, help_text="Latest bookable hour (24h format)")
+    timezone = models.CharField(max_length=50, default='Asia/Kuala_Lumpur')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"GCal: {self.name} ({self.calendar_id[:30]})"
+
+    class Meta:
+        db_table = 'google_calendar_links'
+
+
+class GoogleCalendarBooking(models.Model):
+    """Tracks Google Calendar booking attempts and confirmations."""
+    STATUS_CHOICES = [
+        ('link_sent', 'Link Sent'),
+        ('slot_selected', 'Slot Selected'),
+        ('booked', 'Booked'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='gcalendar_bookings')
+    gcalendar_link = models.ForeignKey(GoogleCalendarLink, on_delete=models.CASCADE, related_name='bookings')
+    booking_token = models.CharField(max_length=64, unique=True, help_text='UUID token for booking page URL')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='link_sent')
+    selected_slot = models.DateTimeField(null=True, blank=True, help_text="Selected appointment time")
+    google_event_id = models.CharField(max_length=200, blank=True, default='', help_text="Google Calendar event ID")
+    attendee_name = models.CharField(max_length=200, blank=True, default='')
+    attendee_email = models.CharField(max_length=200, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.phone_no} → {self.gcalendar_link.name} ({self.status})"
+
+    class Meta:
+        db_table = 'google_calendar_bookings'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['booking_token']),
+            models.Index(fields=['user', 'status']),
+        ]
+

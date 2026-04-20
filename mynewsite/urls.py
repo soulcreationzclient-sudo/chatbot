@@ -12,19 +12,55 @@ from newapp.controllers.settings import Settingcontroller
 from newapp.controllers.whatsapp import whatsappcontroller
 from newapp.controllers.integration import Integrationcontroller
 from newapp.views import whatsapp_templates
-from newapp.controllers.integration import Integrationcontroller
-integration_controller = Integrationcontroller()
 from django.conf import settings
 from django.conf.urls.static import static
 from newapp.views import delete_pdf
 from newapp import calendly_views
 from newapp import calendly_integration_views
+from newapp import calendly_redirect_views
+from newapp import gcalendar_views
 
 # Multi-tenant admin imports
 from newapp.controllers import auth_views, superadmin_views, client_views
+from newapp.controllers import team_views
 from newapp.controllers import broadcast as broadcast_views
+from newapp.controllers import pipeline as pipeline_views
+from newapp.controllers import guide_views
 
+# Controller instances
+integration_controller = Integrationcontroller()
 
+# Webchat imports
+from newapp.controllers.webchat import (
+    api_webchat_start,
+    api_webchat_message,
+    api_webchat_messages,
+    api_webchat_end,
+    api_webchat_feedback,
+    api_webchat_language
+)
+from newapp.controllers.webchat_admin import (
+    dashboard as webchat_dashboard,
+    session_detail as webchat_session_detail,
+    end_session_api,
+    delete_session_api,
+    analytics as webchat_analytics,
+    widgets as webchat_widgets,
+    create_widget,
+    update_widget,
+    delete_widget,
+    get_widget_embed_code,
+    list_sessions_api,
+    get_session_messages_api,
+    webchat_standalone_page,
+)
+
+# Test Chat imports
+from newapp.controllers.test_chat import (
+    test_chat,
+    test_chat_send,
+    test_chat_quick,
+)
 
 urlpatterns = [
     # ==================== SUPER ADMIN PORTAL ====================
@@ -47,9 +83,46 @@ urlpatterns = [
     path('login/', auth_views.client_login, name='login'),
     path('client-logout/', auth_views.client_logout, name='client_logout'),
     
+    # ==================== TERMS & CONDITIONS + SETUP GUIDE ====================
+    path('terms/', guide_views.terms_and_conditions, name='terms_and_conditions'),
+    path('guide/', guide_views.setup_guide, name='setup_guide'),
+    
     # ==================== CLIENT SETTINGS ====================
     path('client/settings/', client_views.client_settings, name='client_settings'),
     path('client/settings/update/', client_views.client_settings_update, name='client_settings_update'),
+    
+    # ==================== TEAM MANAGEMENT (Feature 4) ====================
+    path('settings/team/', team_views.team_list, name='team_list'),
+    path('settings/team/add/', team_views.team_add, name='team_add'),
+    path('settings/team/<int:member_id>/update/', team_views.team_update, name='team_update'),
+    path('settings/team/<int:member_id>/toggle/', team_views.team_toggle, name='team_toggle'),
+    path('settings/team/<int:member_id>/delete/', team_views.team_delete, name='team_delete'),
+    
+    # ==================== PIPELINE CRM ====================
+    path('pipeline/', pipeline_views.pipeline_list, name='pipeline_list'),
+    path('pipeline/create/', pipeline_views.pipeline_create, name='pipeline_create'),
+    path('pipeline/<int:pipeline_id>/', pipeline_views.pipeline_board, name='pipeline_board'),
+    path('pipeline/<int:pipeline_id>/delete/', pipeline_views.pipeline_delete, name='pipeline_delete'),
+    path('pipeline/<int:pipeline_id>/stage/create/', pipeline_views.stage_create, name='stage_create'),
+    path('pipeline/stage/<int:stage_id>/delete/', pipeline_views.stage_delete, name='stage_delete'),
+    path('pipeline/stage/<int:stage_id>/rename/', pipeline_views.stage_rename, name='stage_rename'),
+    path('pipeline/opportunity/create/', pipeline_views.opportunity_create, name='opportunity_create'),
+    path('pipeline/opportunity/<int:opp_id>/move/', pipeline_views.opportunity_move, name='opportunity_move'),
+    path('pipeline/opportunity/<int:opp_id>/update/', pipeline_views.opportunity_update, name='opportunity_update'),
+    path('pipeline/opportunity/<int:opp_id>/delete/', pipeline_views.opportunity_delete, name='opportunity_delete'),
+    path('pipeline/opportunity/<int:opp_id>/comment/', pipeline_views.opportunity_comment, name='opportunity_comment'),
+    path('pipeline/automation/create/', pipeline_views.automation_create, name='automation_create'),
+    path('pipeline/automation/<int:auto_id>/delete/', pipeline_views.automation_delete, name='automation_delete'),
+    path('pipeline/automation/<int:auto_id>/update/', pipeline_views.automation_update, name='automation_update'),
+    
+    # ==================== GOOGLE CALENDAR BOOKING (Feature 6) ====================
+    path('gcalendar/book/<str:token>/', gcalendar_views.gcalendar_booking_page, name='gcalendar_booking_page'),
+    path('gcalendar/book/<str:token>/confirm/', gcalendar_views.gcalendar_confirm_booking, name='gcalendar_confirm_booking'),
+    
+    # Google Calendar Admin/Settings
+    path('settings/gcalendar/', Settingcontroller.gcalendar_links, name='gcalendar_links_view'),
+    path('settings/gcalendar/save/', Settingcontroller.gcalendar_link_save, name='gcalendar_link_save'),
+    path('settings/gcalendar/<int:link_id>/delete/', Settingcontroller.gcalendar_link_delete, name='gcalendar_link_delete'),
     
     # ==================== LEGACY ROUTES (backward compatibility) ====================
     # logout
@@ -121,6 +194,12 @@ urlpatterns = [
     #path('admin/connect_google_calendar/', Integrationcontroller.connect_google_calendar, name='connect_google_calendar'),
     #path('admin/disconnect_google_calendar/', Integrationcontroller.disconnect_google_calendar, name='disconnect_google_calendar'),
 
+    # ==================== PROMPT MANAGEMENT (AI Agent) ====================
+    path('setting/ai_agent', Settingcontroller.prompt_list, name='ai_agent_view'),
+    path('api/prompt/create/', Settingcontroller.prompt_create, name='prompt_create'),
+    path('api/prompt/<int:prompt_id>/update/', Settingcontroller.prompt_update, name='prompt_update'),
+    path('api/prompt/<int:prompt_id>/delete/', Settingcontroller.prompt_delete, name='prompt_delete'),
+
     
     
     # whatsapp
@@ -145,7 +224,7 @@ urlpatterns = [
     
     path('flows/', views.flows_view, name='flows'),
     path('admin/', admin.site.urls),
-   
+    
     path('connect_whatsapp/', views.connect_whatsapp, name='connect_whatsapp'),
     path('voice_bot/', views.voice_bot, name='voice_bot'),
     path('send_voice_bot/', views.send_voice_bot, name='send_voice_bot'),
@@ -162,11 +241,14 @@ urlpatterns = [
     #chatgpt
     path('connect_openai_key/', views.connect_openai_key, name='connect_openai_key'),
     path('disconnect_openai_key/', views.disconnect_openai_key, name='disconnect_openai_key'),
+    path('set_gpt_model/', views.set_gpt_model, name='set_gpt_model'),
     path('set_chatgpt_mode/', Integrationcontroller.set_chatgpt_mode, name='set_chatgpt_mode'),
     path('chatgpt_prompt/', views.chatgpt_prompt_page, name='chatgpt_prompt_page'),
     path('chatgpt/respond/', views.chatgpt_respond, name='chatgpt_respond'),
     path('inbox/send/', views.send_inbox_message, name='send_inbox_message'),
     path('ai_agent/upload/', integration_controller.ai_agent_upload, name='ai_agent_upload'),
+    path('api/ai_agent/set_default/', Integrationcontroller.set_default_agent, name='ai_agent_set_default'),
+    path('api/ai_agent/delete/<int:agent_id>/', Integrationcontroller.delete_agent, name='ai_agent_delete'),
     path('ai_agent/delete/<int:pk>/', delete_pdf, name='delete_pdf'),
     path('whatsapp/chatgpt_webhook/', views.get_message_chatgpt, name='chatgpt_webhook'),
  
@@ -191,6 +273,16 @@ urlpatterns = [
     path('disconnect_calendly/', calendly_integration_views.disconnect_calendly, name='disconnect_calendly'),
     path('update_followup_settings/', calendly_integration_views.update_followup_settings, name='update_followup_settings'),
     
+    # Calendly Booking Links (Tag-based)
+    path('setting/calendly_links', Settingcontroller.calendly_links, name='calendly_links_view'),
+    path('api/calendly-link/create/', Settingcontroller.calendly_link_create, name='calendly_link_create'),
+    path('api/calendly-link/<int:link_id>/update/', Settingcontroller.calendly_link_update, name='calendly_link_update'),
+    path('api/calendly-link/<int:link_id>/delete/', Settingcontroller.calendly_link_delete, name='calendly_link_delete'),
+    
+    # Calendly Redirect Booking Flow (no paid plan required)
+    path('book/<str:token>/', calendly_redirect_views.book_redirect, name='calendly_book_redirect'),
+    path('booking-confirmed/<str:token>/', calendly_redirect_views.booking_confirmed, name='calendly_booking_confirmed'),
+    
     # ==================== BROADCAST SYSTEM ====================
     path('api/broadcast/templates/sync/', broadcast_views.BroadcastController.sync_templates, name='broadcast_sync_templates'),
     path('api/broadcast/templates/', broadcast_views.BroadcastController.list_templates, name='broadcast_list_templates'),
@@ -210,6 +302,55 @@ urlpatterns = [
     path('api/inbox/user_log/create/', Inboxcontroller.create_user_log, name='inbox_create_user_log'),
     # Inbox User Tags API
     path('api/inbox/user_tags/', Inboxcontroller.get_user_tags, name='inbox_get_user_tags'),
+    path('api/inbox/export/<int:user_id>/csv/', Inboxcontroller.export_chat_csv, name='inbox_export_csv'),
+    
+    # ==================== WEBCHAT API ====================
+    path('api/webchat/start/', api_webchat_start, name='webchat_start'),
+    path('api/webchat/message/', api_webchat_message, name='webchat_message'),
+    path('api/webchat/messages/<str:session_id>/', api_webchat_messages, name='webchat_messages'),
+    path('api/webchat/end/', api_webchat_end, name='webchat_end'),
+    path('api/webchat/feedback/', api_webchat_feedback, name='webchat_feedback'),
+    path('api/webchat/language/', api_webchat_language, name='webchat_language'),
+    
+    # ==================== WEBCHAT ADMIN ====================
+    path('webchat/dashboard/', webchat_dashboard, name='webchat_dashboard'),
+    path('webchat/session/<str:session_id>/', webchat_session_detail, name='webchat_session_detail'),
+    path('api/webchat/session/end/', end_session_api, name='webchat_end_session'),
+    path('api/webchat/session/delete/', delete_session_api, name='webchat_delete_session'),
+    path('webchat/analytics/', webchat_analytics, name='webchat_analytics'),
+    path('webchat/widgets/', webchat_widgets, name='webchat_widgets'),
+    path('api/webchat/widget/create/', create_widget, name='webchat_create_widget'),
+    path('api/webchat/widget/<int:widget_id>/update/', update_widget, name='webchat_update_widget'),
+    path('api/webchat/widget/<int:widget_id>/delete/', delete_widget, name='webchat_delete_widget'),
+    path('api/webchat/widget/<int:widget_id>/embed/', get_widget_embed_code, name='webchat_embed_code'),
+    path('api/webchat/sessions/', list_sessions_api, name='webchat_list_sessions'),
+    path('api/webchat/sessions/<str:session_id>/messages/', get_session_messages_api, name='webchat_session_messages'),
+    
+    # ==================== WEBCHAT STANDALONE (Shareable Links) ====================
+    path('webchat/w/<int:widget_id>/', webchat_standalone_page, name='webchat_standalone'),
+    
+    # ==================== TEST CHAT (Prompt Testing) ====================
+    path('test/chat/', test_chat, name='test_chat'),
+    path('api/test/chat/send/', test_chat_send, name='test_chat_send'),
+    path('api/test/chat/quick/', test_chat_quick, name='test_chat_quick'),
+    
+    # ==================== PIPELINE CRM ====================
+    path('pipeline/', pipeline_views.pipeline_list, name='pipeline_list'),
+    path('pipeline/<int:pipeline_id>/board/', pipeline_views.pipeline_board, name='pipeline_board'),
+    path('api/pipeline/create/', pipeline_views.pipeline_create, name='pipeline_create'),
+    path('api/pipeline/delete/<int:pipeline_id>/', pipeline_views.pipeline_delete, name='pipeline_delete'),
+    path('api/pipeline/<int:pipeline_id>/stage/create/', pipeline_views.stage_create, name='pipeline_stage_create'),
+    path('api/pipeline/stage/delete/<int:stage_id>/', pipeline_views.stage_delete, name='pipeline_stage_delete'),
+    path('api/pipeline/opportunity/create/', pipeline_views.opportunity_create, name='pipeline_opp_create'),
+    path('api/pipeline/opportunity/<int:opp_id>/move/', pipeline_views.opportunity_move, name='pipeline_opp_move'),
+    path('api/pipeline/opportunity/<int:opp_id>/update/', pipeline_views.opportunity_update, name='pipeline_opp_update'),
+    path('api/pipeline/opportunity/<int:opp_id>/delete/', pipeline_views.opportunity_delete, name='pipeline_opp_delete'),
+    path('api/pipeline/opportunity/<int:opp_id>/comment/', pipeline_views.opportunity_comment, name='pipeline_opp_comment'),
+    path('api/pipeline/stage/<int:stage_id>/rename/', pipeline_views.stage_rename, name='pipeline_stage_rename'),
+    path('api/pipeline/stage/<int:stage_id>/settings/', pipeline_views.stage_settings, name='pipeline_stage_settings'),
+    path('api/pipeline/automation/create/', pipeline_views.automation_create, name='pipeline_auto_create'),
+    path('api/pipeline/automation/delete/<int:auto_id>/', pipeline_views.automation_delete, name='pipeline_auto_delete'),
+    path('api/pipeline/automation/update/<int:auto_id>/', pipeline_views.automation_update, name='pipeline_auto_update'),
     
 ]
 

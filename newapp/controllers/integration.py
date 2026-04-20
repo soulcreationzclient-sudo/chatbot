@@ -73,29 +73,129 @@ class Integrationcontroller:
     #     })
     @csrf_exempt
     def ai_agent_upload(self, request):
+        from newapp.models import Organization
+        
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
         if request.method == 'POST':
-            form = AIAgentConfigForm(request.POST, request.FILES)
-            if form.is_valid():
-                ai_agent = form.save()
-                pdf_path = ai_agent.pdf_file.path
-                pdf_text = self.extract_pdf_text(pdf_path)
-                ai_agent.pdf_text = pdf_text
-                ai_agent.save()
-                # Prepare pre-filled form with last instruction
-                form = AIAgentConfigForm(initial={'instruction': ai_agent.instruction})
+            agent_id = request.POST.get('agent_id')
+            name = request.POST.get('name', 'Default Agent')
+            instruction = request.POST.get('instruction', '')
+            is_default = request.POST.get('is_default') == 'on'
+            pdf_file = request.FILES.get('pdf_file')
+            
+            if agent_id:
+                # Update existing agent
+                agent = AIAgentConfig.objects.filter(id=agent_id).first()
+                if agent:
+                    agent.name = name
+                    agent.instruction = instruction
+                    if pdf_file:
+                        agent.pdf_file = pdf_file
+                        agent.save()
+                        agent.pdf_text = self.extract_pdf_text(agent.pdf_file.path)
+                    agent.save()
             else:
-                form = AIAgentConfigForm()
+                # Create new agent
+                agent = AIAgentConfig(
+                    name=name,
+                    instruction=instruction,
+                    is_default=is_default,
+                )
+                if org_id:
+                    agent.organization_id = org_id
+                if admin_id:
+                    agent.admin_id = admin_id
+                if pdf_file:
+                    agent.pdf_file = pdf_file
+                    agent.save()
+                    agent.pdf_text = self.extract_pdf_text(agent.pdf_file.path)
+                    agent.save()
+                else:
+                    agent.pdf_file = ''
+                    agent.save()
+            
+            # Handle is_default
+            if is_default:
+                # Unset other defaults for this org/admin
+                q = AIAgentConfig.objects.exclude(id=agent.id)
+                if org_id:
+                    q = q.filter(organization_id=org_id)
+                elif admin_id:
+                    q = q.filter(admin_id=admin_id)
+                q.update(is_default=False)
+                agent.is_default = True
+                agent.save()
+            
+            return redirect('ai_agent_upload')
+        
+        # GET: List all agents
+        if org_id:
+            agents = AIAgentConfig.objects.filter(organization_id=org_id).order_by('-is_default', '-uploaded_at')
+        elif admin_id:
+            agents = AIAgentConfig.objects.filter(admin_id=admin_id).order_by('-is_default', '-uploaded_at')
         else:
-            # On GET, fetch the last uploaded instruction if it exists
-            last_pdf = AIAgentConfig.objects.order_by('-uploaded_at').first()
-            last_instruction = last_pdf.instruction if last_pdf else ""
-            form = AIAgentConfigForm(initial={'instruction': last_instruction})
-
-        uploaded_pdfs = AIAgentConfig.objects.all().order_by('-uploaded_at')
+            agents = AIAgentConfig.objects.none()
+        
+        # Add computed properties for template
+        agent_list = []
+        for a in agents:
+            a.pdf_count = 1 if a.pdf_file else 0
+            a.pdf_list = [a.pdf_file.name.split('/')[-1]] if a.pdf_file else []
+            agent_list.append(a)
+        
         return render(request, 'set/ai_agent.html', {
-            'form': form,
-            'uploaded_pdfs': uploaded_pdfs,
+            'agents': agent_list,
         })
+
+    @staticmethod
+    @csrf_exempt 
+    def set_default_agent(request):
+        """Set an agent as the default for the org/admin."""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+        
+        import json
+        data = json.loads(request.body)
+        agent_id = data.get('agent_id')
+        
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        
+        agent = AIAgentConfig.objects.filter(id=agent_id).first()
+        if not agent:
+            return JsonResponse({'error': 'Agent not found'}, status=404)
+        
+        # Unset all defaults, then set this one
+        q = AIAgentConfig.objects.all()
+        if org_id:
+            q = q.filter(organization_id=org_id)
+        elif admin_id:
+            q = q.filter(admin_id=admin_id)
+        q.update(is_default=False)
+        
+        agent.is_default = True
+        agent.save()
+        
+        return JsonResponse({'success': True})
+
+    @staticmethod
+    @csrf_exempt
+    def delete_agent(request, agent_id):
+        """Delete an AI agent."""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+        
+        agent = AIAgentConfig.objects.filter(id=agent_id).first()
+        if not agent:
+            return JsonResponse({'error': 'Agent not found'}, status=404)
+        
+        if agent.is_default:
+            return JsonResponse({'error': 'Cannot delete the default agent'}, status=400)
+        
+        agent.delete()
+        return JsonResponse({'success': True})
     
     @staticmethod    
     def extract_pdf_text(pdf_path):

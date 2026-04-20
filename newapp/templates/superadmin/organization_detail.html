@@ -141,6 +141,29 @@
             color: #ef4444;
         }
 
+        .status-beta {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+        }
+
+        .deployment-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            border-radius: 10px;
+        }
+
+        .deployment-section h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #c2410c;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
         .card {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -339,6 +362,9 @@
             {% else %}
             <span class="status-badge status-inactive">Inactive</span>
             {% endif %}
+            {% if organization.is_beta_tester %}
+            <span class="status-badge status-beta">🧪 Beta Tester</span>
+            {% endif %}
         </div>
 
         {% if messages %}
@@ -363,6 +389,35 @@
                         <label for="is_active" style="margin: 0;">Active</label>
                     </div>
                 </div>
+
+                <!-- Deployment / Feature Flag Settings -->
+                <div class="deployment-section">
+                    <h4>🚀 Deployment Settings</h4>
+                    <div class="info-grid">
+                        <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" name="is_beta_tester" id="is_beta_tester" {% if organization.is_beta_tester %}checked{% endif %}>
+                            <label for="is_beta_tester" style="margin: 0;">Beta Tester (sees new features first)</label>
+                        </div>
+                        <div class="form-group">
+                            <label>App Version</label>
+                            <select name="app_version">
+                                <option value="stable" {% if organization.app_version == 'stable' %}selected{% endif %}>Stable</option>
+                                <option value="beta" {% if organization.app_version == 'beta' %}selected{% endif %}>Beta</option>
+                                <option value="canary" {% if organization.app_version == 'canary' %}selected{% endif %}>Canary</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Branding Settings -->
+                <div class="deployment-section" style="background: #f0fdf4; border-color: #86efac; margin-top: 15px;">
+                    <h4 style="color: #15803d;">🎨 Branding Settings</h4>
+                    <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" name="hide_logo" id="hide_logo" {% if organization.hide_logo %}checked{% endif %}>
+                        <label for="hide_logo" style="margin: 0;">Hide SpeedBots Logo (removes logo from admin sidebar for this org)</label>
+                    </div>
+                </div>
+
                 <div style="margin-top: 20px; text-align: right;">
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                 </div>
