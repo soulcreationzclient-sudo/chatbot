@@ -383,9 +383,9 @@ a { text-decoration: none; color: inherit; }
 .modal-header .modal-title { font-size: 1rem; font-weight: 700; }
 .modal-footer { border-top: 1px solid var(--border); padding: 14px 22px; }
 .modal-body   { padding: 22px; }
-.modal { z-index: 1050 !important; }
-.modal-backdrop { z-index: 1040 !important; }
-.modal-overlay  { z-index: 1050 !important; }
+.modal { z-index: 1210 !important; }
+.modal-backdrop { z-index: 1200 !important; }
+.modal-overlay  { z-index: 1210 !important; }
 
 /* ============================================================
    LOGIN PAGE
@@ -472,9 +472,9 @@ a { text-decoration: none; color: inherit; }
 /* ============================================================
    BOOTSTRAP / MODAL FIX
    ============================================================ */
-.modal-backdrop { z-index: 1040 !important; }
-.modal { z-index: 1050 !important; }
-.modal-dialog { z-index: 1055 !important; }
+.modal-backdrop { z-index: 1200 !important; }
+.modal { z-index: 1210 !important; }
+.modal-dialog { z-index: 1215 !important; }
 body.modal-open { overflow: auto !important; padding-right: 0 !important; }
 
 /* ============================================================
@@ -668,7 +668,7 @@ html { overflow-x: clip; } /* clip instead of hidden — doesn't break fixed */
   inset: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  z-index: 1055 !important;
+  z-index: 1210 !important;
 }
 .modal-dialog {
   position: relative !important;
@@ -676,9 +676,12 @@ html { overflow-x: clip; } /* clip instead of hidden — doesn't break fixed */
   margin: 1.75rem auto !important;
   pointer-events: none;
 }
+.modal-content {
+  pointer-events: auto;
+}
 .modal-backdrop {
   position: fixed !important;
   inset: 0 !important;
-  z-index: 1050 !important;
+  z-index: 1200 !important;
   background: rgba(0,0,0,0.5) !important;
 }
