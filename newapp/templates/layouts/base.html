@@ -7,72 +7,25 @@
   <title>{% block title %}Speedbots{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   {% block head_css %}{% endblock %}
   {% block head_js %}{% endblock %}
-
-  <style>
-    /* Sidebar overlay for mobile */
-    .sidebar-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.4);
-      z-index: 99;
-    }
-    .sidebar-overlay.active {
-      display: block;
-    }
-  </style>
 </head>
 
 <body>
 
-  <!-- Mobile topbar -->
-  <div class="topbar" id="topbar">
-    <button class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+  {% block sidebar %}
+  {% include 'layouts/sidebar.html' %}
+  {% endblock %}
+
+  <div class="main">
+    {% block content %}{% endblock %}
   </div>
-
-  <div style="display:flex; min-height:100vh;">
-    <nav class="sidebar" id="appSidebar">
-      {% block sidebar %}
-      {% include 'layouts/sidebar.html' %}
-      {% endblock %}
-    </nav>
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-    <main class="main-content">
-      <div class="page-content">
-        {% block content %}{% endblock %}
-      </div>
-    </main>
-  </div>
-
-
 
   {% block body_js %}
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   {% endblock %}
 
-  <script>
-    var appSidebar = document.getElementById('appSidebar');
-    var overlay = document.getElementById('sidebarOverlay');
-    var toggle = document.getElementById('sidebarToggle');
-
-    function openSidebar() {
-      appSidebar.classList.add('open');
-      overlay.classList.add('active');
-    }
-    function closeSidebar() {
-      appSidebar.classList.remove('open');
-      overlay.classList.remove('active');
-    }
-
-    toggle.addEventListener('click', function() {
-      appSidebar.classList.contains('open') ? closeSidebar() : openSidebar();
-    });
-    overlay.addEventListener('click', closeSidebar);
-  </script>
 </body>
 
 </html>
