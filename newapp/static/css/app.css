@@ -110,7 +110,7 @@ a { text-decoration: none; color: inherit; }
   background: var(--bg-app);
   transition: margin-left var(--t-base);
 }
-.page-content { position: relative; z-index: 1; }
+.page-content { position: relative; }
 
 /* ============================================================
    SIDEBAR
