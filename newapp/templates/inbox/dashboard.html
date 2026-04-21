@@ -566,7 +566,7 @@
     <div class="right-panel-section tags-section">
       <div class="tags-header">
         <span class="tags-title">Tags</span>
-        <a href="javascript:void(0)" class="tags-add-btn" onclick="addTag()">+ Add New</a>
+        <a href="javascript:void(0)" class="tags-add-btn" onclick="showAddTagModal()">+ Add New</a>
       </div>
       <div class="tags-container" id="tagsContainer">
         <span class="tag-empty">No tags</span>
@@ -637,6 +637,33 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-primary" onclick="saveCustomField()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Tag Modal -->
+<div class="modal fade" id="addTagModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">🏷️ Add Tag</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Select Tag</label>
+          <select class="form-select" id="tagSelect" required>
+            <option value="">Choose a tag...</option>
+            {% for tag in all_tags %}
+            <option value="{{ tag.name }}" data-color="{{ tag.color }}">{{ tag.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveTag()">Add Tag</button>
       </div>
     </div>
   </div>
@@ -1620,17 +1647,34 @@
   }
 
   /**
-   * Add new tag to user
+   * Show add tag modal with dropdown
    */
-  async function addTag() {
+  var addTagModalInstance = null;
+  function showAddTagModal() {
     const currentUserId = getCurrentUserId();
     if (!currentUserId) {
       alert('Please select a conversation first');
       return;
     }
+    if (!addTagModalInstance) {
+      addTagModalInstance = new bootstrap.Modal(document.getElementById('addTagModal'));
+    }
+    document.getElementById('tagSelect').value = '';
+    addTagModalInstance.show();
+  }
 
-    const tagName = prompt('Enter tag name:');
-    if (!tagName || !tagName.trim()) return;
+  /**
+   * Save selected tag to user
+   */
+  async function saveTag() {
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) return;
+
+    const tagName = document.getElementById('tagSelect').value;
+    if (!tagName) {
+      alert('Please select a tag');
+      return;
+    }
 
     try {
       const res = await fetch('/api/inbox/user_tag/add/', {
@@ -1648,6 +1692,7 @@
       const data = await res.json();
 
       if (data.success) {
+        if (addTagModalInstance) addTagModalInstance.hide();
         await loadUserTags(currentUserId);
         showNotification(`Tag "${tagName}" added`);
       } else {
