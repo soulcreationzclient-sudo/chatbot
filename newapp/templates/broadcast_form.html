@@ -1,6 +1,120 @@
 {% extends "layouts/base.html" %}
 {% block title %}Broadcast Message{% endblock %}
 
+{% block head_css %}
+<style>
+/* ── Rose Theme Polish ── */
+:root {
+  --accent: #f43f5e;
+  --accent-soft: #fff1f2;
+  --accent-border: #fecdd3;
+  --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
+}
+body, * { font-family: var(--font-main) !important; }
+
+/* Cards and sections */
+.section, .card-box, .info-card, .form-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.section-title, .card-title {
+  font-size: 15px; font-weight: 700; color: #111827;
+  margin-bottom: 14px; padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title i, .card-title i { color: #f43f5e; }
+
+/* Primary buttons */
+.btn-primary, .btn-save, .btn-submit, button[type=submit] {
+  background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%) !important;
+  color: #fff !important; border: none !important;
+  padding: 9px 20px !important; border-radius: 10px !important;
+  font-weight: 700 !important; cursor: pointer !important;
+  box-shadow: 0 3px 10px rgba(244,63,94,0.25) !important;
+  transition: opacity 0.15s !important; font-size: 14px !important;
+  font-family: var(--font-main) !important;
+}
+.btn-primary:hover, .btn-save:hover, .btn-submit:hover, button[type=submit]:hover { opacity: 0.9 !important; }
+
+/* Secondary buttons */
+.btn-secondary, .btn-outline, .btn-cancel {
+  background: #fff !important; color: #374151 !important;
+  border: 1px solid #e5e7eb !important; border-radius: 10px !important;
+  padding: 9px 18px !important; font-weight: 600 !important; font-size: 14px !important;
+  cursor: pointer !important; transition: all 0.12s !important;
+  font-family: var(--font-main) !important;
+}
+.btn-secondary:hover, .btn-outline:hover { background: #f8fafc !important; border-color: #d1d5db !important; }
+
+/* Danger buttons */
+.btn-danger, .btn-delete {
+  background: #fff1f2 !important; color: #dc2626 !important;
+  border: 1px solid #fecdd3 !important; border-radius: 10px !important;
+  padding: 9px 18px !important; font-weight: 600 !important; font-size: 14px !important;
+  cursor: pointer !important; transition: all 0.12s !important;
+  font-family: var(--font-main) !important;
+}
+.btn-danger:hover, .btn-delete:hover { background: #fee2e2 !important; }
+
+/* Form controls */
+input[type=text], input[type=email], input[type=password], input[type=number],
+input[type=url], input[type=search], textarea, select {
+  font-family: var(--font-main) !important;
+  background: #f1f5f9 !important; border: 1px solid #e5e7eb !important;
+  border-radius: 10px !important; padding: 9px 13px !important;
+  font-size: 14px !important; color: #111827 !important;
+  outline: none !important; transition: all 0.15s !important;
+  width: 100%;
+}
+input[type=text]:focus, input[type=email]:focus, input[type=password]:focus,
+input[type=number]:focus, input[type=url]:focus, textarea:focus, select:focus {
+  background: #fff !important; border-color: #f43f5e !important;
+  box-shadow: 0 0 0 3px rgba(244,63,94,0.1) !important;
+}
+
+/* Table improvements */
+table { border-collapse: collapse; width: 100%; }
+table th { background: #f8fafc !important; color: #9ca3af !important; font-size: 11px !important; font-weight: 700 !important; text-transform: uppercase; letter-spacing: 0.07em; padding: 12px 16px !important; border-bottom: 1px solid #e5e7eb !important; }
+table td { padding: 13px 16px !important; border-bottom: 1px solid #f1f5f9 !important; font-size: 14px !important; color: #374151 !important; }
+table tr:hover td { background: #fff8f9 !important; }
+table tr:last-child td { border-bottom: none !important; }
+
+/* Badges */
+.badge-success { background: #f0fdf4 !important; color: #16a34a !important; border: 1px solid #bbf7d0 !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
+.badge-danger  { background: #fff1f2 !important; color: #dc2626 !important; border: 1px solid #fecdd3 !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
+.badge-info    { background: #fff1f2 !important; color: #f43f5e !important; border: 1px solid #fecdd3 !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
+.badge-warning { background: #fffbeb !important; color: #d97706 !important; border: 1px solid #fde68a !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
+
+/* Modals */
+.modal-box, .modal-content {
+  border-radius: 18px !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.12) !important;
+}
+
+/* Nav tabs */
+.tab-bar { display: flex; border-bottom: 1px solid #e5e7eb; margin-bottom: 20px; }
+.tab { padding: 10px 18px; font-size: 14px; font-weight: 600; color: #9ca3af; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.12s; text-decoration: none; }
+.tab:hover { color: #374151; }
+.tab.active { color: #f43f5e; border-bottom-color: #f43f5e; }
+
+/* Page headers */
+.page-header h1, .page-title { font-size: 22px; font-weight: 800; color: #111827; letter-spacing: -0.02em; }
+.page-header .breadcrumb { font-size: 13px; color: #9ca3af; margin-bottom: 6px; }
+.page-header .breadcrumb a { color: #f43f5e; font-weight: 600; text-decoration: none; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.18); }
+</style>
+{% endblock %}
+
 {% block content %}
 <style>
   :root {
@@ -8,7 +122,7 @@
     --border-soft: #e5e7eb;
     --text-main: #0f172a;
     --text-muted: #64748b;
-    --accent: #3b82f6;
+    --accent: #f43f5e;
     --success: #22c55e;
   }
 
@@ -73,8 +187,8 @@
   select:focus,
   textarea:focus {
     outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    border-color: #f43f5e;
+    box-shadow: 0 0 0 4px rgba(244,63,94, 0.1);
   }
 
   textarea {
@@ -89,7 +203,7 @@
 
   .btn-send {
     background: var(--success);
-    background-color: #3b82f6;
+    background-color: #f43f5e;
     color: white;
     border: none;
     padding: 16px 45px;
