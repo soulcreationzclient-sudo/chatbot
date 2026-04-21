@@ -3,6 +3,12 @@
 {% block title %}Team Management{% endblock %}
 
 {% block head_css %}
+<style>
+.modal-backdrop { z-index: 1040 !important; }
+.modal { z-index: 1050 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; }
+.modal-dialog { pointer-events: all !important; margin: auto !important; }
+body.modal-open { overflow: auto !important; padding-right: 0 !important; }
+</style>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
     :root {
@@ -10,7 +16,7 @@
         --border-soft: #e5e7eb;
         --text-main: #0f172a;
         --text-muted: #64748b;
-        --accent: #3b82f6;
+        --accent: #f43f5e;
         --success: #22c55e;
         --danger: #ef4444;
         --warning: #f59e0b;
@@ -82,7 +88,7 @@
         color: #fff;
     }
 
-    .member-avatar.admin { background: #3b82f6; }
+    .member-avatar.admin { background: linear-gradient(135deg,#f43f5e,#fb7185); }
     .member-avatar.agent { background: #22c55e; }
     .member-avatar.viewer { background: #8b5cf6; }
 
@@ -104,7 +110,7 @@
         font-weight: 600;
     }
 
-    .role-badge.client_admin { background: #dbeafe; color: #1d4ed8; }
+    .role-badge.client_admin { background: #fce7f3; color: #1d4ed8; }
     .role-badge.agent { background: #dcfce7; color: #15803d; }
     .role-badge.viewer { background: #f3e8ff; color: #7c3aed; }
 
@@ -118,7 +124,7 @@
     }
 
     .btn-add {
-        background: #3B82F6;
+        background: linear-gradient(135deg, #f43f5e, #fb7185);
         color: white;
         border: none;
         padding: 12px 24px;
@@ -211,6 +217,254 @@
         color: var(--text-muted);
         margin-top: 4px;
     }
+
+/* ── Modal White Fix ── */
+.modal-content {
+  background: #ffffff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15) !important;
+}
+.modal-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  border-radius: 16px 16px 0 0 !important;
+  padding: 18px 22px !important;
+}
+.modal-body {
+  background: #ffffff !important;
+  padding: 22px !important;
+}
+.modal-footer {
+  background: #ffffff !important;
+  border-top: 1px solid #e5e7eb !important;
+  border-radius: 0 0 16px 16px !important;
+  padding: 14px 22px !important;
+}
+.modal-body .form-control,
+.modal-body .form-select,
+.modal-body input,
+.modal-body textarea,
+.modal-body select {
+  background: #f8fafc !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 10px !important;
+  padding: 9px 13px !important;
+  font-size: 14px !important;
+  color: #111827 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  outline: none !important;
+  width: 100% !important;
+  box-shadow: none !important;
+}
+.modal-body .form-control:focus,
+.modal-body .form-select:focus,
+.modal-body input:focus,
+.modal-body textarea:focus,
+.modal-body select:focus {
+  background: #ffffff !important;
+  border-color: #f43f5e !important;
+  box-shadow: 0 0 0 3px rgba(244,63,94,0.1) !important;
+}
+.modal-body .form-label,
+.modal-body label {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+  margin-bottom: 6px !important;
+}
+.modal-title {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+}
+.modal-footer .btn-secondary {
+  background: #f1f5f9 !important;
+  color: #374151 !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 10px !important;
+  padding: 9px 18px !important;
+  font-weight: 600 !important;
+}
+.modal-footer .btn-success,
+.modal-footer .btn-primary {
+  background: linear-gradient(135deg, #f43f5e, #fb7185) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 10px !important;
+  padding: 9px 18px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(244,63,94,0.25) !important;
+}
+</style>
+<style>
+  /* ── SpeedBots Rose Theme Patch ── */
+  :root {
+    --accent: #f43f5e !important;
+    --accent-soft: #fff1f2 !important;
+    --accent-hover: #e11d48 !important;
+    --primary: #f43f5e !important;
+    --blue: #f43f5e !important;
+  }
+  /* Accent color overrides */
+  a { color: inherit; }
+  .btn-primary, button.btn-primary {
+    background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    box-shadow: 0 2px 10px rgba(244,63,94,0.25) !important;
+  }
+  .btn-primary:hover { opacity: 0.9 !important; }
+  /* Input focus rings */
+  input:focus, select:focus, textarea:focus {
+    border-color: #f43f5e !important;
+    box-shadow: 0 0 0 3px rgba(244,63,94,0.1) !important;
+    outline: none !important;
+  }
+  /* Section/card heading accent */
+  .section-title i, .page-title i { color: #f43f5e !important; }
+  /* Table row hover */
+  tr:hover td { background: #fff8f9 !important; }
+  /* Badge accent */
+  .badge-primary, .badge.bg-primary { background: #fff1f2 !important; color: #f43f5e !important; border: 1px solid #fecdd3 !important; }
+  /* Links */
+  .text-primary, .text-blue { color: #f43f5e !important; }
+  /* Active nav / tabs */
+  .nav-link.active { color: #f43f5e !important; border-bottom-color: #f43f5e !important; }
+  /* Search focus */
+  .search:focus-within, .search-input:focus {
+    border-color: #f43f5e !important;
+    box-shadow: 0 0 0 3px rgba(244,63,94,0.08) !important;
+  }
+</style>
+<style>
+/* ── Rose Theme Polish ── */
+:root {
+  --accent: #f43f5e;
+  --accent-soft: #fff1f2;
+  --accent-border: #fecdd3;
+  --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
+}
+body, * { font-family: var(--font-main) !important; }
+
+/* Cards and sections */
+.section, .card-box, .info-card, .form-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.section-title, .card-title {
+  font-size: 15px; font-weight: 700; color: #111827;
+  margin-bottom: 14px; padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title i, .card-title i { color: #f43f5e; }
+
+/* Primary buttons */
+.btn-primary, .btn-save, .btn-submit, button[type=submit] {
+  background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%) !important;
+  color: #fff !important; border: none !important;
+  padding: 9px 20px !important; border-radius: 10px !important;
+  font-weight: 700 !important; cursor: pointer !important;
+  box-shadow: 0 3px 10px rgba(244,63,94,0.25) !important;
+  transition: opacity 0.15s !important; font-size: 14px !important;
+  font-family: var(--font-main) !important;
+}
+.btn-primary:hover, .btn-save:hover, .btn-submit:hover, button[type=submit]:hover { opacity: 0.9 !important; }
+
+/* Secondary buttons */
+.btn-secondary, .btn-outline, .btn-cancel {
+  background: #fff !important; color: #374151 !important;
+  border: 1px solid #e5e7eb !important; border-radius: 10px !important;
+  padding: 9px 18px !important; font-weight: 600 !important; font-size: 14px !important;
+  cursor: pointer !important; transition: all 0.12s !important;
+  font-family: var(--font-main) !important;
+}
+.btn-secondary:hover, .btn-outline:hover { background: #f8fafc !important; border-color: #d1d5db !important; }
+
+/* Danger buttons */
+.btn-danger, .btn-delete {
+  background: #fff1f2 !important; color: #dc2626 !important;
+  border: 1px solid #fecdd3 !important; border-radius: 10px !important;
+  padding: 9px 18px !important; font-weight: 600 !important; font-size: 14px !important;
+  cursor: pointer !important; transition: all 0.12s !important;
+  font-family: var(--font-main) !important;
+}
+.btn-danger:hover, .btn-delete:hover { background: #fee2e2 !important; }
+
+/* Form controls — only outside modals */
+:not(.modal-body) > input[type=text], :not(.modal-body) > input[type=email],
+:not(.modal-body) > input[type=password], :not(.modal-body) > input[type=number],
+:not(.modal-body) > input[type=url], :not(.modal-body) > input[type=search],
+:not(.modal-body) > textarea, :not(.modal-body) > select {
+  font-family: var(--font-main) !important;
+  background: #f1f5f9 !important; border: 1px solid #e5e7eb !important;
+  border-radius: 10px !important; padding: 9px 13px !important;
+  font-size: 14px !important; color: #111827 !important;
+  outline: none !important; transition: all 0.15s !important;
+  width: 100%;
+}
+:not(.modal-body) > input[type=text]:focus, :not(.modal-body) > input[type=email]:focus,
+:not(.modal-body) > input[type=password]:focus, :not(.modal-body) > textarea:focus,
+:not(.modal-body) > select:focus {
+  background: #fff !important; border-color: #f43f5e !important;
+  box-shadow: 0 0 0 3px rgba(244,63,94,0.1) !important;
+}
+/* Modal inputs — always clean white */
+.modal-body input, .modal-body textarea, .modal-body select,
+.modal-content input, .modal-content textarea, .modal-content select,
+.modal-box input, .modal-box textarea, .modal-box select {
+  background: #ffffff !important; border: 1px solid #e5e7eb !important;
+  border-radius: 10px !important; padding: 9px 13px !important;
+  font-size: 14px !important; color: #111827 !important;
+  font-family: var(--font-main) !important;
+  outline: none !important; transition: all 0.15s !important;
+  width: 100%;
+}
+.modal-body input:focus, .modal-body textarea:focus, .modal-body select:focus,
+.modal-content input:focus, .modal-content textarea:focus, .modal-content select:focus {
+  background: #fff !important; border-color: #f43f5e !important;
+  box-shadow: 0 0 0 3px rgba(244,63,94,0.1) !important;
+}
+
+/* Table improvements */
+table { border-collapse: collapse; width: 100%; }
+table th { background: #f8fafc !important; color: #9ca3af !important; font-size: 11px !important; font-weight: 700 !important; text-transform: uppercase; letter-spacing: 0.07em; padding: 12px 16px !important; border-bottom: 1px solid #e5e7eb !important; }
+table td { padding: 13px 16px !important; border-bottom: 1px solid #f1f5f9 !important; font-size: 14px !important; color: #374151 !important; }
+table tr:hover td { background: #fff8f9 !important; }
+table tr:last-child td { border-bottom: none !important; }
+
+/* Badges */
+.badge-success { background: #f0fdf4 !important; color: #16a34a !important; border: 1px solid #bbf7d0 !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
+.badge-danger  { background: #fff1f2 !important; color: #dc2626 !important; border: 1px solid #fecdd3 !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
+.badge-info    { background: #fff1f2 !important; color: #f43f5e !important; border: 1px solid #fecdd3 !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
+.badge-warning { background: #fffbeb !important; color: #d97706 !important; border: 1px solid #fde68a !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
+
+/* Modals */
+.modal-box, .modal-content {
+  border-radius: 18px !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.12) !important;
+}
+
+/* Nav tabs */
+.tab-bar { display: flex; border-bottom: 1px solid #e5e7eb; margin-bottom: 20px; }
+.tab { padding: 10px 18px; font-size: 14px; font-weight: 600; color: #9ca3af; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.12s; text-decoration: none; }
+.tab:hover { color: #374151; }
+.tab.active { color: #f43f5e; border-bottom-color: #f43f5e; }
+
+/* Page headers */
+.page-header h1, .page-title { font-size: 22px; font-weight: 800; color: #111827; letter-spacing: -0.02em; }
+.page-header .breadcrumb { font-size: 13px; color: #9ca3af; margin-bottom: 6px; }
+.page-header .breadcrumb a { color: #f43f5e; font-weight: 600; text-decoration: none; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.18); }
 </style>
 {% endblock %}
 
@@ -310,8 +564,8 @@
 
 <!-- Add/Edit Modal -->
 <div class="modal fade" id="addModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog" style="margin:1.75rem auto!important;left:0!important;right:0!important;">
+        <div class="modal-content" style="background:#ffffff!important;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalTitle">Add Team Member</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -320,23 +574,23 @@
                 <input type="hidden" id="editMemberId" value="">
                 <div class="mb-3">
                     <label class="form-label">Full Name</label>
-                    <input type="text" class="form-control" id="memberName" placeholder="e.g., John Doe">
+                    <input type="text" class="form-control" id="memberName" style="background:#fff!important;border:1px solid #e5e7eb!important;border-radius:10px!important;" placeholder="e.g., John Doe">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Username <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="memberUsername" placeholder="e.g., johnd">
+                    <input type="text" class="form-control" id="memberUsername" style="background:#fff!important;border:1px solid #e5e7eb!important;border-radius:10px!important;" placeholder="e.g., johnd">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Email</label>
-                    <input type="email" class="form-control" id="memberEmail" placeholder="john@example.com">
+                    <input type="email" class="form-control" id="memberEmail" style="background:#fff!important;border:1px solid #e5e7eb!important;border-radius:10px!important;" placeholder="john@example.com">
                 </div>
                 <div class="mb-3" id="passwordField">
                     <label class="form-label">Password <span class="text-danger">*</span></label>
-                    <input type="password" class="form-control" id="memberPassword" placeholder="Min 6 characters">
+                    <input type="password" class="form-control" id="memberPassword" style="background:#fff!important;border:1px solid #e5e7eb!important;border-radius:10px!important;" placeholder="Min 6 characters">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Role</label>
-                    <select class="form-select" id="memberRole">
+                    <select class="form-select" id="memberRole" style="background:#fff!important;border:1px solid #e5e7eb!important;border-radius:10px!important;">
                         {% for role in roles %}
                         <option value="{{ role.id }}">{{ role.get_name_display }} — {{ role.description|truncatechars:50 }}</option>
                         {% endfor %}
@@ -472,5 +726,14 @@
         }
         return '';
     }
+</script>
+
+<script>
+// Move modals to document.body to escape sidebar offset
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.modal').forEach(function(modal) {
+    document.body.appendChild(modal);
+  });
+});
 </script>
 {% endblock %}
