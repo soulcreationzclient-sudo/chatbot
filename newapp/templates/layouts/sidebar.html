@@ -16,6 +16,10 @@
   }
   .sidebar.hidden { left: -260px; }
 
+  /* Ensure Bootstrap modals appear above sidebar (z-index 1000) and topbar */
+  .modal-backdrop { z-index: 1200 !important; }
+  .modal { z-index: 1210 !important; }
+
   /* Logo area */
   .brand {
     padding: 8px 16px;
