@@ -455,7 +455,7 @@ table tr:last-child td { border-bottom: none !important; }
     <div class="page-header">
         <h1 class="page-title">Broadcast & Templates</h1>
         <button class="btn btn-primary" onclick="syncTemplates()">
-            🔄 Sync Templates from Meta
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync Templates from Meta
         </button>
     </div>
 
@@ -463,18 +463,18 @@ table tr:last-child td { border-bottom: none !important; }
 
     <!-- Template Tag Usage Docs -->
     <div class="usage-box">
-        <h3>🤖 Use Templates in AI Prompt</h3>
+        <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><rect x="3" y="8" width="18" height="12" rx="3"/><circle cx="9" cy="14" r="1.5" fill="currentColor"/><circle cx="15" cy="14" r="1.5" fill="currentColor"/><path d="M9 18h6"/><line x1="12" y1="8" x2="12" y2="5"/><circle cx="12" cy="4" r="1.5" fill="currentColor"/></svg> Use Templates in AI Prompt</h3>
         <p>Add these tags to your ChatGPT prompt to make the AI send template messages automatically:</p>
         <p style="margin-bottom: 4px;"><code>{% templatetag openvariable %}template:template_name{% templatetag closevariable %}</code> — sends a WhatsApp template message</p>
         <p style="font-size: 12px; color: #92400e;">Example prompt instruction: <em>"When user confirms booking, respond with: {% templatetag openvariable %}template:hello_world{% templatetag closevariable %}"</em></p>
-        <p style="margin-top: 8px;"><strong>⚡ Manual Rule Mode:</strong></p>
+        <p style="margin-top: 8px;"><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Manual Rule Mode:</strong></p>
         <p style="margin-bottom: 0;">Copy the tag from each template below and paste into your AI prompt.</p>
     </div>
 
     <!-- Templates Section -->
     <div class="section">
         <div class="section-title">
-            <span>📋 Approved Templates</span>
+            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg> Approved Templates</span>
             <span style="font-size: 14px; font-weight: normal; color: var(--text-muted);">
                 {{ templates|length }} template(s)
             </span>
@@ -489,7 +489,7 @@ table tr:last-child td { border-bottom: none !important; }
                         {{ tpl.name }}
                         <span class="template-tag" onclick="copyTemplateTag('{{ tpl.name }}')" title="Click to copy">
                             {% templatetag openvariable %}template:{{ tpl.name }}{% templatetag closevariable %}
-                            <span class="copy-icon">📋</span>
+                            <span class="copy-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></span>
                         </span>
                     </div>
                     <div class="template-meta">{{ tpl.category }} • {{ tpl.language }}</div>
@@ -508,7 +508,7 @@ table tr:last-child td { border-bottom: none !important; }
 
     <!-- Create Broadcast Section -->
     <div class="section">
-        <div class="section-title">📤 Create Broadcast</div>
+        <div class="section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Create Broadcast</div>
 
         {% if templates %}
         <form id="broadcastForm" onsubmit="createBroadcast(event)">
@@ -532,7 +532,7 @@ table tr:last-child td { border-bottom: none !important; }
                 </select>
             </div>
 
-            <button type="submit" class="btn btn-primary">🚀 Start Broadcast</button>
+            <button type="submit" class="btn btn-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg> Start Broadcast</button>
         </form>
         {% else %}
         <p style="color: var(--text-muted);">Sync templates first to create a broadcast.</p>
@@ -542,7 +542,7 @@ table tr:last-child td { border-bottom: none !important; }
     <!-- Recent Broadcasts Section -->
     <div class="section">
         <div class="section-title">
-            <span>📊 Recent Broadcasts</span>
+            <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Recent Broadcasts</span>
         </div>
 
         {% if jobs %}
@@ -552,8 +552,8 @@ table tr:last-child td { border-bottom: none !important; }
                 <div>
                     <div class="job-name">{{ job.name }}</div>
                     <div class="job-stats">
-                        ✅ {{ job.sent_count }}/{{ job.total_recipients }} sent •
-                        ❌ {{ job.failed_count }} failed •
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> {{ job.sent_count }}/{{ job.total_recipients }} sent •
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> {{ job.failed_count }} failed •
                         {{ job.created_at|date:"M d, H:i" }}
                     </div>
                 </div>
@@ -585,13 +585,13 @@ table tr:last-child td { border-bottom: none !important; }
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    showAlert('success', `✅ Synced ${data.synced_count} templates!`);
+                    showAlert('success', `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Synced ${data.synced_count} templates!`);
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    showAlert('error', '❌ ' + (data.error || 'Failed to sync'));
+                    showAlert('error', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> ' + (data.error || 'Failed to sync'));
                 }
             })
-            .catch(err => showAlert('error', '❌ Network error'));
+            .catch(err => showAlert('error', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Network error'));
     }
 
     function copyTemplateTag(name) {
@@ -600,7 +600,7 @@ table tr:last-child td { border-bottom: none !important; }
             // Visual feedback
             const btn = event.currentTarget;
             const original = btn.innerHTML;
-            btn.innerHTML = '✅ Copied!';
+            btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Copied!';
             btn.style.background = '#dcfce7';
             btn.style.borderColor = '#22c55e';
             setTimeout(() => {
@@ -639,13 +639,13 @@ table tr:last-child td { border-bottom: none !important; }
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    showAlert('success', `✅ Broadcast started! Job ID: ${data.job_id}`);
+                    showAlert('success', `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Broadcast started! Job ID: ${data.job_id}`);
                     setTimeout(() => location.reload(), 2000);
                 } else {
-                    showAlert('error', '❌ ' + (data.error || 'Failed to create broadcast'));
+                    showAlert('error', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> ' + (data.error || 'Failed to create broadcast'));
                 }
             })
-            .catch(err => showAlert('error', '❌ Network error'));
+            .catch(err => showAlert('error', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Network error'));
     }
 </script>
 {% endblock %}

@@ -6,7 +6,7 @@
     <title>Shareable Chat Links - Chatbot Admin</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; color: #333; }
         .container { max-width: 800px; margin: 0 auto; padding: 24px; }
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
         .page-title { font-size: 24px; font-weight: 600; }
@@ -46,14 +46,14 @@
 <body>
     <div class="container">
         <div class="nav-tabs">
-            <a href="/webchat/dashboard/" class="nav-tab">💬 Sessions</a>
-            <a href="/webchat/analytics/" class="nav-tab">📊 Analytics</a>
-            <a href="/webchat/widgets/" class="nav-tab active">🔗 Shareable Links</a>
+            <a href="/webchat/dashboard/" class="nav-tab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Sessions</a>
+            <a href="/webchat/analytics/" class="nav-tab"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Analytics</a>
+            <a href="/webchat/widgets/" class="nav-tab active"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Shareable Links</a>
         </div>
 
         <div class="page-header">
             <div>
-                <h1 class="page-title">🔗 Shareable Chat Links</h1>
+                <h1 class="page-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Shareable Chat Links</h1>
                 <p class="page-subtitle">Create chat links you can share with anyone to test or use your chatbot</p>
             </div>
             <button class="btn-create" onclick="openModal()">+ Create Link</button>
@@ -70,9 +70,9 @@
                 </div>
             </div>
             <div class="share-row">
-                <span>🔗</span>
+                <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
                 <span class="share-url" id="url-{{ widget.id }}">{{ request.scheme }}://{{ request.get_host }}/webchat/w/{{ widget.id }}/</span>
-                <button class="btn-copy" onclick="copyUrl({{ widget.id }})">📋 Copy</button>
+                <button class="btn-copy" onclick="copyUrl({{ widget.id }})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg> Copy</button>
                 <a class="btn-open" href="/webchat/w/{{ widget.id }}/" target="_blank">Open</a>
             </div>
             <div class="created-date">Created: {{ widget.created_at|date:"M d, Y" }}</div>
@@ -154,8 +154,8 @@
             const url = document.getElementById('url-' + id).textContent;
             navigator.clipboard.writeText(url).then(() => {
                 const btn = event.currentTarget;
-                btn.textContent = '✅ Copied!';
-                setTimeout(() => { btn.textContent = '📋 Copy'; }, 1500);
+                btn.textContent = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Copied!';
+                setTimeout(() => { btn.textContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg> Copy'; }, 1500);
             });
         }
 

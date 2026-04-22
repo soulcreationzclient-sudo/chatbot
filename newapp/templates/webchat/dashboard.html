@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebChat Dashboard - Test Your Prompts</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #4169e1;
@@ -27,7 +27,7 @@
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            font-family: 'Plus Jakarta Sans', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-body);
             color: var(--text-main);
             height: 100vh;
@@ -564,19 +564,19 @@
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="logo">
-                <div class="logo-icon">💬</div>
+                <div class="logo-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
                 <span>WebChat</span>
             </div>
             <div class="nav-item active" onclick="switchTab('dashboard')">
-                <span class="nav-icon">📊</span>
+                <span class="nav-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
                 <span>Dashboard</span>
             </div>
             <div class="nav-item" onclick="switchTab('test-chat')">
-                <span class="nav-icon">✨</span>
+                <span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
                 <span>Test Chat</span>
             </div>
             <a href="/webchat/widgets/" class="nav-item" style="text-decoration:none;">
-                <span class="nav-icon">⚙️</span>
+                <span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
                 <span>Widgets</span>
             </a>
             <div style="border-top: 1px solid #d1d5db; margin: 12px 0;"></div>
@@ -602,10 +602,10 @@
             <div class="tab-nav-container">
                 <div class="tab-nav">
                     <button class="tab-btn active" onclick="switchTab('dashboard')">
-                        📊 Overview
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Overview
                     </button>
                     <button class="tab-btn" onclick="switchTab('test-chat')">
-                        ✨ Test Simulator
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Test Simulator
                     </button>
                 </div>
             </div>
@@ -631,7 +631,7 @@
                     <div class="stat-card">
                         <h3>Avg Response</h3>
                         <div class="value">{{ avg_response_time }}s</div>
-                        <div class="change text-green">⚡ Fast</div>
+                        <div class="change text-green"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Fast</div>
                     </div>
                 </div>
 
@@ -674,7 +674,7 @@
 
                         <div class="chat-messages" id="chat-messages">
                             <div class="empty-state">
-                                <div class="empty-icon">👋</div>
+                                <div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M6 14a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4v-2.5"/></svg></div>
                                 <h3>Welcome to AI Simulator</h3>
                                 <p style="max-width: 300px; margin-top: 8px;">
                                     Test your AI's responses in real-time. Tags and custom fields will appear on the
@@ -687,7 +687,7 @@
                             <div class="chat-input-container">
                                 <textarea class="chat-input" id="chat-input" rows="1"
                                     placeholder="Type a message to test... (Shift+Enter for new line)" onkeydown="handleKeyDown(event)"></textarea>
-                                <button class="icon-btn send-btn" onclick="sendMessage()">➤</button>
+                                <button class="icon-btn send-btn" onclick="sendMessage()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
                             </div>
                         </div>
                     </div>
@@ -696,7 +696,7 @@
                     <div id="simulator-sidebar"
                         style="width: 320px; flex-shrink: 0; background: white; border-radius: 16px; border: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column;">
                         <div style="padding: 16px 20px; border-bottom: 1px solid var(--border);">
-                            <h3 style="font-size: 15px; font-weight: 600; color: var(--text-main);">📋 AI Response
+                            <h3 style="font-size: 15px; font-weight: 600; color: var(--text-main);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg> AI Response
                                 Details</h3>
                         </div>
 
@@ -704,7 +704,7 @@
                         <div style="padding: 16px 20px; border-bottom: 1px solid var(--border);">
                             <h4
                                 style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
-                                🏷️ Tags Applied</h4>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Tags Applied</h4>
                             <div id="sidebar-tags">
                                 <span style="font-size: 13px; color: #94a3b8;">No tags detected yet</span>
                             </div>
@@ -714,7 +714,7 @@
                         <div style="padding: 16px 20px; border-bottom: 1px solid var(--border);">
                             <h4
                                 style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
-                                📝 Custom Fields Captured</h4>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Custom Fields Captured</h4>
                             <div id="sidebar-custom-fields">
                                 <span style="font-size: 13px; color: #94a3b8;">No custom fields detected yet</span>
                             </div>
@@ -724,7 +724,7 @@
                         <div style="padding: 16px 20px; border-bottom: 1px solid var(--border);">
                             <h4
                                 style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
-                                📊 All Tags (Session)</h4>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> All Tags (Session)</h4>
                             <div id="sidebar-all-tags">
                                 <span style="font-size: 13px; color: #94a3b8;">—</span>
                             </div>
@@ -734,7 +734,7 @@
                         <div style="padding: 16px 20px; flex: 1;">
                             <h4
                                 style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
-                                📊 All Custom Fields (Session)</h4>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> All Custom Fields (Session)</h4>
                             <div id="sidebar-all-fields">
                                 <span style="font-size: 13px; color: #94a3b8;">—</span>
                             </div>
@@ -888,7 +888,7 @@
                             style="background:none; border:none; cursor:pointer; color:#94a3b8; font-size:14px; padding:4px; border-radius:4px;" 
                             onmouseenter="this.style.color='#ef4444'" 
                             onmouseleave="this.style.color='#94a3b8'" 
-                            title="Delete">🗑</button>
+                            title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></button>
                 </div>
             `).join('');
         }
@@ -932,12 +932,12 @@
                             updateSidebar(Array.from(allSessionTags), Object.entries(allSessionFields).map(([n,v]) => ({name:n, value:v})));
                         }
                         if (data.messages.length === 0) {
-                            container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><h3>Empty session</h3></div>';
+                            container.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div><h3>Empty session</h3></div>';
                         }
                     }
                 })
                 .catch(() => {
-                    container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><h3>Failed to load</h3></div>';
+                    container.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><h3>Failed to load</h3></div>';
                 });
 
             // Highlight active session
@@ -957,7 +957,7 @@
                         if (currentSessionId === sessionId) {
                             currentSessionId = null;
                             const container = document.getElementById('chat-messages');
-                            container.innerHTML = '<div class="empty-state"><div class="empty-icon">👋</div><h3>Welcome to AI Simulator</h3><p style="max-width: 300px; margin-top: 8px;">Test your AI\'s responses in real-time.</p></div>';
+                            container.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M6 14a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4v-2.5"/></svg></div><h3>Welcome to AI Simulator</h3><p style="max-width: 300px; margin-top: 8px;">Test your AI\'s responses in real-time.</p></div>';
                         }
                         loadSessions();
                     }
@@ -970,7 +970,7 @@
             allSessionFields = {};
             switchTab('test-chat');
             const container = document.getElementById('chat-messages');
-            container.innerHTML = '<div class="empty-state"><div class="empty-icon">👋</div><h3>New Chat Session</h3><p style="max-width: 300px; margin-top: 8px;">Start a fresh conversation to test your AI.</p></div>';
+            container.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M6 14a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4v-2.5"/></svg></div><h3>New Chat Session</h3><p style="max-width: 300px; margin-top: 8px;">Start a fresh conversation to test your AI.</p></div>';
             // Reset sidebar panels
             document.getElementById('sidebar-tags').innerHTML = '<span style="font-size: 13px; color: #94a3b8;">No tags detected yet</span>';
             document.getElementById('sidebar-custom-fields').innerHTML = '<span style="font-size: 13px; color: #94a3b8;">No custom fields detected yet</span>';

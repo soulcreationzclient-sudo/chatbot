@@ -7,7 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -62,7 +62,7 @@
 <body>
     <div class="card{% if not success %} error{% endif %}">
         {% if success %}
-        <div class="icon">✅</div>
+        <div class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
         <h1>Booking Confirmed!</h1>
         <p class="subtitle">
             Thank you{{ user_name|default:"" }}, your <strong>{{ link_name }}</strong> appointment has been scheduled successfully.
@@ -79,7 +79,7 @@
             You can close this page now. We look forward to meeting you!
         </p>
         {% else %}
-        <div class="icon">⚠️</div>
+        <div class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <h1>Something went wrong</h1>
         <p class="subtitle">{{ message|default:"This booking link may have expired. Please request a new booking link from the chat." }}</p>
         {% endif %}

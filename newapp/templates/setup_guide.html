@@ -6,7 +6,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Setup Guide - SpeedBots</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #f7f8fb; --card: #ffffff; --ink: #111827;
@@ -19,7 +19,7 @@
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg); color: var(--ink);
       padding: 32px 16px; line-height: 1.6;
     }
@@ -178,7 +178,7 @@
             <li><strong>Log in</strong> to your SpeedBot dashboard using the login URL, ID, and password provided by the SpeedBot team.</li>
             <li>Once logged in, you'll see the <strong>Inbox</strong> — the main dashboard.</li>
           </ol>
-          <div class="tip"><span class="tip-icon">💡</span> <span><strong>First things to do:</strong> Connect your WhatsApp number, add your OpenAI API key, and set up your AI system prompt.</span></div>
+          <div class="tip"><span class="tip-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg></span> <span><strong>First things to do:</strong> Connect your WhatsApp number, add your OpenAI API key, and set up your AI system prompt.</span></div>
         </div>
       </div>
     </div>
@@ -192,7 +192,7 @@
       </div>
       <div class="section-body">
         <div class="section-content">
-          <div class="tip"><span class="tip-icon">🤝</span> <span><strong>Our team will help you with this.</strong> We'll connect your WhatsApp account for you during onboarding. No action needed from your side!</span></div>
+          <div class="tip"><span class="tip-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/></svg></span> <span><strong>Our team will help you with this.</strong> We'll connect your WhatsApp account for you during onboarding. No action needed from your side!</span></div>
         </div>
       </div>
     </div>
@@ -220,7 +220,7 @@
             <li>Paste your API key in the <strong>OpenAI API Key</strong> field.</li>
             <li>Click <strong>Save</strong>.</li>
           </ol>
-          <div class="warning"><span class="warning-icon">⚠️</span> <span>Make sure your OpenAI account has <strong>credits/billing enabled</strong>. Without credits, the chatbot cannot generate responses.</span></div>
+          <div class="warning"><span class="warning-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <span>Make sure your OpenAI account has <strong>credits/billing enabled</strong>. Without credits, the chatbot cannot generate responses.</span></div>
         </div>
       </div>
     </div>
@@ -246,7 +246,7 @@
             <tr><td><code>gpt-4-turbo</code></td><td>High capability, faster</td><td>Medium</td></tr>
             <tr><td><code>gpt-3.5-turbo</code></td><td>Basic use, most affordable</td><td>Lowest</td></tr>
           </table>
-          <div class="tip"><span class="tip-icon">💡</span> <span>Start with <code>gpt-4o-mini</code> for testing (lower cost), then switch to <code>gpt-4o</code> for production.</span></div>
+          <div class="tip"><span class="tip-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg></span> <span>Start with <code>gpt-4o-mini</code> for testing (lower cost), then switch to <code>gpt-4o</code> for production.</span></div>
         </div>
       </div>
     </div>
@@ -303,7 +303,7 @@
             <tr><td><strong>Calendly Link</strong></td><td><code>{{calendly:link_name}}</code></td><td><code>{{calendly:booking_link}}</code></td></tr>
             <tr><td><strong>External API</strong></td><td><code>{{api:api_name}}</code></td><td><code>{{api:check_order}}</code></td></tr>
           </table>
-          <div class="warning"><span class="warning-icon">⚠️</span> <span>Tag names, custom field names, and image asset names must <strong>exactly match</strong> what you create in the dashboard (case-sensitive).</span></div>
+          <div class="warning"><span class="warning-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <span>Tag names, custom field names, and image asset names must <strong>exactly match</strong> what you create in the dashboard (case-sensitive).</span></div>
         </div>
       </div>
     </div>
@@ -384,11 +384,11 @@
           <h4>Example Sequence:</h4>
           <table class="guide-table">
             <tr><th>Step</th><th>Delay</th><th>Message</th></tr>
-            <tr><td>1</td><td>10 min</td><td>Hi! 👋 Did you have any other questions?</td></tr>
+            <tr><td>1</td><td>10 min</td><td>Hi! <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M6 14a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4v-2.5"/></svg> Did you have any other questions?</td></tr>
             <tr><td>2</td><td>60 min</td><td>Hey! Would you like more details about our products?</td></tr>
-            <tr><td>3</td><td>24 hrs</td><td>Hi again! 🌟 We're here whenever you're ready.</td></tr>
+            <tr><td>3</td><td>24 hrs</td><td>Hi again! <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> We're here whenever you're ready.</td></tr>
           </table>
-          <div class="tip"><span class="tip-icon">💡</span> <span>If the user replies, all pending follow-ups are <strong>automatically cancelled</strong>.</span></div>
+          <div class="tip"><span class="tip-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg></span> <span>If the user replies, all pending follow-ups are <strong>automatically cancelled</strong>.</span></div>
         </div>
       </div>
     </div>
@@ -440,7 +440,7 @@
 1. When a customer wants to book → ALWAYS use {{calendly:booking_link}}
 2. NEVER ask for name, phone, email manually — Calendly handles it.
 3. NEVER generate your own URLs — always use the tag.</div>
-          <div class="tip"><span class="tip-icon">💡</span> <span>When a user books via Calendly, SpeedBot automatically updates their contact with booking status.</span></div>
+          <div class="tip"><span class="tip-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg></span> <span>When a user books via Calendly, SpeedBot automatically updates their contact with booking status.</span></div>
         </div>
       </div>
     </div>
@@ -462,7 +462,7 @@
             <li>Select the image file and click <strong>Upload</strong>.</li>
           </ol>
           <p>In your prompt: <span class="code-inline">{{image:product_catalog}}</span></p>
-          <div class="warning"><span class="warning-icon">⚠️</span> <span>Asset name must <strong>exactly match</strong> — use lowercase with underscores, no spaces.</span></div>
+          <div class="warning"><span class="warning-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <span>Asset name must <strong>exactly match</strong> — use lowercase with underscores, no spaces.</span></div>
         </div>
       </div>
     </div>
@@ -482,7 +482,7 @@
             <li>Type a message and press Send.</li>
             <li>Verify responses, tags, custom fields, images, and Calendly links work correctly.</li>
           </ol>
-          <div class="tip"><span class="tip-icon">💡</span> <span>Test greetings, product inquiries, edge cases, and objections for a complete check.</span></div>
+          <div class="tip"><span class="tip-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg></span> <span>Test greetings, product inquiries, edge cases, and objections for a complete check.</span></div>
         </div>
       </div>
     </div>
@@ -490,7 +490,7 @@
     <!-- Quick Start Checklist -->
     <div class="section">
       <div class="section-header" onclick="toggleSection(this)">
-        <span class="section-num">✅</span>
+        <span class="section-num"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
         <span class="section-title">Quick Setup Checklist</span>
         <svg class="section-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
       </div>
@@ -509,7 +509,7 @@
             <li><input type="checkbox" id="c10"><label for="c10">Calendly connected and booking links added (if needed)</label></li>
             <li><input type="checkbox" id="c11"><label for="c11">External APIs configured (if needed)</label></li>
 
-            <li><input type="checkbox" id="c12"><label for="c12">Test Chat completed — all features working ✅</label></li>
+            <li><input type="checkbox" id="c12"><label for="c12">Test Chat completed — all features working <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></label></li>
           </ul>
         </div>
       </div>

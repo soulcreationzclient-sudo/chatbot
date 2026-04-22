@@ -3,442 +3,386 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebChat Analytics - Chatbot Admin</title>
+    <title>WebChat Analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f8fafc;
+            color: #111827;
             line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1300px;
             margin: 0 auto;
-            padding: 24px;
+            padding: 32px 28px;
         }
 
-        /* Header */
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
+        /* PAGE HEADER */
+        .page-header { margin-bottom: 28px; }
+        .page-title { font-size: 24px; font-weight: 800; color: #111827; letter-spacing: -0.02em; }
+        .page-subtitle { font-size: 13px; color: #9ca3af; margin-top: 3px; font-weight: 500; }
 
-        .page-title {
-            font-size: 28px;
-            font-weight: 600;
-            color: #1a1a1a;
-        }
-
-        .page-subtitle {
-            color: #666;
-            font-size: 14px;
-            margin-top: 4px;
-        }
-
-        /* Navigation Tabs */
+        /* NAV TABS */
         .nav-tabs {
             display: flex;
             gap: 4px;
-            background: white;
-            padding: 8px;
-            border-radius: 12px;
+            background: #fff;
+            padding: 6px;
+            border-radius: 14px;
             margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            width: fit-content;
         }
-
         .nav-tab {
-            padding: 12px 24px;
-            border: none;
-            background: transparent;
-            font-size: 14px;
-            font-weight: 500;
-            color: #666;
-            cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 9px 18px;
+            border: none; background: transparent;
+            font-size: 13px; font-weight: 600; color: #6b7280;
+            cursor: pointer; border-radius: 10px;
             text-decoration: none;
+            transition: all 0.15s ease;
+            font-family: 'Plus Jakarta Sans', sans-serif;
         }
+        .nav-tab:hover { background: #f8fafc; color: #374151; }
+        .nav-tab.active { background: linear-gradient(135deg, #f43f5e, #fb7185); color: #fff; box-shadow: 0 2px 8px rgba(244,63,94,0.25); }
+        .nav-tab svg { width: 16px; height: 16px; flex-shrink: 0; }
 
-        .nav-tab:hover {
-            background: #f0f0f0;
-        }
-
-        .nav-tab.active {
-            background: #007bff;
-            color: white;
-        }
-
-        .nav-tab svg {
-            width: 18px;
-            height: 18px;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-
-        /* Filters */
-        .filters {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
+        /* FILTER BAR */
+        .filter-bar {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 14px 20px;
             margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            display: flex;
-            gap: 16px;
-            align-items: center;
+            display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
-
-        .filter-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .filter-label {
-            font-size: 14px;
-            color: #666;
-        }
-
+        .filter-label { font-size: 13px; font-weight: 600; color: #374151; }
         .filter-select {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-            background: white;
+            padding: 7px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #f8fafc;
+            color: #111827;
             cursor: pointer;
-        }
-
-        .filter-select:focus {
             outline: none;
-            border-color: #007bff;
+            font-family: 'Plus Jakarta Sans', sans-serif;
         }
+        .filter-select:focus { border-color: #f43f5e; box-shadow: 0 0 0 3px rgba(244,63,94,0.1); }
 
-        /* Stats Grid */
+        /* STATS GRID */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 16px;
             margin-bottom: 24px;
         }
-
         .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 22px 22px 18px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: all 0.15s ease;
         }
-
+        .stat-card:hover { border-color: #fecdd3; box-shadow: 0 4px 12px rgba(244,63,94,0.08); transform: translateY(-1px); }
+        .stat-icon {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 14px; flex-shrink: 0;
+        }
+        .stat-icon svg { width: 18px; height: 18px; }
+        .stat-icon.purple { background: #f5f3ff; color: #8b5cf6; }
+        .stat-icon.rose   { background: #fff1f2; color: #f43f5e; }
+        .stat-icon.green  { background: #f0fdf4; color: #22c55e; }
+        .stat-icon.blue   { background: #eff6ff; color: #3b82f6; }
+        .stat-icon.amber  { background: #fffbeb; color: #f59e0b; }
+        .stat-icon.teal   { background: #f0fdfa; color: #14b8a6; }
         .stat-label {
-            font-size: 13px;
-            color: #666;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 11px; font-weight: 700; color: #9ca3af;
+            text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px;
         }
-
         .stat-value {
-            font-size: 32px;
-            font-weight: 700;
-            color: #1a1a1a;
+            font-size: 28px; font-weight: 800; color: #111827;
+            letter-spacing: -0.03em; line-height: 1;
         }
+        .stat-value.rose   { color: #f43f5e; }
+        .stat-value.green  { color: #22c55e; }
+        .stat-value.amber  { color: #f59e0b; }
+        .stat-value.blue   { color: #3b82f6; }
 
-        .stat-value.primary {
-            color: #007bff;
-        }
-
-        .stat-value.success {
-            color: #28a745;
-        }
-
-        .stat-value.warning {
-            color: #ffc107;
-        }
-
-        .stat-value.danger {
-            color: #dc3545;
-        }
-
-        /* Charts Section */
+        /* CHARTS GRID */
         .charts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 24px;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
             margin-bottom: 24px;
         }
+        @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
 
         .chart-card {
-            background: white;
-            border-radius: 12px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
             padding: 24px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
-
         .chart-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: #1a1a1a;
+            font-size: 14px; font-weight: 700; color: #111827;
+            margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
         }
+        .chart-title svg { width: 16px; height: 16px; color: #f43f5e; }
 
-        /* Bar Chart */
-        .bar-chart {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .bar-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .bar-label {
-            width: 60px;
-            font-size: 14px;
-            color: #666;
-        }
-
+        /* BAR CHART */
+        .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+        .bar-item { display: flex; align-items: center; gap: 12px; }
+        .bar-label { width: 52px; font-size: 12px; color: #6b7280; font-weight: 600; flex-shrink: 0; }
         .bar-track {
-            flex: 1;
-            height: 24px;
-            background: #f0f0f0;
-            border-radius: 12px;
-            overflow: hidden;
+            flex: 1; height: 20px; background: #f1f5f9;
+            border-radius: 10px; overflow: hidden;
         }
-
         .bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
-            border-radius: 12px;
-            transition: width 0.5s ease;
+            height: 100%; border-radius: 10px;
+            background: linear-gradient(90deg, #f43f5e, #fb7185);
+            transition: width 0.6s ease;
         }
+        .bar-fill.blue { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+        .bar-fill.green { background: linear-gradient(90deg, #22c55e, #4ade80); }
+        .bar-value { width: 36px; text-align: right; font-weight: 700; font-size: 13px; color: #111827; }
 
-        .bar-value {
-            width: 50px;
-            text-align: right;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        /* Feedback Section */
+        /* FEEDBACK SECTION */
         .feedback-section {
-            background: white;
-            border-radius: 12px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
             padding: 24px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
             margin-bottom: 24px;
         }
-
-        .feedback-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
-        }
-
+        .feedback-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; }
         .feedback-item {
-            text-align: center;
-            padding: 20px;
-            border-radius: 12px;
-            background: #f8f9fa;
+            text-align: center; padding: 24px 16px;
+            border-radius: 14px; border: 1px solid #e5e7eb;
         }
+        .feedback-item.positive { background: #f0fdf4; border-color: #bbf7d0; }
+        .feedback-item.neutral  { background: #f8fafc; border-color: #e5e7eb; }
+        .feedback-item.negative { background: #fff1f2; border-color: #fecdd3; }
+        .feedback-icon { margin-bottom: 10px; display: flex; justify-content: center; }
+        .feedback-icon svg { width: 28px; height: 28px; }
+        .feedback-count { font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+        .feedback-item.positive .feedback-count { color: #16a34a; }
+        .feedback-item.neutral  .feedback-count { color: #6b7280; }
+        .feedback-item.negative .feedback-count { color: #dc2626; }
+        .feedback-label { font-size: 12px; font-weight: 600; color: #9ca3af; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
 
-        .feedback-count {
-            font-size: 36px;
-            font-weight: 700;
-        }
-
-        .feedback-label {
-            font-size: 14px;
-            color: #666;
-            margin-top: 4px;
-        }
-
-        .feedback-positive .feedback-count {
-            color: #28a745;
-        }
-
-        .feedback-neutral .feedback-count {
-            color: #6c757d;
-        }
-
-        .feedback-negative .feedback-count {
-            color: #dc3545;
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
-        }
-
-        .empty-state svg {
-            width: 64px;
-            height: 64px;
-            fill: #ddd;
-            margin-bottom: 16px;
-        }
+        /* EMPTY STATE */
+        .empty-state { text-align: center; padding: 40px 20px; color: #9ca3af; font-size: 13px; }
+        .empty-state svg { width: 40px; height: 40px; color: #e5e7eb; margin-bottom: 12px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="page-header">
-            <div>
-                <h1 class="page-title">WebChat Analytics</h1>
-                <p class="page-subtitle">Track performance and user satisfaction metrics</p>
+<div class="container">
+
+    <!-- Header -->
+    <div class="page-header">
+        <h1 class="page-title">WebChat Analytics</h1>
+        <p class="page-subtitle">Track performance and user satisfaction metrics</p>
+    </div>
+
+    <!-- Nav Tabs -->
+    <div class="nav-tabs">
+        <a href="/webchat/dashboard/" class="nav-tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Sessions
+        </a>
+        <a href="/webchat/analytics/" class="nav-tab active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6"  y1="20" x2="6"  y2="14"/>
+            </svg>
+            Analytics
+        </a>
+        <a href="/webchat/widgets/" class="nav-tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+            </svg>
+            Widgets
+        </a>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <span class="filter-label">Time Period:</span>
+        <select class="filter-select" onchange="window.location.href='?date_range=' + this.value">
+            <option value="7"   {% if date_range == '7'   %}selected{% endif %}>Last 7 days</option>
+            <option value="30"  {% if date_range == '30'  %}selected{% endif %}>Last 30 days</option>
+            <option value="90"  {% if date_range == '90'  %}selected{% endif %}>Last 90 days</option>
+            <option value="365" {% if date_range == '365' %}selected{% endif %}>Last year</option>
+        </select>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="stat-label">Total Sessions</div>
+            <div class="stat-value">{{ summary.total_sessions }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon rose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            </div>
+            <div class="stat-label">Active Sessions</div>
+            <div class="stat-value rose">{{ summary.active_sessions }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div class="stat-label">Completed Sessions</div>
+            <div class="stat-value green">{{ summary.ended_sessions }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div class="stat-label">Total Messages</div>
+            <div class="stat-value">{{ summary.total_messages }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="stat-label">Avg Response Time</div>
+            <div class="stat-value amber">
+                {% if summary.avg_response_time %}{{ summary.avg_response_time|floatformat:0 }}s{% else %}N/A{% endif %}
             </div>
         </div>
-
-        <!-- Navigation Tabs -->
-        <div class="nav-tabs">
-            <a href="/webchat/dashboard/" class="nav-tab">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-                </svg>
-                Sessions
-            </a>
-            <a href="/webchat/analytics/" class="nav-tab active">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
-                </svg>
-                Analytics
-            </a>
-            <a href="/webchat/widgets/" class="nav-tab">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-                </svg>
-                Widgets
-            </a>
-        </div>
-
-        <!-- Filters -->
-        <div class="filters">
-            <div class="filter-group">
-                <label class="filter-label">Time Period:</label>
-                <select class="filter-select" onchange="window.location.href='?date_range=' + this.value">
-                    <option value="7" {% if date_range == '7' %}selected{% endif %}>Last 7 days</option>
-                    <option value="30" {% if date_range == '30' %}selected{% endif %}>Last 30 days</option>
-                    <option value="90" {% if date_range == '90' %}selected{% endif %}>Last 90 days</option>
-                    <option value="365" {% if date_range == '365' %}selected{% endif %}>Last year</option>
-                </select>
+        <div class="stat-card">
+            <div class="stat-icon teal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
-        </div>
-
-        <!-- Summary Stats -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Total Sessions</div>
-                <div class="stat-value">{{ summary.total_sessions }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Active Sessions</div>
-                <div class="stat-value primary">{{ summary.active_sessions }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Completed Sessions</div>
-                <div class="stat-value success">{{ summary.ended_sessions }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Total Messages</div>
-                <div class="stat-value">{{ summary.total_messages }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Avg Response Time</div>
-                <div class="stat-value warning">
-                    {% if summary.avg_response_time %}
-                        {{ summary.avg_response_time|floatformat:0 }}s
-                    {% else %}
-                        N/A
-                    {% endif %}
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Avg Session Duration</div>
-                <div class="stat-value">
-                    {% if summary.avg_session_duration %}
-                        {{ summary.avg_session_duration|floatformat:0 }}s
-                    {% else %}
-                        N/A
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Charts Grid -->
-        <div class="charts-grid">
-            <!-- Daily Sessions Chart -->
-            <div class="chart-card">
-                <h3 class="chart-title">Sessions Over Time</h3>
-                {% if daily_sessions %}
-                <div class="bar-chart">
-                    {% for day in daily_sessions %}
-                    <div class="bar-item">
-                        <span class="bar-label">{{ day.date|date:"M d" }}</span>
-                        <div class="bar-track">
-                            <div class="bar-fill" style="width: {% widthratio day.count daily_sessions.0.count 100 %}%"></div>
-                        </div>
-                        <span class="bar-value">{{ day.count }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="empty-state">
-                    <p>No session data available for this period.</p>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Language Distribution -->
-            <div class="chart-card">
-                <h3 class="chart-title">Language Distribution</h3>
-                {% if language_stats %}
-                <div class="bar-chart">
-                    {% for lang in language_stats %}
-                    <div class="bar-item">
-                        <span class="bar-label">{{ lang.language|upper }}</span>
-                        <div class="bar-track">
-                            <div class="bar-fill" style="width: {% widthratio lang.count language_stats.0.count 100 %}%; background: {% if lang.language == 'en' %}#007bff{% elif lang.language == 'ar' %}#28a745{% else %}#6c757d{% endif %}"></div>
-                        </div>
-                        <span class="bar-value">{{ lang.count }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="empty-state">
-                    <p>No language data available.</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Feedback Section -->
-        <div class="feedback-section">
-            <h3 class="chart-title">User Feedback</h3>
-            <div class="feedback-grid">
-                <div class="feedback-item feedback-positive">
-                    <div class="feedback-count">{{ feedback_summary.positive|default:0 }}</div>
-                    <div class="feedback-label">Positive</div>
-                </div>
-                <div class="feedback-item feedback-neutral">
-                    <div class="feedback-count">{{ feedback_summary.neutral|default:0 }}</div>
-                    <div class="feedback-label">Neutral</div>
-                </div>
-                <div class="feedback-item feedback-negative">
-                    <div class="feedback-count">{{ feedback_summary.negative|default:0 }}</div>
-                    <div class="feedback-label">Negative</div>
-                </div>
+            <div class="stat-label">Avg Session Duration</div>
+            <div class="stat-value">
+                {% if summary.avg_session_duration %}{{ summary.avg_session_duration|floatformat:0 }}s{% else %}N/A{% endif %}
             </div>
         </div>
     </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+        <!-- Sessions Over Time -->
+        <div class="chart-card">
+            <h3 class="chart-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Sessions Over Time
+            </h3>
+            {% if daily_sessions %}
+            <div class="bar-chart">
+                {% for day in daily_sessions %}
+                <div class="bar-item">
+                    <span class="bar-label">{{ day.date|date:"M d" }}</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width: {% widthratio day.count daily_sessions.0.count 100 %}%"></div>
+                    </div>
+                    <span class="bar-value">{{ day.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                <p>No session data available.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Language Distribution -->
+        <div class="chart-card">
+            <h3 class="chart-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                Language Distribution
+            </h3>
+            {% if language_stats %}
+            <div class="bar-chart">
+                {% for lang in language_stats %}
+                <div class="bar-item">
+                    <span class="bar-label">{{ lang.language|upper }}</span>
+                    <div class="bar-track">
+                        <div class="bar-fill blue" style="width: {% widthratio lang.count language_stats.0.count 100 %}%"></div>
+                    </div>
+                    <span class="bar-value">{{ lang.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                <p>No language data available.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- User Feedback -->
+    <div class="feedback-section">
+        <h3 class="chart-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="color:#f43f5e;">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            User Feedback
+        </h3>
+        <div class="feedback-grid">
+            <div class="feedback-item positive">
+                <div class="feedback-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round">
+                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
+                        <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                    </svg>
+                </div>
+                <div class="feedback-count">{{ feedback_summary.positive|default:0 }}</div>
+                <div class="feedback-label">Positive</div>
+            </div>
+            <div class="feedback-item neutral">
+                <div class="feedback-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="8" y1="15" x2="16" y2="15"/>
+                        <line x1="9" y1="9" x2="9.01" y2="9"/>
+                        <line x1="15" y1="9" x2="15.01" y2="9"/>
+                    </svg>
+                </div>
+                <div class="feedback-count">{{ feedback_summary.neutral|default:0 }}</div>
+                <div class="feedback-label">Neutral</div>
+            </div>
+            <div class="feedback-item negative">
+                <div class="feedback-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round">
+                        <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/>
+                        <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
+                    </svg>
+                </div>
+                <div class="feedback-count">{{ feedback_summary.negative|default:0 }}</div>
+                <div class="feedback-label">Negative</div>
+            </div>
+        </div>
+    </div>
+
+</div>
 </body>
 </html>

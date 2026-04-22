@@ -3,7 +3,9 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta charset="utf-8">
   <title>{% block title %}Speedbots{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,13 +14,14 @@
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   {% block head_css %}{% endblock %}
   {% block head_js %}{% endblock %}
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
 
   <!-- Mobile topbar — lives OUTSIDE the flex layout so it doesn't break desktop -->
   <div class="topbar" id="topbarEl" style="display:none;">
-    <button class="topbar-toggle" onclick="toggleSidebar()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#374151;line-height:1;">☰</button>
+    <button class="topbar-toggle" onclick="toggleSidebar()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#374151;line-height:1;">&#9776;</button>
   </div>
 
   <!-- Sidebar overlay (mobile tap-outside to close) -->

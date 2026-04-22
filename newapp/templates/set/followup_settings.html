@@ -301,7 +301,7 @@ table tr:last-child td { border-bottom: none !important; }
         <a href="{% url 'settings' %}">Settings</a> &gt; <b>Follow-up Settings</b>
     </div>
 
-    <h1 class="page-title">📬 Follow-up Settings</h1>
+    <h1 class="page-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><path d="M16 19h6"/><path d="M19 16v6"/></svg> Follow-up Settings</h1>
     <p class="page-desc">Configure automatic follow-up messages sent to users who haven't responded. You can add up to 4
         sequential follow-ups.</p>
 
@@ -331,7 +331,7 @@ table tr:last-child td { border-bottom: none !important; }
                         max="10080" data-id="{{ followup.id }}" onchange="checkDelayWarning(this)">
                     <div class="template-warning" id="delayWarning_{{ followup.id }}"
                         {% if followup.delay_minutes > 1440 %}style="display:block"{% endif %}>
-                        ⚠️ Delay exceeds 24h — WhatsApp requires a <strong>template message</strong>.
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Delay exceeds 24h — WhatsApp requires a <strong>template message</strong>.
                     </div>
                 </div>
                 <div class="col-md-3 mb-3">
@@ -400,7 +400,7 @@ table tr:last-child td { border-bottom: none !important; }
                     <input type="number" class="form-control" id="newDelay" value="10" min="1" max="10080" onchange="checkNewDelayWarning()">
                     <div class="form-text">Time to wait before sending this follow-up</div>
                     <div class="template-warning" id="newDelayWarning">
-                        ⚠️ Delay exceeds 24h — WhatsApp requires a <strong>template message</strong>.
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Delay exceeds 24h — WhatsApp requires a <strong>template message</strong>.
                     </div>
                 </div>
                 <div class="mb-3">
