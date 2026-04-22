@@ -254,6 +254,18 @@
   @media (max-width: 1200px) { .right-panel { width: 260px; } }
   @media (max-width: 992px) { .right-panel { display: none; } }
 
+  /* ── Mobile helper buttons (base: hidden on desktop) ── */
+  .mobile-back-btn, .mobile-info-btn {
+    display: none;
+    align-items: center; justify-content: center;
+    width: 34px; height: 34px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: #fff; cursor: pointer;
+    color: #6b7280; transition: all 0.12s; flex-shrink: 0;
+    text-decoration: none;
+  }
+  .mobile-back-btn:hover, .mobile-info-btn:hover { background: #f8fafc; border-color: #d1d5db; color: #374151; }
+
   /* ── MOBILE INBOX: show list OR thread, not both ── */
   @media (max-width: 768px) {
     .inbox-container { flex-direction: row; height: calc(100vh - 72px); }
@@ -268,21 +280,35 @@
     .inbox-container:not(.has-selected) .list { display: flex; }
     .inbox-container:not(.has-selected) .thread { display: none; }
 
-    /* Back button only shows on mobile */
-    .mobile-back-btn { display: inline-flex !important; }
+    /* Show mobile buttons */
+    .mobile-back-btn, .mobile-info-btn { display: inline-flex !important; }
+
+    /* Right panel as mobile overlay */
+    .right-panel.mobile-open {
+      display: flex !important;
+      position: fixed !important;
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: 100% !important; height: 100vh !important;
+      z-index: 1100;
+      border: none; border-radius: 0;
+    }
+    .mobile-panel-close {
+      display: flex !important;
+    }
   }
 
-  /* Hide back button on desktop */
-  .mobile-back-btn {
-    display: none !important;
-    align-items: center; justify-content: center;
-    width: 34px; height: 34px;
-    border-radius: 8px; border: 1px solid var(--border);
-    background: #fff; cursor: pointer;
-    color: #6b7280; transition: all 0.12s; flex-shrink: 0;
-    text-decoration: none;
+  /* Mobile panel close button — hidden on desktop */
+  .mobile-panel-close {
+    display: none;
+    align-items: center; gap: 8px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    background: #fff;
+    cursor: pointer;
+    font-weight: 700; font-size: 14px; color: var(--text-main);
+    flex-shrink: 0;
   }
-  .mobile-back-btn:hover { background: #f8fafc; border-color: #d1d5db; color: #374151; }
+  .mobile-panel-close svg { color: #6b7280; }
 
   /* Input group compat (bootstrap override) */
   .input-group input { border-radius: 10px 0 0 10px !important; }
@@ -485,6 +511,15 @@
     </svg>
   </button>
 
+  <!-- INFO BUTTON (mobile: open right panel) -->
+  <button type="button" class="th-icon-btn mobile-info-btn" onclick="toggleMobilePanel()" title="Contact info">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="16" x2="12" y2="12"/>
+      <line x1="12" y1="8" x2="12.01" y2="8"/>
+    </svg>
+  </button>
+
   {% else %}
   <div style="font-weight:700">Select a conversation</div>
   {% endif %}
@@ -577,6 +612,11 @@
 
   <!-- Right Panel - Custom Fields, Tags, and Error Logs -->
   <section class="right-panel" id="rightPanel">
+    <!-- Mobile close button -->
+    <div class="mobile-panel-close" onclick="toggleMobilePanel()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      Contact Info
+    </div>
     <!-- Scrollable body wraps ALL sections -->
     <div class="right-panel-body">
     <!-- Custom Fields Section -->
@@ -718,6 +758,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  // Toggle right panel on mobile
+  function toggleMobilePanel() {
+    var panel = document.getElementById('rightPanel');
+    if (panel) panel.classList.toggle('mobile-open');
+  }
+
   // Robust Scroll & Auto-Refresh Logic (Final)
 
   // DELETE CONTACT
