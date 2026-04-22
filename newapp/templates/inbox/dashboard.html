@@ -253,10 +253,36 @@
 
   @media (max-width: 1200px) { .right-panel { width: 260px; } }
   @media (max-width: 992px) { .right-panel { display: none; } }
+
+  /* ── MOBILE INBOX: show list OR thread, not both ── */
   @media (max-width: 768px) {
-    .list { width: 100%; max-width: 260px; }
-    .inbox-container { flex-direction: column; }
+    .inbox-container { flex-direction: row; height: calc(100vh - 72px); }
+    .list { width: 100%; flex-shrink: 0; }
+    .thread { width: 100%; flex-shrink: 0; }
+
+    /* When a user is selected, hide list and show thread */
+    .inbox-container.has-selected .list { display: none; }
+    .inbox-container.has-selected .thread { display: flex; }
+
+    /* When no user selected, show list and hide thread */
+    .inbox-container:not(.has-selected) .list { display: flex; }
+    .inbox-container:not(.has-selected) .thread { display: none; }
+
+    /* Back button only shows on mobile */
+    .mobile-back-btn { display: inline-flex !important; }
   }
+
+  /* Hide back button on desktop */
+  .mobile-back-btn {
+    display: none !important;
+    align-items: center; justify-content: center;
+    width: 34px; height: 34px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: #fff; cursor: pointer;
+    color: #6b7280; transition: all 0.12s; flex-shrink: 0;
+    text-decoration: none;
+  }
+  .mobile-back-btn:hover { background: #f8fafc; border-color: #d1d5db; color: #374151; }
 
   /* Input group compat (bootstrap override) */
   .input-group input { border-radius: 10px 0 0 10px !important; }
@@ -396,7 +422,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="inbox-container">
+<div class="inbox-container {% if selected_user %}has-selected{% endif %}">
   <!-- Conversation list -->
   <section class="list">
     <div class="list-head">
@@ -421,6 +447,10 @@
   <!-- Thread -->
   <section class="thread">
     <div class="thread-head">
+  <!-- Mobile back button -->
+  <a href="/inbox/dashboard" class="mobile-back-btn" title="Back to contacts">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </a>
   {% if selected_user %}
   <div class="avatar" style="width:36px;height:36px">
     {{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}
