@@ -453,7 +453,7 @@ a { text-decoration: none; color: inherit; }
    ============================================================ */
 @media (max-width: 1024px) {
   .main-content { margin-left: 0 !important; padding: 20px 16px; padding-top: calc(var(--topbar-height) + 16px); }
-  .sidebar { left: calc(-1 * var(--sidebar-width)); z-index: 1050; transition: left var(--t-base); }
+  .sidebar { left: calc(-1 * var(--sidebar-width)); z-index: 1050; transition: left var(--t-base); top: var(--topbar-height); height: calc(100vh - var(--topbar-height)); }
   .sidebar:not(.hidden) { left: 0; }
   .topbar { display: flex; }
   .chart-grid { grid-template-columns: 1fr; }
@@ -488,7 +488,7 @@ body.modal-open { overflow: auto !important; padding-right: 0 !important; }
 
 #appSidebar { display: flex !important; flex-direction: column; }
 @media (max-width: 1024px) {
-  #appSidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100vh; z-index: 1050; pointer-events: none; }
+  #appSidebar { position: fixed; left: 0; top: var(--topbar-height); width: 260px; height: calc(100vh - var(--topbar-height)); z-index: 1050; pointer-events: none; }
   #appSidebar .sidebar { pointer-events: auto; }
 }
 
