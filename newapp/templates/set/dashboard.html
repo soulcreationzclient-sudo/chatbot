@@ -1,4 +1,4 @@
-{% extends "layouts/base.html" %}
+﻿{% extends "layouts/base.html" %}
 {% load static %}
 {% block title %}Settings{% endblock %}
 
@@ -40,7 +40,7 @@
   --accent-border: #fecdd3;
   --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
 }
-body, * { font-family: var(--font-main) !important; }
+body, *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not([class*="fa-"]) { font-family: var(--font-main) !important; }
 
 /* Cards and sections */
 .section, .card-box, .info-card, .form-card {
