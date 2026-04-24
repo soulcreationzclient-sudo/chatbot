@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css');
 
+/* ── Global font enforcement — Plus Jakarta Sans everywhere ── */
+*, *::before, *::after { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important; }
+
 /* ============================================================
    DESIGN TOKENS — useSAASkit-inspired: clean, pastel, modern
    ============================================================ */
@@ -211,7 +214,7 @@ a { text-decoration: none; color: inherit; }
   line-height: 1.3;
 }
 .nav-item:hover { color: var(--text-primary); background: var(--bg-hover); border-color: var(--border); text-decoration: none; }
-.nav-item.active { color: var(--accent); background: var(--accent-light); border-color: var(--accent-border); font-weight: 700; }
+.nav-item.active { color: var(--accent); background: transparent; border-color: transparent; font-weight: 700; }
 .nav-item svg {
   width: 18px; height: 18px;
   flex-shrink: 0;
@@ -308,14 +311,20 @@ a { text-decoration: none; color: inherit; }
 .kpi-card[style*="gradient-6"] { background: var(--card-teal)   !important; border-color: #99f6e4 !important; }
 
 /* Channel cards */
-.channel-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; margin-top: 16px; }
-.channel-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; transition: all var(--t-fast); box-shadow: var(--shadow-sm); }
-.channel-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow); }
-.channel-card i { font-size: 22px; }
-.channel-card div { font-weight: 600; font-size: 14px; color: var(--text-primary); }
-.channel-card .ch-btn { background: var(--success); color: #fff; border: none; padding: 5px 14px; border-radius: var(--radius-full); font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: none; transition: opacity var(--t-fast); }
-.channel-card .ch-btn:hover { opacity: 0.85; }
-.channel-card:last-child { background: transparent; border: 2px dashed var(--border); justify-content: center; color: var(--text-muted); }
+.channel-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 28px; }
+.channel-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; display: flex; align-items: center; gap: 14px; transition: all var(--t-fast); box-shadow: var(--shadow-sm); }
+.channel-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow); transform: translateY(-1px); }
+.channel-icon { width: 40px; height: 40px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.channel-icon.whatsapp { background: #dcfce7; }
+.channel-icon.webchat  { background: var(--accent-light); }
+.channel-icon.testchat { background: #ede9fe; }
+.channel-name { font-weight: 600; font-size: 14px; color: var(--text-primary); flex: 1; }
+.channel-card .ch-btn { background: #16a34a; color: #fff; border: none; padding: 6px 16px; border-radius: var(--radius-full); font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; transition: opacity var(--t-fast); white-space: nowrap; font-family: 'Plus Jakarta Sans', sans-serif; }
+.channel-card .ch-btn:hover { opacity: 0.85; color: #fff; text-decoration: none; }
+.channel-card .ch-btn.pink { background: linear-gradient(135deg, #f43f5e, #fb7185); }
+.channel-card .ch-btn.purple { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+.channel-card.more { background: transparent; border: 1.5px dashed var(--border); justify-content: center; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; }
+.channel-card.more:hover { border-color: var(--accent); color: var(--accent); }
 
 /* Chart cards */
 .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
