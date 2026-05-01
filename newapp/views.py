@@ -719,22 +719,106 @@ def dashboard_view(request):
             opp_qs = Opportunity.objects.filter(organization__isnull=True)
 
     now = timezone.now()
-    seven_days_ago = now - timedelta(days=7)
-    fourteen_days_ago = now - timedelta(days=14)
+
+    # ---------- DYNAMIC DATE RANGE ----------
+    period = request.GET.get('period', '7d')
+    from datetime import datetime as _dtx
+    today = now.date()
+
+    if period == 'today':
+        range_days = 1
+        period_start = timezone.make_aware(_dtx.combine(today, _dtx.min.time()))
+        period_end = now
+        prev_start = period_start - timedelta(days=1)
+        prev_end = period_start
+        date_range = [today]
+        period_label = 'Today'
+    elif period == 'yesterday':
+        yesterday = today - timedelta(days=1)
+        range_days = 1
+        period_start = timezone.make_aware(_dtx.combine(yesterday, _dtx.min.time()))
+        period_end = timezone.make_aware(_dtx.combine(today, _dtx.min.time()))
+        prev_start = period_start - timedelta(days=1)
+        prev_end = period_start
+        date_range = [yesterday]
+        period_label = 'Yesterday'
+    elif period == '30d':
+        range_days = 30
+        period_start = now - timedelta(days=30)
+        period_end = now
+        prev_start = now - timedelta(days=60)
+        prev_end = period_start
+        date_range = [(now - timedelta(days=i)).date() for i in range(29, -1, -1)]
+        period_label = 'Last 30 days'
+    elif period == 'this_month':
+        from calendar import monthrange
+        first_of_month = today.replace(day=1)
+        range_days = (today - first_of_month).days + 1
+        period_start = timezone.make_aware(_dtx.combine(first_of_month, _dtx.min.time()))
+        period_end = now
+        # Previous period = last month
+        last_month_end = first_of_month - timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        prev_start = timezone.make_aware(_dtx.combine(last_month_start, _dtx.min.time()))
+        prev_end = period_start
+        date_range = [(first_of_month + timedelta(days=i)) for i in range(range_days)]
+        period_label = 'This Month'
+    elif period == 'last_month':
+        first_of_this_month = today.replace(day=1)
+        last_month_end = first_of_this_month - timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        range_days = (last_month_end - last_month_start).days + 1
+        period_start = timezone.make_aware(_dtx.combine(last_month_start, _dtx.min.time()))
+        period_end = timezone.make_aware(_dtx.combine(first_of_this_month, _dtx.min.time()))
+        # Previous period = month before last
+        prev_month_end = last_month_start - timedelta(days=1)
+        prev_month_start = prev_month_end.replace(day=1)
+        prev_start = timezone.make_aware(_dtx.combine(prev_month_start, _dtx.min.time()))
+        prev_end = period_start
+        date_range = [(last_month_start + timedelta(days=i)) for i in range(range_days)]
+        period_label = 'Last Month'
+    elif period == 'lifetime':
+        # Get earliest message/contact date
+        earliest_contact = user_qs.order_by('created_at').values_list('created_at', flat=True).first()
+        earliest_msg = msg_qs.order_by('created_at').values_list('created_at', flat=True).first()
+        earliest = min(filter(None, [earliest_contact, earliest_msg, now - timedelta(days=90)]))
+        range_days = (now - earliest).days + 1
+        period_start = earliest
+        period_end = now
+        prev_start = earliest - timedelta(days=range_days)
+        prev_end = earliest
+        # For lifetime, group by week if > 60 days, else by day
+        if range_days > 60:
+            # Show last 90 days max for chart readability
+            date_range = [(now - timedelta(days=i)).date() for i in range(min(range_days, 90) - 1, -1, -1)]
+        else:
+            date_range = [(earliest.date() + timedelta(days=i)) for i in range(range_days)]
+        period_label = 'Lifetime'
+    else:  # Default: 7d
+        period = '7d'
+        range_days = 7
+        period_start = now - timedelta(days=7)
+        period_end = now
+        prev_start = now - timedelta(days=14)
+        prev_end = period_start
+        date_range = [(now - timedelta(days=i)).date() for i in range(6, -1, -1)]
+        period_label = 'Last 7 days'
+
+    date_labels = [d.strftime('%b %d') for d in date_range]
+
 
     # ---------- KPI CARDS ----------
     total_contacts = user_qs.count()
-    new_contacts_7d = user_qs.filter(created_at__gte=seven_days_ago).count()
-    new_contacts_prev_7d = user_qs.filter(created_at__gte=fourteen_days_ago, created_at__lt=seven_days_ago).count()
+    new_contacts_period = user_qs.filter(created_at__gte=period_start, created_at__lt=period_end).count()
+    new_contacts_prev = user_qs.filter(created_at__gte=prev_start, created_at__lt=prev_end).count()
 
-    total_messages_7d = msg_qs.filter(created_at__gte=seven_days_ago).count()
-    total_messages_prev_7d = msg_qs.filter(created_at__gte=fourteen_days_ago, created_at__lt=seven_days_ago).count()
+    total_messages_period = msg_qs.filter(created_at__gte=period_start, created_at__lt=period_end).count()
+    total_messages_prev = msg_qs.filter(created_at__gte=prev_start, created_at__lt=prev_end).count()
 
-    active_convos_7d = msg_qs.filter(created_at__gte=seven_days_ago, who='human').values('user_id').distinct().count()
-    active_convos_prev_7d = msg_qs.filter(created_at__gte=fourteen_days_ago, created_at__lt=seven_days_ago, who='human').values('user_id').distinct().count()
+    active_convos_period = msg_qs.filter(created_at__gte=period_start, created_at__lt=period_end, who='human').values('user_id').distinct().count()
+    active_convos_prev = msg_qs.filter(created_at__gte=prev_start, created_at__lt=prev_end, who='human').values('user_id').distinct().count()
 
-    total_bookings = 0  # Kept for KPI card but not charted
-
+    total_bookings = 0
     pipeline_value = opp_qs.filter(status='open').aggregate(total=Sum('opportunity_value'))['total'] or 0
 
     def _pct_change(current, previous):
@@ -744,26 +828,23 @@ def dashboard_view(request):
 
     # ---------- CHART DATA ----------
 
-    # 1) Messages over time (7 days) — bot vs user
-    date_range = [(now - timedelta(days=i)).date() for i in range(6, -1, -1)]
-    date_labels = [d.strftime('%b %d') for d in date_range]
-
+    # 1) Messages over time — bot vs user
     msg_by_day_user = dict(
-        msg_qs.filter(created_at__gte=seven_days_ago, who='human')
+        msg_qs.filter(created_at__gte=period_start, created_at__lt=period_end, who='human')
         .annotate(day=TruncDate('created_at'))
         .values('day').annotate(c=Count('id')).values_list('day', 'c')
     )
     msg_by_day_bot = dict(
-        msg_qs.filter(created_at__gte=seven_days_ago, who='bot')
+        msg_qs.filter(created_at__gte=period_start, created_at__lt=period_end, who='bot')
         .annotate(day=TruncDate('created_at'))
         .values('day').annotate(c=Count('id')).values_list('day', 'c')
     )
     chart_msg_user = [msg_by_day_user.get(d, 0) for d in date_range]
     chart_msg_bot = [msg_by_day_bot.get(d, 0) for d in date_range]
 
-    # 2) New contacts over time (7 days)
+    # 2) New contacts over time
     contacts_by_day = dict(
-        user_qs.filter(created_at__gte=seven_days_ago)
+        user_qs.filter(created_at__gte=period_start, created_at__lt=period_end)
         .annotate(day=TruncDate('created_at'))
         .values('day').annotate(c=Count('id')).values_list('day', 'c')
     )
@@ -796,21 +877,21 @@ def dashboard_view(request):
         running += contacts_by_day.get(d, 0)
         chart_total_contacts.append(running)
 
-    # 8) Human vs Bot message totals (7d) for doughnut
-    total_human_msgs = msg_qs.filter(created_at__gte=seven_days_ago, who='human').count()
-    total_bot_msgs = msg_qs.filter(created_at__gte=seven_days_ago, who='bot').count()
+    # 8) Human vs Bot message totals for doughnut
+    total_human_msgs = msg_qs.filter(created_at__gte=period_start, created_at__lt=period_end, who='human').count()
+    total_bot_msgs = msg_qs.filter(created_at__gte=period_start, created_at__lt=period_end, who='bot').count()
 
-    # 9) New contacts by channel (7d)
-    new_webchat_7d = user_qs.filter(created_at__gte=seven_days_ago, phone_no__startswith='webchat_').count()
-    new_whatsapp_7d = new_contacts_7d - new_webchat_7d
+    # 9) New contacts by channel
+    new_webchat_period = user_qs.filter(created_at__gte=period_start, created_at__lt=period_end, phone_no__startswith='webchat_').count()
+    new_whatsapp_period = new_contacts_period - new_webchat_period
 
-    # 10) Follow-ups per day (7d)
+    # 10) Follow-ups per day
     try:
         from .models import ScheduledFollowUp
         followups_by_day = dict(
             ScheduledFollowUp.objects.filter(
                 user__in=user_qs,
-                created_at__gte=seven_days_ago
+                created_at__gte=period_start, created_at__lt=period_end
             ).annotate(day=TruncDate('created_at'))
             .values('day').annotate(c=Count('id')).values_list('day', 'c')
         )
@@ -818,9 +899,9 @@ def dashboard_view(request):
         followups_by_day = {}
     chart_followups = [followups_by_day.get(d, 0) for d in date_range]
 
-    # 11) Archived contacts per day (7d)
+    # 11) Archived contacts per day
     archived_by_day = dict(
-        user_qs.filter(archived_at__gte=seven_days_ago)
+        user_qs.filter(archived_at__gte=period_start, archived_at__lt=period_end)
         .annotate(day=TruncDate('archived_at'))
         .values('day').annotate(c=Count('id')).values_list('day', 'c')
     )
@@ -910,16 +991,16 @@ def dashboard_view(request):
     all_first_vals = [v for vals in first_resp_by_day.values() for v in vals]
     avg_first_response_7d = round(sum(all_first_vals) / len(all_first_vals), 1) if all_first_vals else 0
 
-    # Previous 7-day response times for week-over-week comparison
-    prev_start, _ = _day_bounds((now - timedelta(days=14)).date())
-    prev_end, _ = _day_bounds((now - timedelta(days=7)).date())
+    # Previous period response times for period-over-period comparison
+    prev_rt_start = prev_start  # Already computed by the dynamic period selector
+    prev_rt_end = prev_end
     prev_human = list(
-        msg_qs.filter(created_at__gte=prev_start, created_at__lt=prev_end, who='human')
+        msg_qs.filter(created_at__gte=prev_rt_start, created_at__lt=prev_rt_end, who='human')
         .order_by('created_at')
         .values_list('id', 'user_id_id', 'created_at')[:3000]
     )
     prev_bot = list(
-        msg_qs.filter(created_at__gte=prev_start, created_at__lt=prev_end, who='bot')
+        msg_qs.filter(created_at__gte=prev_rt_start, created_at__lt=prev_rt_end, who='bot')
         .order_by('created_at')
         .values_list('id', 'user_id_id', 'created_at')[:3000]
     )
@@ -976,9 +1057,9 @@ def dashboard_view(request):
     bot_toggle_human = bot_off  # Contacts currently handled by human
     bot_toggle_bot = bot_on     # Contacts currently handled by bot
 
-    # 16) New contacts by source (7d)
+    # 16) New contacts by source
     source_data = list(
-        user_qs.filter(created_at__gte=seven_days_ago)
+        user_qs.filter(created_at__gte=period_start, created_at__lt=period_end)
         .values('source')
         .annotate(count=Count('id'))
         .order_by('-count')[:8]
@@ -1014,17 +1095,31 @@ def dashboard_view(request):
     country_labels = [c[0] for c in sorted_countries]
     country_values = [c[1] for c in sorted_countries]
 
+    PERIOD_CHOICES = [
+        ('today', 'Today'),
+        ('yesterday', 'Yesterday'),
+        ('7d', 'Last 7 days'),
+        ('30d', 'Last 30 days'),
+        ('this_month', 'This Month'),
+        ('last_month', 'Last Month'),
+        ('lifetime', 'Lifetime'),
+    ]
+
     context = {
         'count': total_contacts,
         'phone_id': user_phone,
         'whatsapp_connected': whatsapp_connected,
+        # Period selector
+        'period': period,
+        'period_label': period_label,
+        'period_choices': PERIOD_CHOICES,
         # KPI Cards
-        'new_contacts_7d': new_contacts_7d,
-        'new_contacts_change': _pct_change(new_contacts_7d, new_contacts_prev_7d),
-        'total_messages_7d': total_messages_7d,
-        'messages_change': _pct_change(total_messages_7d, total_messages_prev_7d),
-        'active_convos_7d': active_convos_7d,
-        'active_convos_change': _pct_change(active_convos_7d, active_convos_prev_7d),
+        'new_contacts_7d': new_contacts_period,
+        'new_contacts_change': _pct_change(new_contacts_period, new_contacts_prev),
+        'total_messages_7d': total_messages_period,
+        'messages_change': _pct_change(total_messages_period, total_messages_prev),
+        'active_convos_7d': active_convos_period,
+        'active_convos_change': _pct_change(active_convos_period, active_convos_prev),
         'total_bookings': total_bookings,
         'pipeline_value': float(pipeline_value),
         # KPI — Response time
@@ -1042,8 +1137,8 @@ def dashboard_view(request):
         'chart_archived': _json.dumps(chart_archived),
         'whatsapp_count': whatsapp_count,
         'webchat_count': webchat_count,
-        'new_whatsapp_7d': new_whatsapp_7d,
-        'new_webchat_7d': new_webchat_7d,
+        'new_whatsapp_7d': new_whatsapp_period,
+        'new_webchat_7d': new_webchat_period,
         'total_human_msgs': total_human_msgs,
         'total_bot_msgs': total_bot_msgs,
         'tag_labels': _json.dumps(tag_labels),
