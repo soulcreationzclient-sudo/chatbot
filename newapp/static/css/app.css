@@ -491,7 +491,7 @@ body.modal-open { overflow: auto !important; padding-right: 0 !important; }
    ============================================================ */
 .sidebar, .sidebar * { visibility: visible !important; }
 .sidebar .nav-item { color: var(--text-secondary) !important; }
-.sidebar .nav-item.active { color: var(--accent) !important; background: var(--accent-light) !important; }
+.sidebar .nav-item.active { color: var(--accent) !important; background: none !important; }
 .sidebar .nav-section-label { color: var(--text-muted) !important; }
 .sidebar .sidebar-user-name { color: var(--text-primary) !important; }
 
