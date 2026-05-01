@@ -209,21 +209,23 @@ class Inboxcontroller:
         user.bot_enabled = True
         user.save(update_fields=['is_in_inbox', 'archived_at', 'followup_count', 'bot_enabled'])
         
-        # DELETE ALL ASSOCIATED DATA:
+        # DELETE ALL ASSOCIATED DATA (wrapped in transaction for consistency):
         # Remove tags, messages, custom fields, logs, follow-ups, and pipeline opportunities
         from ..models import UserTag, Message, CustomFieldValue, UserLog, ScheduledFollowUp, Opportunity
-        # 1. Remove all tags
-        UserTag.objects.filter(user=user).delete()
-        # 2. Delete message history (Message FK field is named 'user_id', not 'user')
-        Message.objects.filter(user_id=user).delete()
-        # 3. Delete custom field values
-        CustomFieldValue.objects.filter(user=user).delete()
-        # 4. Delete user logs
-        UserLog.objects.filter(user=user).delete()
-        # 5. Cancel scheduled follow-ups
-        ScheduledFollowUp.objects.filter(user=user).delete()
-        # 6. Delete pipeline opportunities
-        Opportunity.objects.filter(user=user).delete()
+        from django.db import transaction
+        with transaction.atomic():
+            # 1. Remove all tags
+            UserTag.objects.filter(user=user).delete()
+            # 2. Delete message history (Message FK field is named 'user_id', not 'user')
+            Message.objects.filter(user_id=user).delete()
+            # 3. Delete custom field values
+            CustomFieldValue.objects.filter(user=user).delete()
+            # 4. Delete user logs
+            UserLog.objects.filter(user=user).delete()
+            # 5. Cancel scheduled follow-ups
+            ScheduledFollowUp.objects.filter(user=user).delete()
+            # 6. Delete pipeline opportunities
+            Opportunity.objects.filter(user=user).delete()
         
         return JsonResponse({'success': True, 'msg': 'Contact archived and all data cleared'})
 

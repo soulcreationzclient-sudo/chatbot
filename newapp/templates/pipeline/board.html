@@ -1,4 +1,4 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
 {% load static %}
 {% block title %}{{ pipeline.name }}{% endblock %}
 
@@ -159,6 +159,127 @@
   .auto-rule .rule-actions {
     margin-left: auto; display: flex; gap: 4px;
   }
+
+  /* ── Detail Slide-Out Panel ── */
+  .detail-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.35); z-index: 3000;
+    transition: opacity 0.2s;
+  }
+  .detail-overlay.active { display: block; }
+  .detail-panel {
+    position: fixed; top: 0; right: -520px; width: 480px; max-width: 90vw;
+    height: 100vh; background: #fff; box-shadow: -8px 0 30px rgba(0,0,0,0.12);
+    z-index: 3001; transition: right 0.3s cubic-bezier(.4,0,.2,1);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .detail-panel.open { right: 0; }
+  .detail-panel-header {
+    padding: 20px 24px 16px; border-bottom: 1px solid #e5e7eb;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .detail-panel-header .back-btn {
+    background: none; border: none; cursor: pointer; padding: 6px;
+    border-radius: 8px; color: var(--text-muted); font-size: 18px;
+  }
+  .detail-panel-header .back-btn:hover { background: #f1f5f9; color: var(--text-main); }
+  .detail-panel-body {
+    flex: 1; overflow-y: auto; padding: 0;
+  }
+  .detail-profile {
+    display: flex; align-items: center; gap: 14px;
+    padding: 20px 24px; border-bottom: 1px solid #f1f5f9;
+  }
+  .detail-avatar {
+    width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,#f43f5e,#fb7185);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 20px; flex-shrink: 0;
+  }
+  .detail-profile-info { flex: 1; min-width: 0; }
+  .detail-profile-name { font-size: 16px; font-weight: 700; color: var(--text-main); }
+  .detail-profile-meta { font-size: 12px; color: var(--text-muted); display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+  .detail-inbox-btn {
+    padding: 6px 14px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 12px; font-weight: 600; color: var(--text-main); cursor: pointer;
+    background: #fff; text-decoration: none; white-space: nowrap;
+  }
+  .detail-inbox-btn:hover { background: #f1f5f9; border-color: #d1d5db; }
+  .detail-section {
+    padding: 16px 24px; border-bottom: 1px solid #f1f5f9;
+  }
+  .detail-section-title {
+    font-size: 13px; font-weight: 700; color: var(--text-main);
+    margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .detail-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px;
+  }
+  .detail-grid-item { font-size: 12px; }
+  .detail-grid-label { color: var(--text-muted); font-weight: 600; margin-bottom: 2px; }
+  .detail-grid-value { color: var(--text-main); font-weight: 500; }
+  .detail-editable {
+    cursor: pointer; padding: 2px 6px; border-radius: 4px;
+    transition: background 0.12s;
+  }
+  .detail-editable:hover { background: #f1f5f9; }
+  .detail-textarea {
+    width: 100%; min-height: 60px; border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; font-size: 13px; resize: vertical;
+    font-family: inherit;
+  }
+  .detail-textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(244,63,94,0.1); }
+  /* Comments */
+  .comment-item {
+    padding: 10px 0; border-bottom: 1px solid #f8fafc;
+  }
+  .comment-author { font-size: 12px; font-weight: 700; color: var(--text-main); }
+  .comment-time { font-size: 11px; color: var(--text-muted); margin-left: 6px; }
+  .comment-text { font-size: 13px; color: var(--text-main); margin-top: 4px; line-height: 1.5; }
+  .comment-input-row {
+    display: flex; gap: 8px; margin-top: 12px;
+  }
+  .comment-input {
+    flex: 1; padding: 8px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 13px; font-family: inherit;
+  }
+  .comment-input:focus { border-color: var(--accent); outline: none; }
+  .comment-send-btn {
+    padding: 8px 16px; background: linear-gradient(135deg,#f43f5e,#fb7185);
+    color: #fff; border: none; border-radius: 8px; font-weight: 600;
+    font-size: 13px; cursor: pointer;
+  }
+  .comment-send-btn:hover { opacity: 0.9; }
+  /* Priority badges */
+  .priority-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 99px;
+    font-size: 11px; font-weight: 700;
+  }
+  .priority-badge.low { background: #f0fdf4; color: #16a34a; }
+  .priority-badge.medium { background: #fffbeb; color: #d97706; }
+  .priority-badge.high { background: #fff7ed; color: #ea580c; }
+  .priority-badge.urgent { background: #fef2f2; color: #dc2626; }
+  .status-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 99px;
+    font-size: 11px; font-weight: 700;
+  }
+  .status-badge.open { background: #eff6ff; color: #2563eb; }
+  .status-badge.won { background: #f0fdf4; color: #16a34a; }
+  .status-badge.lost { background: #fef2f2; color: #dc2626; }
+  .status-badge.abandoned { background: #f8fafc; color: #64748b; }
+
+  /* Toggle switch for new contact */
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 13px; }
+  .toggle-switch {
+    position: relative; width: 42px; height: 22px; background: #e5e7eb;
+    border-radius: 11px; cursor: pointer; transition: background 0.2s;
+  }
+  .toggle-switch.active { background: #f43f5e; }
+  .toggle-switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; background: #fff; border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle-switch.active::after { transform: translateX(20px); }
 </style>
 <style>
   /* ── SpeedBots Rose Theme Patch ── */
@@ -446,7 +567,8 @@ table tr:last-child td { border-bottom: none !important; }
          ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
       {% for opp in stage.opp_list %}
       <div class="opp-card" draggable="true" data-opp-id="{{ opp.id }}"
-           ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)">
+           ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)"
+           onclick="openOppDetail({{ opp.id }})" style="cursor:pointer;">
         <div class="opp-name">
           <span>
             <span class="priority-dot priority-{{ opp.priority }}"></span>
@@ -490,18 +612,43 @@ table tr:last-child td { border-bottom: none !important; }
 <div class="modal-overlay" id="addOppModal">
   <div class="modal-box">
     <h2>Add Opportunity</h2>
-    <div class="form-group">
-      <label>Contact</label>
-      <select id="oppContact">
-        <option value="">-- Select Contact --</option>
-        {% for c in contacts %}
-        <option value="{{ c.id }}">{{ c.name|default:c.phone_no }} ({{ c.phone_no }})</option>
-        {% endfor %}
-      </select>
+    <div class="toggle-row">
+      <span style="font-weight:600;">Create new contact</span>
+      <div class="toggle-switch" id="newContactToggle" onclick="toggleNewContact()"></div>
+    </div>
+    <div id="existingContactFields">
+      <div class="form-group">
+        <label>Contact</label>
+        <select id="oppContact">
+          <option value="">-- Select Contact --</option>
+          {% for c in contacts %}
+          <option value="{{ c.id }}">{{ c.name|default:c.phone_no }} ({{ c.phone_no }})</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div id="newContactFields" style="display:none;">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="newContactName" placeholder="e.g. John Doe">
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="text" id="newContactPhone" placeholder="e.g. +60123456789">
+      </div>
     </div>
     <div class="form-group">
       <label>Title (optional)</label>
       <input type="text" id="oppTitle" placeholder="e.g. Website Inquiry">
+    </div>
+    <div class="form-group">
+      <label>Stage</label>
+      <select id="oppStage">
+        <option value="">First Stage (default)</option>
+        {% for stage in stages %}
+        <option value="{{ stage.id }}">{{ stage.name }}</option>
+        {% endfor %}
+      </select>
     </div>
     <div class="form-group">
       <label>Value ($)</label>
@@ -619,6 +766,63 @@ table tr:last-child td { border-bottom: none !important; }
   </div>
 </div>
 
+<!-- Opportunity Detail Slide-Out Panel -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeOppDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-panel-header">
+    <button class="back-btn" onclick="closeOppDetail()">← </button>
+    <span id="detailHeaderTitle" style="font-weight:700;font-size:15px;"></span>
+  </div>
+  <div class="detail-panel-body">
+    <!-- Profile -->
+    <div class="detail-profile">
+      <div class="detail-avatar" id="detailAvatar"></div>
+      <div class="detail-profile-info">
+        <div class="detail-profile-name" id="detailName"></div>
+        <div class="detail-profile-meta">
+          <span id="detailPhone"></span>
+          <span id="detailEmail"></span>
+        </div>
+      </div>
+      <a class="detail-inbox-btn" id="detailInboxLink" href="#" style="display:none;">Inbox</a>
+    </div>
+
+    <!-- Opportunity Details -->
+    <div class="detail-section">
+      <div class="detail-section-title">
+        <span id="detailTitle" class="detail-editable" onclick="editDetailField('title')"></span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-muted);cursor:pointer;" onclick="editDetailField('title')">Edit</span>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-grid-item"><div class="detail-grid-label">Number</div><div class="detail-grid-value" id="detailId"></div></div>
+        <div class="detail-grid-item"><div class="detail-grid-label">Created by</div><div class="detail-grid-value" id="detailCreatedBy"></div></div>
+        <div class="detail-grid-item"><div class="detail-grid-label">Due date</div><div class="detail-grid-value detail-editable" id="detailDueDate" onclick="editDetailField('due_date')"></div></div>
+        <div class="detail-grid-item"><div class="detail-grid-label">Status</div><div class="detail-grid-value" id="detailStatus"></div></div>
+        <div class="detail-grid-item"><div class="detail-grid-label">Priority</div><div class="detail-grid-value" id="detailPriority"></div></div>
+        <div class="detail-grid-item"><div class="detail-grid-label">Value</div><div class="detail-grid-value detail-editable" id="detailValue" onclick="editDetailField('value')"></div></div>
+        <div class="detail-grid-item"><div class="detail-grid-label">Stage</div><div class="detail-grid-value" id="detailStage"></div></div>
+        <div class="detail-grid-item"><div class="detail-grid-label">Created</div><div class="detail-grid-value" id="detailCreatedAt"></div></div>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="detail-section">
+      <div class="detail-section-title">📝 Description</div>
+      <textarea class="detail-textarea" id="detailDescription" placeholder="Add a description..." onblur="saveDescription()"></textarea>
+    </div>
+
+    <!-- Comments -->
+    <div class="detail-section" style="border-bottom:none;">
+      <div class="detail-section-title">💬 Comments</div>
+      <div id="detailComments"></div>
+      <div class="comment-input-row">
+        <input type="text" class="comment-input" id="commentInput" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')submitComment()">
+        <button class="comment-send-btn" onclick="submitComment()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   let draggedId = null;
 
@@ -675,18 +879,41 @@ table tr:last-child td { border-bottom: none !important; }
     }, 400);
   }
 
+  // ====== New Contact Toggle ======
+  let isNewContact = false;
+  function toggleNewContact() {
+    isNewContact = !isNewContact;
+    document.getElementById('newContactToggle').classList.toggle('active', isNewContact);
+    document.getElementById('existingContactFields').style.display = isNewContact ? 'none' : 'block';
+    document.getElementById('newContactFields').style.display = isNewContact ? 'block' : 'none';
+  }
+
   // ====== Add Opportunity ======
-  function openAddModal() { document.getElementById('addOppModal').classList.add('active'); }
+  function openAddModal() {
+    isNewContact = false;
+    document.getElementById('newContactToggle').classList.remove('active');
+    document.getElementById('existingContactFields').style.display = 'block';
+    document.getElementById('newContactFields').style.display = 'none';
+    document.getElementById('addOppModal').classList.add('active');
+  }
   function closeAddModal() { document.getElementById('addOppModal').classList.remove('active'); }
 
   async function createOpp() {
-    const res = await api('/api/pipeline/opportunity/create/', {
+    const data = {
       pipeline_id: {{ pipeline.id }},
-      user_id: document.getElementById('oppContact').value || null,
       title: document.getElementById('oppTitle').value,
       value: parseFloat(document.getElementById('oppValue').value) || 0,
-      priority: document.getElementById('oppPriority').value
-    });
+      priority: document.getElementById('oppPriority').value,
+      stage_id: document.getElementById('oppStage').value || null,
+    };
+    if (isNewContact) {
+      data.new_contact_name = document.getElementById('newContactName').value;
+      data.new_contact_phone = document.getElementById('newContactPhone').value;
+      if (!data.new_contact_phone) { alert('Phone number is required'); return; }
+    } else {
+      data.user_id = document.getElementById('oppContact').value || null;
+    }
+    const res = await api('/api/pipeline/opportunity/create/', data);
     if (res.ok) location.reload();
     else alert('Failed to create opportunity');
   }
@@ -699,10 +926,141 @@ table tr:last-child td { border-bottom: none !important; }
     else alert('Failed to delete');
   }
 
-  // ====== Edit Opportunity (placeholder — could expand) ======
-  function editOpp(id) {
-    alert('Edit coming soon! For now, drag cards between stages.');
+  // ====== Opportunity Detail Panel ======
+  let currentOppId = null;
+  let currentOppData = null;
+
+  async function openOppDetail(id) {
+    // Don't open if we're dragging
+    if (draggedId) return;
+    currentOppId = id;
+    document.getElementById('detailOverlay').classList.add('active');
+    setTimeout(() => document.getElementById('detailPanel').classList.add('open'), 10);
+    // Fetch data
+    try {
+      const res = await fetch(`/api/pipeline/opportunity/${id}/detail/`);
+      const data = await res.json();
+      if (!data.success) { alert(data.error || 'Failed to load'); return; }
+      currentOppData = data;
+      populateDetail(data);
+    } catch(e) { alert('Failed to load opportunity details'); }
   }
+
+  function closeOppDetail() {
+    document.getElementById('detailPanel').classList.remove('open');
+    setTimeout(() => document.getElementById('detailOverlay').classList.remove('active'), 300);
+    currentOppId = null;
+    currentOppData = null;
+  }
+
+  function populateDetail(data) {
+    const opp = data.opportunity;
+    const user = data.user;
+    const comments = data.comments;
+
+    // Header
+    document.getElementById('detailHeaderTitle').textContent = opp.title || `Opportunity #${opp.id}`;
+
+    // Profile
+    if (user) {
+      const initials = (user.name || '?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      document.getElementById('detailAvatar').textContent = initials;
+      document.getElementById('detailName').textContent = user.name || user.phone_no || 'Unknown';
+      document.getElementById('detailPhone').textContent = user.phone_no || '';
+      document.getElementById('detailEmail').textContent = user.email || '';
+      const inboxLink = document.getElementById('detailInboxLink');
+      inboxLink.href = `/inbox/dashboard?user_id=${user.id}`;
+      inboxLink.style.display = 'inline-block';
+    } else {
+      document.getElementById('detailAvatar').textContent = '?';
+      document.getElementById('detailName').textContent = opp.title || 'No Contact';
+      document.getElementById('detailPhone').textContent = '';
+      document.getElementById('detailEmail').textContent = '';
+      document.getElementById('detailInboxLink').style.display = 'none';
+    }
+
+    // Details grid
+    document.getElementById('detailTitle').textContent = opp.title || 'Untitled';
+    document.getElementById('detailId').textContent = opp.id;
+    document.getElementById('detailCreatedBy').textContent = opp.created_by || '—';
+    document.getElementById('detailDueDate').textContent = opp.due_date ? new Date(opp.due_date).toLocaleDateString('en-US', {month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    document.getElementById('detailStatus').innerHTML = `<span class="status-badge ${opp.status}">${opp.status.charAt(0).toUpperCase()+opp.status.slice(1)}</span>`;
+    document.getElementById('detailPriority').innerHTML = `<span class="priority-badge ${opp.priority}">${opp.priority.charAt(0).toUpperCase()+opp.priority.slice(1)}</span>`;
+    document.getElementById('detailValue').textContent = '$' + opp.opportunity_value.toFixed(2);
+    document.getElementById('detailStage').textContent = opp.stage_name || '—';
+    document.getElementById('detailCreatedAt').textContent = new Date(opp.created_at).toLocaleDateString();
+
+    // Description
+    document.getElementById('detailDescription').value = opp.description || '';
+
+    // Comments
+    renderComments(comments);
+  }
+
+  function renderComments(comments) {
+    const container = document.getElementById('detailComments');
+    if (!comments || comments.length === 0) {
+      container.innerHTML = '<p style="font-size:12px;color:var(--text-muted);">No comments yet.</p>';
+      return;
+    }
+    container.innerHTML = comments.map(c => `
+      <div class="comment-item">
+        <span class="comment-author">${c.author}</span>
+        <span class="comment-time">${new Date(c.created_at).toLocaleString()}</span>
+        <div class="comment-text">${c.text}</div>
+      </div>
+    `).join('');
+  }
+
+  async function saveDescription() {
+    if (!currentOppId) return;
+    const desc = document.getElementById('detailDescription').value;
+    await api(`/api/pipeline/opportunity/${currentOppId}/update/`, { description: desc });
+  }
+
+  async function submitComment() {
+    if (!currentOppId) return;
+    const input = document.getElementById('commentInput');
+    const text = input.value.trim();
+    if (!text) return;
+    const res = await api(`/api/pipeline/opportunity/${currentOppId}/comment/`, { text });
+    if (res.ok) {
+      const data = await res.json();
+      input.value = '';
+      // Append comment
+      const container = document.getElementById('detailComments');
+      if (container.querySelector('p')) container.innerHTML = '';
+      const c = data.comment;
+      container.innerHTML += `<div class="comment-item"><span class="comment-author">${c.author}</span><span class="comment-time">${new Date(c.created_at).toLocaleString()}</span><div class="comment-text">${c.text}</div></div>`;
+    }
+  }
+
+  async function editDetailField(field) {
+    if (!currentOppId || !currentOppData) return;
+    const opp = currentOppData.opportunity;
+    let newVal;
+    if (field === 'title') {
+      newVal = prompt('Edit title:', opp.title || '');
+      if (newVal === null) return;
+    } else if (field === 'due_date') {
+      newVal = prompt('Due date (YYYY-MM-DD):', opp.due_date || '');
+      if (newVal === null) return;
+    } else if (field === 'value') {
+      newVal = prompt('Opportunity value ($):', opp.opportunity_value);
+      if (newVal === null) return;
+      newVal = parseFloat(newVal) || 0;
+    }
+    const payload = {};
+    payload[field] = newVal;
+    const res = await api(`/api/pipeline/opportunity/${currentOppId}/update/`, payload);
+    if (res.ok) {
+      // Re-fetch
+      openOppDetail(currentOppId);
+    } else { alert('Failed to update'); }
+  }
+
+  // Legacy alias
+  function editOpp(id) { openOppDetail(id); }
 
   // ====== Stage Management ======
   function renameStage(id, currentName) {

@@ -1,9 +1,11 @@
 """Pipeline CRM views — list, kanban board, opportunity management."""
 import json
 from django.http import JsonResponse, HttpResponse
+from django.db import transaction
 from django.db.models import Q as models_Q
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 from newapp.models import (
     Pipeline, PipelineStage, Opportunity, OpportunityComment,
     PipelineAutomation, Organization, User, Tag, CustomField
@@ -190,7 +192,10 @@ def stage_delete(request, stage_id):
 
 @csrf_exempt
 def opportunity_create(request):
-    """Create a new opportunity (contact card on board)."""
+    """Create a new opportunity (contact card on board).
+    Supports both selecting an existing contact (user_id) and
+    creating a new contact inline (new_contact_name + new_contact_phone).
+    """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
 
@@ -206,12 +211,34 @@ def opportunity_create(request):
     value = data.get('value', 0)
     priority = data.get('priority', 'medium')
 
+    # Inline contact creation
+    new_name = data.get('new_contact_name', '').strip()
+    new_phone = data.get('new_contact_phone', '').strip()
+
     pipeline = get_object_or_404(Pipeline, id=pipeline_id, organization_id=org_id)
 
     if not stage_id:
         stage = pipeline.stages.first()
     else:
         stage = get_object_or_404(PipelineStage, id=stage_id, pipeline=pipeline)
+
+    # If creating a new contact inline
+    if new_phone and not user_id:
+        # Check if phone already exists in this org
+        existing = User.objects.filter(phone_no=new_phone, organization_id=org_id).first()
+        if existing:
+            user_id = existing.id
+        else:
+            new_user = User.objects.create(
+                name=new_name or 'User',
+                phone_no=new_phone,
+                organization_id=org_id,
+                created_at=timezone.now(),
+                source='Pipeline',
+            )
+            user_id = new_user.id
+            if not title:
+                title = new_name or new_phone
 
     opp = Opportunity.objects.create(
         pipeline=pipeline,
@@ -285,6 +312,72 @@ def opportunity_delete(request, opp_id):
     opp = get_object_or_404(Opportunity, id=opp_id)
     opp.delete()
     return JsonResponse({'success': True})
+
+
+def opportunity_detail(request, opp_id):
+    """Return full opportunity details as JSON for the slide-out panel."""
+    org_id = request.session.get('organization_id')
+    if not org_id:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    opp = get_object_or_404(Opportunity, id=opp_id, organization_id=org_id)
+
+    # User details
+    user_data = None
+    if opp.user:
+        u = opp.user
+        # Try to get email from custom fields
+        email = ''
+        try:
+            from newapp.models import CustomFieldValue
+            email_cfv = CustomFieldValue.objects.filter(
+                user=u,
+                custom_field__name__iexact='email'
+            ).first()
+            if email_cfv:
+                email = email_cfv.value or ''
+        except Exception:
+            pass
+
+        user_data = {
+            'id': u.id,
+            'name': u.name or '',
+            'phone_no': u.phone_no or '',
+            'email': email,
+            'source': getattr(u, 'source', ''),
+            'created_at': u.created_at.isoformat() if u.created_at else '',
+        }
+
+    # Comments
+    comments = []
+    for c in opp.comments.all().order_by('created_at'):
+        comments.append({
+            'id': c.id,
+            'text': c.text,
+            'author': c.author,
+            'created_at': c.created_at.isoformat(),
+        })
+
+    return JsonResponse({
+        'success': True,
+        'opportunity': {
+            'id': opp.id,
+            'title': opp.title,
+            'description': opp.description,
+            'opportunity_value': float(opp.opportunity_value),
+            'priority': opp.priority,
+            'status': opp.status,
+            'due_date': opp.due_date.isoformat() if opp.due_date else '',
+            'created_by': opp.created_by,
+            'created_at': opp.created_at.isoformat(),
+            'updated_at': opp.updated_at.isoformat(),
+            'stage_name': opp.stage.name if opp.stage else '',
+            'stage_id': opp.stage_id,
+            'pipeline_name': opp.pipeline.name if opp.pipeline else '',
+        },
+        'user': user_data,
+        'comments': comments,
+    })
 
 
 @csrf_exempt
@@ -438,8 +531,6 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
     """
     auto_logger.info(f"[Automation] START: user_id={user_id}, trigger={trigger_type}, tag_id={tag_id}")
     
-    opps = Opportunity.objects.filter(user_id=user_id, status='open')
-    
     # Build the matching rules query
     all_rules = PipelineAutomation.objects.filter(
         trigger_type=trigger_type,
@@ -455,59 +546,68 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
                 models_Q(trigger_field_value='') | models_Q(trigger_field_value=field_value)
             )
     
-    auto_logger.info(f"[Automation] Rules found: {all_rules.count()}, Existing opps: {opps.count()}")
-    
     if not all_rules.exists():
         auto_logger.info("[Automation] No matching rules, returning")
         return
     
-    if opps.exists():
-        # Move existing opportunities
-        for opp in opps:
-            rules = all_rules.filter(pipeline=opp.pipeline)
-            for rule in rules:
-                opp.stage = rule.target_stage
-                opp.save()
-                auto_logger.info(f"[Automation] Moved opp {opp.id} to stage '{rule.target_stage.name}'")
-                # Auto-send template message on stage move
-                if rule.target_stage.auto_send_enabled and rule.target_stage.auto_send_template:
-                    try:
-                        from ..template_message_sender import send_pipeline_stage_template
-                        result = send_pipeline_stage_template(opp, rule.target_stage)
-                        auto_logger.info(f"[Automation] Auto-sent template for stage '{rule.target_stage.name}': {result}")
-                    except Exception as e:
-                        auto_logger.error(f"[Automation] Auto-send template error: {e}", exc_info=True)
-                break
-    else:
-        # Auto-create opportunity in matching pipeline
-        for rule in all_rules:
-            try:
-                user = User.objects.get(id=user_id)
-                display_name = getattr(user, 'name', '') or user.phone_no
-                # Get organization from user first, then from the pipeline itself
-                org = getattr(user, 'organization', None)
-                if not org:
-                    org = rule.pipeline.organization
-                
-                auto_logger.info(f"[Automation] Creating opp: pipeline={rule.pipeline.name}, stage={rule.target_stage.name}, user={user_id}, org={org}")
-                opp = Opportunity.objects.create(
-                    pipeline=rule.pipeline,
-                    stage=rule.target_stage,
-                    user=user,
-                    organization=org,
-                    title=display_name,
-                    status='open',
-                    created_by='Automation'
-                )
-                auto_logger.info(f"[Automation] Created opp {opp.id} for user {user_id} in stage '{rule.target_stage.name}'")
-                # Auto-send template message on stage entry
-                if rule.target_stage.auto_send_enabled and rule.target_stage.auto_send_template:
-                    try:
-                        from ..template_message_sender import send_pipeline_stage_template
-                        result = send_pipeline_stage_template(opp, rule.target_stage)
-                        auto_logger.info(f"[Automation] Auto-sent template for stage '{rule.target_stage.name}': {result}")
-                    except Exception as e:
-                        auto_logger.error(f"[Automation] Auto-send template error: {e}", exc_info=True)
-                break  # Only create one opportunity
-            except Exception as e:
-                auto_logger.error(f"[Automation] Error creating opportunity: {e}", exc_info=True)
+    # Bug #6 fix: Use transaction.atomic + select_for_update to prevent race conditions
+    with transaction.atomic():
+        opps = Opportunity.objects.select_for_update().filter(user_id=user_id, status='open')
+        auto_logger.info(f"[Automation] Rules found: {all_rules.count()}, Existing opps: {opps.count()}")
+
+        if opps.exists():
+            # Move existing opportunities
+            for opp in opps:
+                rules = all_rules.filter(pipeline=opp.pipeline)
+                for rule in rules:
+                    opp.stage = rule.target_stage
+                    opp.save()
+                    auto_logger.info(f"[Automation] Moved opp {opp.id} to stage '{rule.target_stage.name}'")
+                    # Auto-send template message on stage move
+                    if rule.target_stage.auto_send_enabled and rule.target_stage.auto_send_template:
+                        try:
+                            from ..template_message_sender import send_pipeline_stage_template
+                            result = send_pipeline_stage_template(opp, rule.target_stage)
+                            auto_logger.info(f"[Automation] Auto-sent template for stage '{rule.target_stage.name}': {result}")
+                        except Exception as e:
+                            auto_logger.error(f"[Automation] Auto-send template error: {e}", exc_info=True)
+                    break
+        else:
+            # Auto-create opportunity in matching pipeline
+            for rule in all_rules:
+                try:
+                    user = User.objects.get(id=user_id)
+                    display_name = getattr(user, 'name', '') or user.phone_no
+                    # Get organization from user first, then from the pipeline itself
+                    org = getattr(user, 'organization', None)
+                    if not org:
+                        org = rule.pipeline.organization
+                    
+                    # Bug #3 fix: Validate org exists before creating
+                    if not org:
+                        auto_logger.error(f"[Automation] Cannot create opportunity: no organization found for user {user_id}, rule {rule.id}")
+                        return
+                    
+                    auto_logger.info(f"[Automation] Creating opp: pipeline={rule.pipeline.name}, stage={rule.target_stage.name}, user={user_id}, org={org}")
+                    opp = Opportunity.objects.create(
+                        pipeline=rule.pipeline,
+                        stage=rule.target_stage,
+                        user=user,
+                        organization=org,
+                        title=display_name,
+                        status='open',
+                        created_by='Automation'
+                    )
+                    auto_logger.info(f"[Automation] Created opp {opp.id} for user {user_id} in stage '{rule.target_stage.name}'")
+                    # Auto-send template message on stage entry
+                    if rule.target_stage.auto_send_enabled and rule.target_stage.auto_send_template:
+                        try:
+                            from ..template_message_sender import send_pipeline_stage_template
+                            result = send_pipeline_stage_template(opp, rule.target_stage)
+                            auto_logger.info(f"[Automation] Auto-sent template for stage '{rule.target_stage.name}': {result}")
+                        except Exception as e:
+                            auto_logger.error(f"[Automation] Auto-send template error: {e}", exc_info=True)
+                    break  # Only create one opportunity
+                except Exception as e:
+                    # Bug #9 fix: Include user_id and rule context in error log
+                    auto_logger.error(f"[Automation] Error creating opportunity for user {user_id}, rule {rule.id}: {e}", exc_info=True)

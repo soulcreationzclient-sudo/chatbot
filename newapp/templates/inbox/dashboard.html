@@ -1,4 +1,4 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
 {% load static %}
 {% load tz %}
 {% block title %}Inbox{% endblock %}
@@ -610,7 +610,7 @@
 
   </section>
 
-  <!-- Right Panel - Custom Fields, Tags, and Error Logs -->
+  <!-- Right Panel - Contact Details, Custom Fields, Tags, Pipelines, Notes, Logs -->
   <section class="right-panel" id="rightPanel">
     <!-- Mobile close button -->
     <div class="mobile-panel-close" onclick="toggleMobilePanel()">
@@ -619,18 +619,82 @@
     </div>
     <!-- Scrollable body wraps ALL sections -->
     <div class="right-panel-body">
-    <!-- Custom Fields Section -->
-    <div class="right-panel-section custom-fields-section">
-      <div class="custom-fields-header">
-        <span class="custom-fields-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg> Custom Fields</span>
+
+    {% if selected_user %}
+    <!-- Profile Header -->
+    <div class="right-panel-section" style="padding:20px 16px 14px; text-align:center;">
+      <div style="position:relative; display:inline-block; margin-bottom:6px;">
+        <div class="avatar" style="width:64px;height:64px;font-size:22px;margin:0 auto;background:linear-gradient(135deg,#f0f4ff,#e0e7ff);color:#4f46e5;">
+          {{ selected_user.name|default:selected_user.phone_no|slice:":2"|upper }}
+        </div>
+        {% if selected_user.phone_no|slice:":7" == "webchat" %}
+        <span style="position:absolute;bottom:0;right:-2px;width:22px;height:22px;border-radius:50%;background:#4f46e5;display:flex;align-items:center;justify-content:center;border:2px solid #fff;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </span>
+        {% else %}
+        <span style="position:absolute;bottom:0;right:-2px;width:22px;height:22px;border-radius:50%;background:#075e54;display:flex;align-items:center;justify-content:center;border:2px solid #fff;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.07L2 22l5.08-1.35A9.93 9.93 0 0012 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/></svg>
+        </span>
+        {% endif %}
       </div>
-      <div id="customFieldsBody">
+      <p style="font-weight:700;font-size:15px;margin:8px 0 2px;color:var(--text-main);">
+        <u>{{ selected_user.name|default:"User" }}</u>
+      </p>
+    </div>
+
+    <!-- Key-Value Detail Rows -->
+    <div class="right-panel-section" style="padding:4px 16px 12px;">
+      <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
+        <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Contact ID</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);word-break:break-all;">{{ selected_user.phone_no }}</div>
+      </div>
+      <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
+        <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Email</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);word-break:break-all;" id="contactEmailDisplay">—</div>
+      </div>
+      <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
+        <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Phone</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);">
+          {% if selected_user.phone_no|slice:":7" != "webchat" %}
+          +{{ selected_user.phone_no }}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#22c55e" style="vertical-align:middle;margin-left:4px;"><path d="M9 12l2 2 4-4M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>
+          {% else %}—{% endif %}
+        </div>
+      </div>
+      <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
+        <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Local time</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);" id="localTimeDisplay">—</div>
+      </div>
+      <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
+        <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Contact</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);">{{ selected_user.created_at|date:"m/d/Y g:i A" }}</div>
+      </div>
+      <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
+        <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Source</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);">—</div>
+      </div>
+      <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
+        <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Language</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);">—</div>
+      </div>
+      <div style="display:flex;padding:5px 0;">
+        <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Country</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);">—</div>
+      </div>
+    </div>
+
+    <!-- Custom Fields (inline key-value) -->
+    <div class="right-panel-section" style="padding:8px 16px 6px;">
+      <div id="customFieldsBody" style="margin-bottom:4px;">
         <p class="custom-field-empty">Loading...</p>
       </div>
-      <button type="button" class="btn btn-sm btn-primary w-100 mt-3" onclick="showAddCustomFieldModal()">
-        + Add Custom Field
-      </button>
+      <div style="display:flex;align-items:center;padding:6px 0;cursor:pointer;color:var(--accent);font-size:12px;font-weight:600;" onclick="showAddCustomFieldModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:8px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add New
+      </div>
     </div>
+
+    {% endif %}
 
     <!-- Tags Section -->
     <div class="right-panel-section tags-section">
@@ -643,6 +707,23 @@
       </div>
     </div>
 
+    <!-- Pipelines Section -->
+    <div class="right-panel-section" style="padding:14px 16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-weight:600;font-size:13px;color:var(--text-main);">Pipelines</span>
+      </div>
+      <div id="pipelinesContainer">
+        <span style="color:var(--text-muted);font-size:13px;">No pipelines</span>
+      </div>
+    </div>
+
+    <!-- Notes Section -->
+    <div class="right-panel-section" style="padding:14px 16px;">
+      <div style="font-weight:600;font-size:13px;color:var(--text-main);margin-bottom:8px;">Notes (0)</div>
+      <button type="button" class="action-btn" style="width:100%;justify-content:center;font-size:12px;" onclick="alert('Notes feature coming soon')">
+        Add New
+      </button>
+    </div>
 
     <!-- Error Logs Accordion Section -->
     <div class="accordion-section">
@@ -660,7 +741,7 @@
       </div>
     </div>
 
-    <!-- More Accordion Sections (placeholder for future) -->
+    <!-- Media and Files -->
     <div class="accordion-section">
       <div class="accordion-header" onclick="toggleAccordion('mediaFilesAccordion')">
         <span class="accordion-title">Media and Files</span>
@@ -671,6 +752,7 @@
       </div>
     </div>
 
+    <!-- Executed Flows/Steps -->
     <div class="accordion-section">
       <div class="accordion-header" onclick="toggleAccordion('executedFlowsAccordion')">
         <span class="accordion-title">Executed Flows/Steps</span>
@@ -1268,28 +1350,35 @@
       if (fields.length === 0) {
         body.innerHTML = `
           <div class="custom-field-empty">
-            <div class="custom-field-empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></div>
             <p>No custom fields captured yet.</p>
-            <p class="small">Fields captured via AI prompts will appear here.</p>
           </div>
         `;
         return;
       }
 
       body.innerHTML = fields.map(f => `
-        <div class="custom-field-item" data-field-name="${f.field_name}">
-          <div class="custom-field-label">${f.field_name}</div>
-          <div class="custom-field-value editable"
+        <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;" data-field-name="${f.field_name}">
+          <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(f.field_name)}">${escapeHtml(f.field_name)}</div>
+          <div style="width:50%;font-size:12px;color:var(--text-main);cursor:pointer;word-break:break-word;"
                onclick="editCustomField('${f.field_name}', '${escapeHtml(f.value || '')}')"
-               id="cf-value-${f.field_name}">
-            ${escapeHtml(f.value || '-')}
+               id="cf-value-${f.field_name}"
+               title="Click to edit">
+            ${escapeHtml(f.value || '—')}
           </div>
-          <div class="custom-field-actions">
-            <button class="btn btn-sm btn-outline-primary" onclick="editCustomField('${f.field_name}', '${escapeHtml(f.value || '')}')">Edit</button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomField('${f.field_name}')">Delete</button>
+          <div style="width:8%;display:flex;align-items:center;justify-content:center;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" style="cursor:pointer;opacity:0.5;" onclick="deleteCustomField('${f.field_name}')" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
           </div>
         </div>
       `).join('');
+
+      // Populate email in profile details from custom fields (User model has no email field)
+      var emailField = fields.find(f => f.field_name.toLowerCase() === 'email');
+      var emailDisplay = document.getElementById('contactEmailDisplay');
+      if (emailDisplay) {
+        emailDisplay.textContent = (emailField && emailField.value) ? emailField.value : '—';
+      }
     } catch (e) {
       body.innerHTML = '<p class="text-danger text-center">Failed to load custom fields</p>';
       console.error(e);
@@ -1954,6 +2043,17 @@
   svg.setAttribute('stroke', starred ? 'currentColor' : '#f59e0b');
   btn.dataset.starred = starred ? '0' : '1';
 }
+
+  // Local time display in sidebar
+  (function updateLocalTime() {
+    var el = document.getElementById('localTimeDisplay');
+    if (el) {
+      var now = new Date();
+      var h = now.getHours(), m = now.getMinutes();
+      el.textContent = (h > 12 ? h - 12 : h || 12) + ':' + (m < 10 ? '0' : '') + m + ' ' + (h >= 12 ? 'PM' : 'AM');
+    }
+    setTimeout(updateLocalTime, 60000);
+  })();
 
 </script>
 {% endblock %}

@@ -493,15 +493,8 @@ def broadcast_msg(request):
     return render(request, 'broadcast_form.html', {'tags': tags})
 
 
-WHATSAPP_API_URL = "https://graph.facebook.com/v22.0/771795822685853/messages"
-ACCESS_TOKEN = "EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD"  # your WhatsApp Cloud API token
-
-
-# views.py
-# views.py
-
-WHATSAPP_API_URL ="https://graph.facebook.com/v22.0/771795822685853/messages"
-ACCESS_TOKEN ='EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD'
+# NOTE: WhatsApp credentials are now stored per-org in the database.
+# Removed hardcoded WHATSAPP_API_URL and ACCESS_TOKEN for security.
 
 
 # def send_broadcast(request):
@@ -536,8 +529,7 @@ ACCESS_TOKEN ='EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo800
 #             who="bot"
 #         )
 #     return HttpResponse(200)
-WHATSAPP_API_URL ="https://graph.facebook.com/v22.0/771795822685853/messages"
-ACCESS_TOKEN ='EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD'
+# NOTE: WhatsApp credentials stored per-org in database (removed hardcoded values)
 
 def send_broadcast(request):
     if request.method != "POST":
@@ -796,6 +788,44 @@ def dashboard_view(request):
     bot_on = user_qs.filter(bot_enabled=True).count()
     bot_off = user_qs.filter(bot_enabled=False).count()
 
+    # 7) Total contacts over time (cumulative running total per day)
+    total_before_range = user_qs.filter(created_at__lt=date_range[0]).count()
+    chart_total_contacts = []
+    running = total_before_range
+    for d in date_range:
+        running += contacts_by_day.get(d, 0)
+        chart_total_contacts.append(running)
+
+    # 8) Human vs Bot message totals (7d) for doughnut
+    total_human_msgs = msg_qs.filter(created_at__gte=seven_days_ago, who='human').count()
+    total_bot_msgs = msg_qs.filter(created_at__gte=seven_days_ago, who='bot').count()
+
+    # 9) New contacts by channel (7d)
+    new_webchat_7d = user_qs.filter(created_at__gte=seven_days_ago, phone_no__startswith='webchat_').count()
+    new_whatsapp_7d = new_contacts_7d - new_webchat_7d
+
+    # 10) Follow-ups per day (7d)
+    try:
+        from .models import ScheduledFollowUp
+        followups_by_day = dict(
+            ScheduledFollowUp.objects.filter(
+                user__in=user_qs,
+                created_at__gte=seven_days_ago
+            ).annotate(day=TruncDate('created_at'))
+            .values('day').annotate(c=Count('id')).values_list('day', 'c')
+        )
+    except Exception:
+        followups_by_day = {}
+    chart_followups = [followups_by_day.get(d, 0) for d in date_range]
+
+    # 11) Archived contacts per day (7d)
+    archived_by_day = dict(
+        user_qs.filter(archived_at__gte=seven_days_ago)
+        .annotate(day=TruncDate('archived_at'))
+        .values('day').annotate(c=Count('id')).values_list('day', 'c')
+    )
+    chart_archived = [archived_by_day.get(d, 0) for d in date_range]
+
     user_phone = f"https://wa.me/{display_phone_number}" if display_phone_number else "#"
 
     context = {
@@ -816,8 +846,15 @@ def dashboard_view(request):
         'chart_msg_user': _json.dumps(chart_msg_user),
         'chart_msg_bot': _json.dumps(chart_msg_bot),
         'chart_new_contacts': _json.dumps(chart_new_contacts),
+        'chart_total_contacts': _json.dumps(chart_total_contacts),
+        'chart_followups': _json.dumps(chart_followups),
+        'chart_archived': _json.dumps(chart_archived),
         'whatsapp_count': whatsapp_count,
         'webchat_count': webchat_count,
+        'new_whatsapp_7d': new_whatsapp_7d,
+        'new_webchat_7d': new_webchat_7d,
+        'total_human_msgs': total_human_msgs,
+        'total_bot_msgs': total_bot_msgs,
         'tag_labels': _json.dumps(tag_labels),
         'tag_counts': _json.dumps(tag_counts),
 

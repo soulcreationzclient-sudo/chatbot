@@ -346,6 +346,7 @@ urlpatterns = [
     path('api/pipeline/opportunity/<int:opp_id>/update/', pipeline_views.opportunity_update, name='pipeline_opp_update'),
     path('api/pipeline/opportunity/<int:opp_id>/delete/', pipeline_views.opportunity_delete, name='pipeline_opp_delete'),
     path('api/pipeline/opportunity/<int:opp_id>/comment/', pipeline_views.opportunity_comment, name='pipeline_opp_comment'),
+    path('api/pipeline/opportunity/<int:opp_id>/detail/', pipeline_views.opportunity_detail, name='pipeline_opp_detail'),
     path('api/pipeline/stage/<int:stage_id>/rename/', pipeline_views.stage_rename, name='pipeline_stage_rename'),
     path('api/pipeline/stage/<int:stage_id>/settings/', pipeline_views.stage_settings, name='pipeline_stage_settings'),
     path('api/pipeline/automation/create/', pipeline_views.automation_create, name='pipeline_auto_create'),
