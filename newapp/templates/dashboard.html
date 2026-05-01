@@ -149,13 +149,17 @@
     </div>
     <div class="kpi-tile">
       <div class="kpi-label">Response Time</div>
-      <div class="kpi-val">—</div>
-      <div class="kpi-change flat">—</div>
+      <div class="kpi-val">{% if avg_response_time_7d %}{{ avg_response_time_7d }}<span style="font-size:14px;font-weight:600;color:var(--muted)">m</span>{% else %}—{% endif %}</div>
+      <div class="kpi-change {% if response_time_change > 0 %}up{% elif response_time_change < 0 %}down{% else %}flat{% endif %}">
+        {% if response_time_change > 0 %}▲ +{{ response_time_change }}% faster{% elif response_time_change < 0 %}▼ {{ response_time_change }}% slower{% else %}— 0%{% endif %}
+      </div>
     </div>
     <div class="kpi-tile">
       <div class="kpi-label">First Response Time</div>
-      <div class="kpi-val">—</div>
-      <div class="kpi-change flat">—</div>
+      <div class="kpi-val">{% if avg_first_response_7d %}{{ avg_first_response_7d }}<span style="font-size:14px;font-weight:600;color:var(--muted)">m</span>{% else %}—{% endif %}</div>
+      <div class="kpi-change {% if first_response_change > 0 %}up{% elif first_response_change < 0 %}down{% else %}flat{% endif %}">
+        {% if first_response_change > 0 %}▲ +{{ first_response_change }}% faster{% elif first_response_change < 0 %}▼ {{ first_response_change }}% slower{% else %}— 0%{% endif %}
+      </div>
     </div>
   </div>
 

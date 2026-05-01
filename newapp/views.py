@@ -828,74 +828,139 @@ def dashboard_view(request):
 
     user_phone = f"https://wa.me/{display_phone_number}" if display_phone_number else "#"
 
-    # ---------- NEW ANALYTICS: Fill placeholder charts ----------
+    # ---------- ANALYTICS: Optimized batch computation ----------
+    from datetime import datetime as _dt
+    from django.db.models import F, Min, Max
+    from collections import defaultdict
 
-    # 12) Average response time per day (seconds between human msg → next bot msg, per user)
-    from django.db.models import F, Subquery, OuterRef, Avg as DjAvg
+    # Helper: build timezone-aware day boundaries once
+    def _day_bounds(d):
+        naive = _dt.combine(d, _dt.min.time())
+        start = timezone.make_aware(naive) if timezone.is_naive(naive) else naive
+        return start, start + timedelta(days=1)
+
+    range_start, _ = _day_bounds(date_range[0])
+    _, range_end = _day_bounds(date_range[-1])
+
+    # 12-13) Response time & First response time — BATCH approach (2 queries total)
+    # Fetch ALL human and bot messages for the 7-day range in bulk
+    all_human = list(
+        msg_qs.filter(created_at__gte=range_start, created_at__lt=range_end, who='human')
+        .order_by('created_at')
+        .values_list('id', 'user_id_id', 'created_at')[:5000]
+    )
+    all_bot = list(
+        msg_qs.filter(created_at__gte=range_start, created_at__lt=range_end, who='bot')
+        .order_by('created_at')
+        .values_list('id', 'user_id_id', 'created_at')[:5000]
+    )
+
+    # Index bot messages by user_id for fast lookup
+    bot_by_user = defaultdict(list)
+    for _, uid, ts in all_bot:
+        bot_by_user[uid].append(ts)
+
+    # Match human→bot pairs: for each human msg, find the next bot msg from same user
+    import bisect
+    all_response_times = []  # (date, diff_minutes) tuples for all response times
+    first_response_by_user_day = {}  # (uid, date) → diff_minutes (first human msg per user per day)
+
+    for _, uid, h_ts in all_human:
+        bot_times = bot_by_user.get(uid, [])
+        if not bot_times:
+            continue
+        # Binary search for the first bot reply after this human message
+        idx = bisect.bisect_right(bot_times, h_ts)
+        if idx < len(bot_times):
+            b_ts = bot_times[idx]
+            diff_sec = (b_ts - h_ts).total_seconds()
+            if 0 < diff_sec < 3600:  # Only count if reply within 1 hour
+                diff_min = round(diff_sec / 60.0, 2)
+                msg_date = h_ts.date()
+                all_response_times.append((msg_date, diff_min))
+                # Track first response per user per day
+                key = (uid, msg_date)
+                if key not in first_response_by_user_day:
+                    first_response_by_user_day[key] = diff_min
+
+    # Build per-day chart data
+    resp_by_day = defaultdict(list)
+    for d, diff in all_response_times:
+        resp_by_day[d].append(diff)
+
+    first_resp_by_day = defaultdict(list)
+    for (uid, d), diff in first_response_by_user_day.items():
+        first_resp_by_day[d].append(diff)
+
     chart_avg_response = []
-    for d in date_range:
-        from datetime import datetime as _dt
-        day_start = timezone.make_aware(_dt.combine(d, _dt.min.time())) if timezone.is_naive(_dt.combine(d, _dt.min.time())) else _dt.combine(d, _dt.min.time())
-        day_end = day_start + timedelta(days=1)
-        # Get human messages for this day
-        human_msgs = msg_qs.filter(created_at__gte=day_start, created_at__lt=day_end, who='human').order_by('created_at')
-        response_times = []
-        for hm in human_msgs[:200]:  # Cap for performance
-            bot_reply = msg_qs.filter(
-                user_id=hm.user_id, who='bot',
-                created_at__gt=hm.created_at,
-                created_at__lt=hm.created_at + timedelta(hours=1)
-            ).order_by('created_at').first()
-            if bot_reply:
-                diff = (bot_reply.created_at - hm.created_at).total_seconds()
-                if diff < 3600:  # Ignore gaps > 1 hour (likely not related)
-                    response_times.append(diff / 60.0)  # Convert to minutes
-        avg = round(sum(response_times) / len(response_times), 1) if response_times else 0
-        chart_avg_response.append(avg)
-
-    # 13) Average first response time (first bot reply to first human msg per user, 7d)
     chart_avg_first_response = []
     for d in date_range:
-        day_start = timezone.make_aware(_dt.combine(d, _dt.min.time())) if timezone.is_naive(_dt.combine(d, _dt.min.time())) else _dt.combine(d, _dt.min.time())
-        day_end = day_start + timedelta(days=1)
-        # Users who sent their first-ever message on this day
-        first_msgs = msg_qs.filter(
-            created_at__gte=day_start, created_at__lt=day_end, who='human'
-        ).order_by('user_id', 'created_at').distinct('user_id') if hasattr(msg_qs, 'distinct') else []
-        # Fallback for SQLite (no DISTINCT ON)
-        try:
-            first_msgs_list = list(first_msgs[:100])
-        except Exception:
-            first_msgs_list = []
-            seen_users = set()
-            for m in msg_qs.filter(created_at__gte=day_start, created_at__lt=day_end, who='human').order_by('created_at')[:200]:
-                uid = m.user_id_id
-                if uid not in seen_users:
-                    seen_users.add(uid)
-                    first_msgs_list.append(m)
-
-        first_times = []
-        for hm in first_msgs_list:
-            bot_reply = msg_qs.filter(
-                user_id=hm.user_id, who='bot',
-                created_at__gt=hm.created_at,
-                created_at__lt=hm.created_at + timedelta(hours=1)
-            ).order_by('created_at').first()
-            if bot_reply:
-                diff = (bot_reply.created_at - hm.created_at).total_seconds() / 60.0
-                if diff < 60:
-                    first_times.append(diff)
-        avg_first = round(sum(first_times) / len(first_times), 1) if first_times else 0
+        # Avg response time
+        day_resps = resp_by_day.get(d, [])
+        avg = round(sum(day_resps) / len(day_resps), 1) if day_resps else 0
+        chart_avg_response.append(avg)
+        # Avg first response time
+        day_firsts = first_resp_by_day.get(d, [])
+        avg_first = round(sum(day_firsts) / len(day_firsts), 1) if day_firsts else 0
         chart_avg_first_response.append(avg_first)
+
+    # KPI summary: overall 7-day averages
+    all_resp_vals = [v for vals in resp_by_day.values() for v in vals]
+    avg_response_time_7d = round(sum(all_resp_vals) / len(all_resp_vals), 1) if all_resp_vals else 0
+    all_first_vals = [v for vals in first_resp_by_day.values() for v in vals]
+    avg_first_response_7d = round(sum(all_first_vals) / len(all_first_vals), 1) if all_first_vals else 0
+
+    # Previous 7-day response times for week-over-week comparison
+    prev_start, _ = _day_bounds((now - timedelta(days=14)).date())
+    prev_end, _ = _day_bounds((now - timedelta(days=7)).date())
+    prev_human = list(
+        msg_qs.filter(created_at__gte=prev_start, created_at__lt=prev_end, who='human')
+        .order_by('created_at')
+        .values_list('id', 'user_id_id', 'created_at')[:3000]
+    )
+    prev_bot = list(
+        msg_qs.filter(created_at__gte=prev_start, created_at__lt=prev_end, who='bot')
+        .order_by('created_at')
+        .values_list('id', 'user_id_id', 'created_at')[:3000]
+    )
+    prev_bot_by_user = defaultdict(list)
+    for _, uid, ts in prev_bot:
+        prev_bot_by_user[uid].append(ts)
+
+    prev_resp_vals = []
+    prev_first_by_user = {}
+    for _, uid, h_ts in prev_human:
+        bot_times = prev_bot_by_user.get(uid, [])
+        if not bot_times:
+            continue
+        idx = bisect.bisect_right(bot_times, h_ts)
+        if idx < len(bot_times):
+            diff_sec = (bot_times[idx] - h_ts).total_seconds()
+            if 0 < diff_sec < 3600:
+                diff_min = round(diff_sec / 60.0, 2)
+                prev_resp_vals.append(diff_min)
+                if uid not in prev_first_by_user:
+                    prev_first_by_user[uid] = diff_min
+
+    prev_avg_response = round(sum(prev_resp_vals) / len(prev_resp_vals), 1) if prev_resp_vals else 0
+    prev_first_vals = list(prev_first_by_user.values())
+    prev_avg_first = round(sum(prev_first_vals) / len(prev_first_vals), 1) if prev_first_vals else 0
+
+    # For response time, lower is better — so invert the change direction
+    def _pct_change_inverted(current, previous):
+        """For metrics where lower is better (response time). Positive change = improvement."""
+        if previous == 0:
+            return -100 if current > 0 else 0
+        return round(((previous - current) / previous) * 100, 1)
+
+    response_time_change = _pct_change_inverted(avg_response_time_7d, prev_avg_response)
+    first_response_change = _pct_change_inverted(avg_first_response_7d, prev_avg_first)
 
     # 14) Average conversation duration per day (minutes between first and last msg per user)
     chart_avg_duration = []
     for d in date_range:
-        day_start = timezone.make_aware(_dt.combine(d, _dt.min.time())) if timezone.is_naive(_dt.combine(d, _dt.min.time())) else _dt.combine(d, _dt.min.time())
-        day_end = day_start + timedelta(days=1)
+        day_start, day_end = _day_bounds(d)
         day_msgs = msg_qs.filter(created_at__gte=day_start, created_at__lt=day_end)
-        # Group by user, get min/max created_at
-        from django.db.models import Min, Max
         user_durations = day_msgs.values('user_id').annotate(
             first_msg=Min('created_at'), last_msg=Max('created_at')
         ).filter(first_msg__lt=F('last_msg'))
@@ -908,7 +973,6 @@ def dashboard_view(request):
         chart_avg_duration.append(avg_dur)
 
     # 15) Bot toggle tracking per day (users currently with bot_enabled=False as proxy for human takeovers)
-    # Since we don't have historical toggle data, use current counts as a doughnut
     bot_toggle_human = bot_off  # Contacts currently handled by human
     bot_toggle_bot = bot_on     # Contacts currently handled by bot
 
@@ -963,6 +1027,11 @@ def dashboard_view(request):
         'active_convos_change': _pct_change(active_convos_7d, active_convos_prev_7d),
         'total_bookings': total_bookings,
         'pipeline_value': float(pipeline_value),
+        # KPI — Response time
+        'avg_response_time_7d': avg_response_time_7d,
+        'response_time_change': response_time_change,
+        'avg_first_response_7d': avg_first_response_7d,
+        'first_response_change': first_response_change,
         # Chart data (JSON)
         'date_labels': _json.dumps(date_labels),
         'chart_msg_user': _json.dumps(chart_msg_user),
@@ -981,7 +1050,7 @@ def dashboard_view(request):
         'tag_counts': _json.dumps(tag_counts),
         'bot_on': bot_on,
         'bot_off': bot_off,
-        # NEW analytics data
+        # Chart analytics data
         'chart_avg_response': _json.dumps(chart_avg_response),
         'chart_avg_first_response': _json.dumps(chart_avg_first_response),
         'chart_avg_duration': _json.dumps(chart_avg_duration),
