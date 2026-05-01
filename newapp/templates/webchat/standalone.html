@@ -9,8 +9,8 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -349,7 +349,7 @@
             const div = document.createElement('div');
             div.className = 'message ' + sender;
             // Auto-link URLs
-            let html = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:' + (sender === 'user' ? '#fff' : '#f43f5e') + '; text-decoration:underline;">$1</a>');
+            let html = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:' + (sender === 'user' ? '#fff' : '#2563eb') + '; text-decoration:underline;">$1</a>');
             html = html.replace(/\n/g, '<br>');
             html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');

@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebChat Analytics</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: #f8fafc;
             color: #111827;
             line-height: 1.6;
@@ -48,10 +48,10 @@
             cursor: pointer; border-radius: 10px;
             text-decoration: none;
             transition: all 0.15s ease;
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
         }
         .nav-tab:hover { background: #f8fafc; color: #374151; }
-        .nav-tab.active { background: linear-gradient(135deg, #f43f5e, #fb7185); color: #fff; box-shadow: 0 2px 8px rgba(244,63,94,0.25); }
+        .nav-tab.active { background: linear-gradient(135deg, #2563eb, #60a5fa); color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,0.25); }
         .nav-tab svg { width: 16px; height: 16px; flex-shrink: 0; }
 
         /* FILTER BAR */
@@ -75,9 +75,9 @@
             color: #111827;
             cursor: pointer;
             outline: none;
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
         }
-        .filter-select:focus { border-color: #f43f5e; box-shadow: 0 0 0 3px rgba(244,63,94,0.1); }
+        .filter-select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 
         /* STATS GRID */
         .stats-grid {
@@ -94,7 +94,7 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
             transition: all 0.15s ease;
         }
-        .stat-card:hover { border-color: #fecdd3; box-shadow: 0 4px 12px rgba(244,63,94,0.08); transform: translateY(-1px); }
+        .stat-card:hover { border-color: #bfdbfe; box-shadow: 0 4px 12px rgba(37,99,235,0.08); transform: translateY(-1px); }
         .stat-icon {
             width: 36px; height: 36px; border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
@@ -102,7 +102,7 @@
         }
         .stat-icon svg { width: 18px; height: 18px; }
         .stat-icon.purple { background: #f5f3ff; color: #8b5cf6; }
-        .stat-icon.rose   { background: #fff1f2; color: #f43f5e; }
+        .stat-icon.rose   { background: #eff6ff; color: #2563eb; }
         .stat-icon.green  { background: #f0fdf4; color: #22c55e; }
         .stat-icon.blue   { background: #eff6ff; color: #3b82f6; }
         .stat-icon.amber  { background: #fffbeb; color: #f59e0b; }
@@ -115,7 +115,7 @@
             font-size: 28px; font-weight: 800; color: #111827;
             letter-spacing: -0.03em; line-height: 1;
         }
-        .stat-value.rose   { color: #f43f5e; }
+        .stat-value.rose   { color: #2563eb; }
         .stat-value.green  { color: #22c55e; }
         .stat-value.amber  { color: #f59e0b; }
         .stat-value.blue   { color: #3b82f6; }
@@ -140,7 +140,7 @@
             font-size: 14px; font-weight: 700; color: #111827;
             margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
         }
-        .chart-title svg { width: 16px; height: 16px; color: #f43f5e; }
+        .chart-title svg { width: 16px; height: 16px; color: #2563eb; }
 
         /* BAR CHART */
         .bar-chart { display: flex; flex-direction: column; gap: 10px; }
@@ -152,7 +152,7 @@
         }
         .bar-fill {
             height: 100%; border-radius: 10px;
-            background: linear-gradient(90deg, #f43f5e, #fb7185);
+            background: linear-gradient(90deg, #2563eb, #60a5fa);
             transition: width 0.6s ease;
         }
         .bar-fill.blue { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
@@ -175,7 +175,7 @@
         }
         .feedback-item.positive { background: #f0fdf4; border-color: #bbf7d0; }
         .feedback-item.neutral  { background: #f8fafc; border-color: #e5e7eb; }
-        .feedback-item.negative { background: #fff1f2; border-color: #fecdd3; }
+        .feedback-item.negative { background: #eff6ff; border-color: #bfdbfe; }
         .feedback-icon { margin-bottom: 10px; display: flex; justify-content: center; }
         .feedback-icon svg { width: 28px; height: 28px; }
         .feedback-count { font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
@@ -342,7 +342,7 @@
     <!-- User Feedback -->
     <div class="feedback-section">
         <h3 class="chart-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="color:#f43f5e;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="color:#2563eb;">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
             User Feedback

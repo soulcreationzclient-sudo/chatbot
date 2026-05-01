@@ -11,8 +11,8 @@
     --border-soft: #e5e7eb;
     --text-main: #0f172a;
     --text-muted: #64748b;
-    --accent: #f43f5e;
-    --accent-soft: #fff1f2;
+    --accent: #2563eb;
+    --accent-soft: #eff6ff;
     --success: #22c55e;
     --danger: #ef4444;
   }
@@ -61,8 +61,8 @@
 
   .channel-item:hover {
     background: var(--accent-soft);
-    border-color: #f43f5e;
-    box-shadow: 0 8px 24px rgba(244,63,94,0.1);
+    border-color: #2563eb;
+    box-shadow: 0 8px 24px rgba(37,99,235,0.1);
     transform: translateY(-1px);
   }
 
@@ -95,7 +95,7 @@
   }
 
   .ci-icon.wc {
-    background: linear-gradient(135deg,#f43f5e,#fb7185);
+    background: linear-gradient(135deg,#2563eb,#60a5fa);
   }
 
   .ci-label {
@@ -208,8 +208,8 @@
 
   .input:focus {
     outline: none;
-    border-color: #f43f5e;
-    box-shadow: 0 0 0 2px rgba(244,63,94, .15);
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37,99,235, .15);
   }
 
   .actions {
@@ -229,7 +229,7 @@
   }
 
   .btn-primary:hover {
-    background: linear-gradient(135deg,#f43f5e,#fb7185);
+    background: linear-gradient(135deg,#2563eb,#60a5fa);
   }
 
   .error {
@@ -252,50 +252,50 @@
 <style>
   /* ── SpeedBots Rose Theme Patch ── */
   :root {
-    --accent: #f43f5e !important;
-    --accent-soft: #fff1f2 !important;
-    --accent-hover: #e11d48 !important;
-    --primary: #f43f5e !important;
-    --blue: #f43f5e !important;
+    --accent: #2563eb !important;
+    --accent-soft: #eff6ff !important;
+    --accent-hover: #1d4ed8 !important;
+    --primary: #2563eb !important;
+    --blue: #2563eb !important;
   }
   /* Accent color overrides */
   a { color: inherit; }
   .btn-primary, button.btn-primary {
-    background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%) !important;
+    background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%) !important;
     border-color: transparent !important;
     color: #fff !important;
-    box-shadow: 0 2px 10px rgba(244,63,94,0.25) !important;
+    box-shadow: 0 2px 10px rgba(37,99,235,0.25) !important;
   }
   .btn-primary:hover { opacity: 0.9 !important; }
   /* Input focus rings */
   input:focus, select:focus, textarea:focus {
-    border-color: #f43f5e !important;
-    box-shadow: 0 0 0 3px rgba(244,63,94,0.1) !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important;
     outline: none !important;
   }
   /* Section/card heading accent */
-  .section-title i, .page-title i { color: #f43f5e !important; }
+  .section-title i, .page-title i { color: #2563eb !important; }
   /* Table row hover */
   tr:hover td { background: #fff8f9 !important; }
   /* Badge accent */
-  .badge-primary, .badge.bg-primary { background: #fff1f2 !important; color: #f43f5e !important; border: 1px solid #fecdd3 !important; }
+  .badge-primary, .badge.bg-primary { background: #eff6ff !important; color: #2563eb !important; border: 1px solid #bfdbfe !important; }
   /* Links */
-  .text-primary, .text-blue { color: #f43f5e !important; }
+  .text-primary, .text-blue { color: #2563eb !important; }
   /* Active nav / tabs */
-  .nav-link.active { color: #f43f5e !important; border-bottom-color: #f43f5e !important; }
+  .nav-link.active { color: #2563eb !important; border-bottom-color: #2563eb !important; }
   /* Search focus */
   .search:focus-within, .search-input:focus {
-    border-color: #f43f5e !important;
-    box-shadow: 0 0 0 3px rgba(244,63,94,0.08) !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.08) !important;
   }
 </style>
 <style>
 /* ── Rose Theme Polish ── */
 :root {
-  --accent: #f43f5e;
-  --accent-soft: #fff1f2;
-  --accent-border: #fecdd3;
-  --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --accent: #2563eb;
+  --accent-soft: #eff6ff;
+  --accent-border: #bfdbfe;
+  --font-main: 'Inter', -apple-system, sans-serif;
 }
 body, *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not([class*="fa-"]) { font-family: var(--font-main) !important; }
 
@@ -314,15 +314,15 @@ body, *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not([class*="
   border-bottom: 1px solid #e5e7eb;
   display: flex; align-items: center; gap: 8px;
 }
-.section-title i, .card-title i { color: #f43f5e; }
+.section-title i, .card-title i { color: #2563eb; }
 
 /* Primary buttons */
 .btn-primary, .btn-save, .btn-submit, button[type=submit] {
-  background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%) !important;
+  background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%) !important;
   color: #fff !important; border: none !important;
   padding: 9px 20px !important; border-radius: 10px !important;
   font-weight: 700 !important; cursor: pointer !important;
-  box-shadow: 0 3px 10px rgba(244,63,94,0.25) !important;
+  box-shadow: 0 3px 10px rgba(37,99,235,0.25) !important;
   transition: opacity 0.15s !important; font-size: 14px !important;
   font-family: var(--font-main) !important;
 }
@@ -340,8 +340,8 @@ body, *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not([class*="
 
 /* Danger buttons */
 .btn-danger, .btn-delete {
-  background: #fff1f2 !important; color: #dc2626 !important;
-  border: 1px solid #fecdd3 !important; border-radius: 10px !important;
+  background: #eff6ff !important; color: #dc2626 !important;
+  border: 1px solid #bfdbfe !important; border-radius: 10px !important;
   padding: 9px 18px !important; font-weight: 600 !important; font-size: 14px !important;
   cursor: pointer !important; transition: all 0.12s !important;
   font-family: var(--font-main) !important;
@@ -360,8 +360,8 @@ input[type=url], input[type=search], textarea, select {
 }
 input[type=text]:focus, input[type=email]:focus, input[type=password]:focus,
 input[type=number]:focus, input[type=url]:focus, textarea:focus, select:focus {
-  background: #fff !important; border-color: #f43f5e !important;
-  box-shadow: 0 0 0 3px rgba(244,63,94,0.1) !important;
+  background: #fff !important; border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important;
 }
 
 /* Table improvements */
@@ -373,8 +373,8 @@ table tr:last-child td { border-bottom: none !important; }
 
 /* Badges */
 .badge-success { background: #f0fdf4 !important; color: #16a34a !important; border: 1px solid #bbf7d0 !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
-.badge-danger  { background: #fff1f2 !important; color: #dc2626 !important; border: 1px solid #fecdd3 !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
-.badge-info    { background: #fff1f2 !important; color: #f43f5e !important; border: 1px solid #fecdd3 !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
+.badge-danger  { background: #eff6ff !important; color: #dc2626 !important; border: 1px solid #bfdbfe !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
+.badge-info    { background: #eff6ff !important; color: #2563eb !important; border: 1px solid #bfdbfe !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
 .badge-warning { background: #fffbeb !important; color: #d97706 !important; border: 1px solid #fde68a !important; padding: 3px 10px !important; border-radius: 99px !important; font-size: 11px !important; font-weight: 700 !important; }
 
 /* Modals */
@@ -388,12 +388,12 @@ table tr:last-child td { border-bottom: none !important; }
 .tab-bar { display: flex; border-bottom: 1px solid #e5e7eb; margin-bottom: 20px; }
 .tab { padding: 10px 18px; font-size: 14px; font-weight: 600; color: #9ca3af; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.12s; text-decoration: none; }
 .tab:hover { color: #374151; }
-.tab.active { color: #f43f5e; border-bottom-color: #f43f5e; }
+.tab.active { color: #2563eb; border-bottom-color: #2563eb; }
 
 /* Page headers */
 .page-header h1, .page-title { font-size: 22px; font-weight: 800; color: #111827; letter-spacing: -0.02em; }
 .page-header .breadcrumb { font-size: 13px; color: #9ca3af; margin-bottom: 6px; }
-.page-header .breadcrumb a { color: #f43f5e; font-weight: 600; text-decoration: none; }
+.page-header .breadcrumb a { color: #2563eb; font-weight: 600; text-decoration: none; }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }

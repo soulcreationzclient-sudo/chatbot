@@ -1,156 +1,128 @@
 {% load static custom_tags %}
 
 <style>
-  /* ── Sidebar ── */
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+  /* ── Sidebar shell ── */
   .sidebar {
-    width: 260px;
+    width: 240px;
     background: #ffffff;
     border-right: 1px solid #e5e7eb;
     position: fixed; top: 0; left: 0;
     height: 100vh;
     transition: left 0.24s cubic-bezier(0.4,0,0.2,1);
     z-index: 1050;
-    display: flex; flex-direction: column;
+    display: flex;
+    flex-direction: column;
     box-sizing: border-box;
     overflow: hidden;
   }
-  .sidebar.hidden { left: -260px; }
+  .sidebar.hidden { left: -240px; }
   @media (max-width: 1024px) {
     .sidebar { top: 56px; height: calc(100vh - 56px); }
   }
 
-  /* Ensure Bootstrap modals appear above sidebar (z-index 1000) and topbar */
   .modal-backdrop { z-index: 1200 !important; }
-  .modal { z-index: 1210 !important; }
+  .modal          { z-index: 1210 !important; }
 
-  /* Logo area */
+  /* ── Logo ── */
   .brand {
-    padding: 14px 16px;
-    border-bottom: 1px solid #e5e7eb;
-    display: flex; align-items: center;
-    min-height: 0; flex-shrink: 0;
-  }
-  .brand img {
-    height: 96px; width: auto; max-width: 180px;
-    object-fit: contain; object-position: left center;
-  }
-
-  /* Org switcher */
-  .org-pill {
-    margin: 12px 12px 4px;
-    padding: 9px 12px;
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    display: flex; align-items: center; gap: 8px;
-    cursor: pointer; flex-shrink: 0;
-    transition: background 0.15s ease;
-  }
-  .org-pill:hover { background: #f1f5f9; }
-  .org-dot {
-    width: 28px; height: 28px;
-    border-radius: 7px;
-    background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
-    color: #fff; font-size: 11px; font-weight: 800;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; letter-spacing: 0;
-  }
-  .org-info { flex: 1; min-width: 0; }
-  .org-info-name { font-size: 13px; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .org-info-sub  { font-size: 11px; color: #9ca3af; }
-
-  /* Nav section label */
-  .nav-label {
-    font-size: 10px; font-weight: 700;
-    color: #9ca3af; text-transform: uppercase;
-    letter-spacing: 0.1em; padding: 14px 14px 4px;
+    padding: 1px 20px 1px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
     flex-shrink: 0;
   }
-
-  /* Nav scrollable area */
-  .nav-scroll {
-    flex: 1; overflow-y: auto;
-    padding: 0 10px 8px;
+  .brand img {
+    height: 94px; width: auto; max-width: 160px;
+    object-fit: contain; object-position: left center;
+  }
+  .brand-text {
+    display: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 17px; font-weight: 700;
+    color: #2563eb; letter-spacing: -0.4px;
   }
 
-  /* Nav items */
+  /* ── Nav scroll area ── */
+  .nav-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 12px 16px;
+  }
+  .nav-scroll::-webkit-scrollbar { width: 0; }
+
+  /* ── Nav items — match reference exactly ── */
   .nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px; margin-bottom: 2px;
-    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 12px;
+    margin-bottom: 4px;
+    border-radius: 8px;
     text-decoration: none;
-    font-size: 14px; font-weight: 500;
-    color: #374151;
+    font-family: 'Inter', sans-serif;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: #6b7280;
     border: 1px solid transparent;
-    transition: all 0.15s ease;
-    position: relative;
+    transition: background 0.12s ease, color 0.12s ease;
+    line-height: 1;
+    white-space: nowrap;
   }
   .nav-item svg {
-    width: 18px; height: 18px;
-    stroke: currentColor; stroke-width: 1.8;
-    fill: none; flex-shrink: 0;
+    width: 20px; height: 20px;
+    stroke: #9ca3af;
+    stroke-width: 1.6;
+    fill: none;
+    flex-shrink: 0;
+    transition: stroke 0.12s ease;
   }
   .nav-item:hover {
-    background: #f8fafc; color: #111827;
-    border-color: #e5e7eb; text-decoration: none;
-  }
-  .nav-item.active {
-    background: transparent; color: #f43f5e;
-    border-color: transparent; font-weight: 700;
+    background: #f3f4f6;
+    color: #111827;
     text-decoration: none;
   }
-  .nav-item.active svg { stroke: #f43f5e; }
-
-  /* Upgrade banner */
-  .upgrade-banner {
-    margin: 4px 10px 10px;
-    padding: 14px; background: #fff1f2;
-    border: 1px solid #fecdd3;
-    border-radius: 12px;
-    text-align: center; flex-shrink: 0;
+  .nav-item:hover svg { stroke: #4b5563; }
+  .nav-item.active {
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: none;
   }
-  .upgrade-banner strong { display: block; font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 3px; }
-  .upgrade-banner p { font-size: 12px; color: #6b7280; margin: 0 0 8px; }
-  .upgrade-btn {
-    display: inline-block; padding: 6px 18px;
-    background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
-    color: #fff; border-radius: 999px;
-    font-size: 12px; font-weight: 700;
-    text-decoration: none; border: none; cursor: pointer;
-    box-shadow: 0 3px 12px rgba(244,63,94,0.3);
-    transition: opacity 0.15s ease;
-  }
-  .upgrade-btn:hover { opacity: 0.9; color: #fff; text-decoration: none; }
+  .nav-item.active svg { stroke: #2563eb; }
 
-  /* Profile footer */
+  /* ── Profile footer ── */
   .profile-footer {
-    border-top: 1px solid #e5e7eb;
-    padding: 12px 10px;
+    border-top: 1px solid #f0f0f0;
+    padding: 10px 12px;
     flex-shrink: 0;
   }
   .profile-row {
     display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border-radius: 12px;
-    cursor: pointer; transition: background 0.15s ease;
+    padding: 9px 12px; border-radius: 8px;
+    cursor: pointer; transition: background 0.12s ease;
   }
-  .profile-row:hover { background: #f8fafc; }
+  .profile-row:hover { background: #f3f4f6; }
   .profile-avatar {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
-    color: #fff; font-weight: 800; font-size: 13px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+    color: #fff; font-family: 'Inter', sans-serif;
+    font-weight: 700; font-size: 12px;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
-  .profile-name { font-size: 13px; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .profile-sub  { font-size: 11px; color: #9ca3af; }
+  .profile-name {
+    font-family: 'Inter', sans-serif; font-size: 13px;
+    font-weight: 600; color: #111827;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .profile-sub { font-family: 'Inter', sans-serif; font-size: 11px; color: #9ca3af; }
 
-  /* Main layout */
+  /* ── Main content offset ── */
   .main-content {
-    margin-left: 260px;
-    padding: 32px;
-    min-height: 100vh;
-    transition: margin-left 0.24s ease;
+    margin-left: 240px; padding: 32px;
+    min-height: 100vh; transition: margin-left 0.24s ease;
   }
   .main-content.full { margin-left: 0; }
 </style>
@@ -162,102 +134,120 @@
   <div class="brand">
     <img src="{% static 'images/speedbot.png' %}" alt="Speedbots"
          onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-    <span style="display:none; font-size:18px; font-weight:800; color:#f43f5e; letter-spacing:-0.5px;">Speedbots</span>
+    <span class="brand-text">Speedbots</span>
   </div>
 
-  <!-- Org Switcher -->
-  <div class="org-pill">
-    <div class="org-dot">
-      {% if organization %}{{ organization.name|first|upper }}{% elif admin %}{{ admin.user.first_name|first|upper }}{% else %}S{% endif %}
-    </div>
-    <div class="org-info">
-      <div class="org-info-name">{% if organization %}{{ organization.name }}{% elif admin %}{{ admin.user.first_name }}'s org{% else %}My Org{% endif %}</div>
-      <div class="org-info-sub">SpeedBots Platform</div>
-    </div>
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
-  </div>
-
-  <!-- Scrollable nav -->
+  <!-- Nav -->
   <div class="nav-scroll">
-    <div class="nav-label">Main Menu</div>
 
     {% url 'dashboard' as dashboard_url %}
     <a href="{{ dashboard_url }}" class="nav-item {% if request.path == dashboard_url %}active{% endif %}">
+      <!-- Analytics: pie chart with a wedge cut out -->
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        <path d="M21.21 15.89A10 10 0 1 1 8 2.83" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M22 12A10 10 0 0 0 12 2v10z" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      Dashboard
+      Analytics
     </a>
 
     {% url 'inbox_dashboard' as inbox_url %}
     <a href="{{ inbox_url }}" class="nav-item {% if request.path == inbox_url %}active{% endif %}">
+      <!-- Inbox: tray with V-shaped divider -->
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
-        <path d="M2 7l10 7 10-7" stroke-linecap="round"/>
+        <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       Inbox
     </a>
 
-    {% url 'broadcast_msg' as broadcast_url %}
-    <a href="{{ broadcast_url }}" class="nav-item {% if request.path == broadcast_url %}active{% endif %}">
+    {% url 'pipeline_list' as pipeline_url %}
+    <a href="{{ pipeline_url }}" class="nav-item {% if '/pipeline/' in request.path %}active{% endif %}">
+      <!-- Pipelines: three vertical bars at different heights -->
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M22 8.5c0 4.1-4.5 7.5-10 7.5a11.7 11.7 0 0 1-4-.7L3 17l1.3-3.5A6.8 6.8 0 0 1 2 8.5C2 4.4 6.5 1 12 1s10 3.4 10 7.5z" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M8 9h8M8 12h5" stroke-linecap="round"/>
+        <line x1="18" y1="20" x2="18" y2="10" stroke-linecap="round" stroke-width="2"/>
+        <line x1="12" y1="20" x2="12" y2="4"  stroke-linecap="round" stroke-width="2"/>
+        <line x1="6"  y1="20" x2="6"  y2="14" stroke-linecap="round" stroke-width="2"/>
       </svg>
-      Broadcast
+      Pipelines
     </a>
 
     {% url 'contact_dashboard' as contact_url %}
     <a href="{{ contact_url }}" class="nav-item {% if request.path == contact_url %}active{% endif %}">
+      <!-- Contacts: two people silhouettes -->
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
         <circle cx="9" cy="7" r="4"/>
-        <path d="M3 21v-1a6 6 0 0 1 6-6v0a6 6 0 0 1 6 6v1" stroke-linecap="round"/>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke-linecap="round"/>
-        <path d="M21 21v-1a4 4 0 0 0-3-3.85" stroke-linecap="round"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      My Contacts
-    </a>
-
-    {% url 'pipeline_list' as pipeline_url %}
-    <a href="{{ pipeline_url }}" class="nav-item {% if '/pipeline/' in request.path %}active{% endif %}">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <rect x="3" y="3" width="5" height="18" rx="1.5"/>
-        <rect x="10" y="8" width="5" height="13" rx="1.5"/>
-        <rect x="17" y="5" width="5" height="16" rx="1.5"/>
-      </svg>
-      Pipeline
+      Contacts
     </a>
 
     {% url 'webchat_dashboard' as webchat_url %}
     <a href="{{ webchat_url }}" class="nav-item {% if request.path == webchat_url %}active{% endif %}">
+      <!-- AI Center: CPU/chip icon -->
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="9" y="9" width="6" height="6" rx="1" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="2" y="2" width="20" height="20" rx="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="9"  y1="2"  x2="9"  y2="6"  stroke-linecap="round"/>
+        <line x1="15" y1="2"  x2="15" y2="6"  stroke-linecap="round"/>
+        <line x1="9"  y1="18" x2="9"  y2="22" stroke-linecap="round"/>
+        <line x1="15" y1="18" x2="15" y2="22" stroke-linecap="round"/>
+        <line x1="2"  y1="9"  x2="6"  y2="9"  stroke-linecap="round"/>
+        <line x1="2"  y1="15" x2="6"  y2="15" stroke-linecap="round"/>
+        <line x1="18" y1="9"  x2="22" y2="9"  stroke-linecap="round"/>
+        <line x1="18" y1="15" x2="22" y2="15" stroke-linecap="round"/>
       </svg>
-      WebChat
+      Web Chat
     </a>
 
-    <div class="nav-label" style="margin-top:8px;">Configuration</div>
+    <!-- <a href="#" class="nav-item"> -->
+      <!-- Flows: 3 nodes connected (share icon) -->
+      <!-- <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="5"  r="3"/>
+        <circle cx="6"  cy="12" r="3"/>
+        <circle cx="18" cy="19" r="3"/>
+        <line x1="8.59"  y1="13.51" x2="15.42" y2="17.49" stroke-linecap="round"/>
+        <line x1="15.41" y1="6.51"  x2="8.59"  y2="10.49" stroke-linecap="round"/>
+      </svg>
+      Flows
+    </a> -->
+
+    {% url 'broadcast_msg' as broadcast_url %}
+    <a href="{{ broadcast_url }}" class="nav-item {% if request.path == broadcast_url %}active{% endif %}">
+      <!-- Broadcasts: megaphone/speaker -->
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 11l19-9-9 19-2-8-8-2z" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Broadcasts
+    </a>
+
+    <!-- <a href="#" class="nav-item"> -->
+      <!-- Tools: briefcase/toolbox -->
+      <!-- <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="7" width="20" height="14" rx="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="12" y1="12" x2="12" y2="16" stroke-linecap="round"/>
+        <line x1="10" y1="14" x2="14" y2="14" stroke-linecap="round"/>
+      </svg>
+      Tools
+    </a> -->
 
     {% url 'settings' as settings_url %}
     <a href="{{ settings_url }}" class="nav-item {% if request.path == settings_url %}active{% endif %}">
+      <!-- Settings: horizontal sliders (filter/adjust icon) -->
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="4"  y1="6"  x2="20" y2="6"  stroke-linecap="round"/>
+        <line x1="4"  y1="12" x2="20" y2="12" stroke-linecap="round"/>
+        <line x1="4"  y1="18" x2="20" y2="18" stroke-linecap="round"/>
+        <circle cx="8"  cy="6"  r="2" fill="white" stroke-width="1.6"/>
+        <circle cx="16" cy="12" r="2" fill="white" stroke-width="1.6"/>
+        <circle cx="10" cy="18" r="2" fill="white" stroke-width="1.6"/>
       </svg>
       Settings
     </a>
 
   </div><!-- /nav-scroll -->
-
-  <!-- Upgrade Banner -->
-  <!-- <div class="upgrade-banner">
-    <strong>Achieve more!</strong>
-    <p>Upgrade to unlock all platform benefits.</p>
-    <a href="#" class="upgrade-btn">Upgrade</a>
-  </div> -->
 
   <!-- Profile Footer -->
   <div class="profile-footer">
@@ -266,7 +256,9 @@
         {% if organization %}{{ organization.name|first|upper }}{% elif admin %}{{ admin.user.first_name|first|upper }}{% else %}A{% endif %}
       </div>
       <div style="flex:1; min-width:0;">
-        <div class="profile-name">{% if organization %}{{ organization.name }}{% elif admin %}{{ admin.user.first_name }} {{ admin.user.last_name }}{% else %}Admin{% endif %}</div>
+        <div class="profile-name">
+          {% if organization %}{{ organization.name }}{% elif admin %}{{ admin.user.first_name }} {{ admin.user.last_name }}{% else %}Admin{% endif %}
+        </div>
         <div class="profile-sub">SpeedBots Platform</div>
       </div>
     </div>
