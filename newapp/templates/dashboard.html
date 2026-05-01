@@ -174,27 +174,27 @@
     </div>
   </div>
 
-  <!-- Row 2: Avg Response Time + Avg First Response by Admin -->
+  <!-- Row 2: Avg Response Time + Avg First Response -->
   <div class="chart-row">
     <div class="chart-panel">
       <div class="chart-panel-head"><p class="chart-panel-title">Average response time (Minutes)</p></div>
-      <div class="chart-panel-body"><span class="placeholder-msg">Response time tracking coming soon</span></div>
+      <div class="chart-panel-body"><canvas id="avgResponseChart"></canvas></div>
     </div>
     <div class="chart-panel">
-      <div class="chart-panel-head"><p class="chart-panel-title">Average first response time by admins (Minutes)</p></div>
-      <div class="chart-panel-body"><span class="placeholder-msg">Admin response metrics coming soon</span></div>
+      <div class="chart-panel-head"><p class="chart-panel-title">Average first response time (Minutes)</p></div>
+      <div class="chart-panel-body"><canvas id="avgFirstResponseChart"></canvas></div>
     </div>
   </div>
 
-  <!-- Row 3: Avg Response by Admin + Avg Conversation Duration -->
+  <!-- Row 3: Avg Response by Admin (duplicate removed) + Avg Conversation Duration -->
   <div class="chart-row">
     <div class="chart-panel">
-      <div class="chart-panel-head"><p class="chart-panel-title">Average response time by admins (Minutes)</p></div>
-      <div class="chart-panel-body"><span class="placeholder-msg">Admin response metrics coming soon</span></div>
+      <div class="chart-panel-head"><p class="chart-panel-title">Average conversation duration (Minutes)</p></div>
+      <div class="chart-panel-body"><canvas id="avgDurationChart"></canvas></div>
     </div>
     <div class="chart-panel">
-      <div class="chart-panel-head"><p class="chart-panel-title">Average duration of a conversation (Minutes)</p></div>
-      <div class="chart-panel-body"><span class="placeholder-msg">Conversation duration tracking coming soon</span></div>
+      <div class="chart-panel-head"><p class="chart-panel-title">New Contacts by Source</p></div>
+      <div class="chart-panel-body"><canvas id="sourceChart"></canvas></div>
     </div>
   </div>
 
@@ -218,7 +218,7 @@
     </div>
     <div class="chart-panel">
       <div class="chart-panel-head"><p class="chart-panel-title">Conversations moved to human/bot</p></div>
-      <div class="chart-panel-body"><span class="placeholder-msg">Bot-toggle tracking coming soon</span></div>
+      <div class="chart-panel-body"><canvas id="botToggleChart"></canvas></div>
     </div>
   </div>
 
@@ -246,15 +246,15 @@
     </div>
   </div>
 
-  <!-- Row 8: New contacts by source + Contacts by country -->
+  <!-- Row 8: All contacts by country -->
   <div class="chart-row">
     <div class="chart-panel">
-      <div class="chart-panel-head"><p class="chart-panel-title">New Contacts by Source</p></div>
-      <div class="chart-panel-body"><span class="placeholder-msg">Source tracking coming soon</span></div>
+      <div class="chart-panel-head"><p class="chart-panel-title">All contacts by country</p></div>
+      <div class="chart-panel-body"><canvas id="countryChart"></canvas></div>
     </div>
     <div class="chart-panel">
-      <div class="chart-panel-head"><p class="chart-panel-title">All contacts by country</p></div>
-      <div class="chart-panel-body"><span class="placeholder-msg">Country tracking coming soon</span></div>
+      <div class="chart-panel-head"><p class="chart-panel-title">Tag Distribution (Top 8)</p></div>
+      <div class="chart-panel-body"><canvas id="tagChart"></canvas></div>
     </div>
   </div>
 
@@ -265,6 +265,34 @@
   const labels = {{ date_labels|safe }};
   Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
   Chart.defaults.color = '#9ca3af';
+
+  // Plugin: draw "No data yet" on empty doughnut charts
+  const emptyDoughnut = {
+    id: 'emptyDoughnut',
+    afterDraw(chart) {
+      if (chart.config.type !== 'doughnut') return;
+      const datasets = chart.data.datasets;
+      const hasData = datasets.some(ds => ds.data.some(v => v > 0));
+      if (hasData) return;
+      const { ctx, width, height } = chart;
+      ctx.save();
+      // Draw grey ring
+      const cx = width / 2, cy = height / 2 - 10, r = Math.min(cx, cy) * 0.55;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.lineWidth = r * 0.35;
+      ctx.strokeStyle = '#f0f2f6';
+      ctx.stroke();
+      // Draw text
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = "600 13px 'Plus Jakarta Sans', sans-serif";
+      ctx.fillStyle = '#9ca3af';
+      ctx.fillText('No data yet', cx, cy);
+      ctx.restore();
+    }
+  };
+  Chart.register(emptyDoughnut);
 
   const lineOpts = {
     responsive: true, maintainAspectRatio: false,
@@ -343,6 +371,58 @@
     type: 'bar',
     data: { labels, datasets: [{ label: 'Archived', data: {{ chart_archived|safe }}, backgroundColor: 'rgba(244,63,94,0.14)', borderColor: '#f43f5e', borderWidth: 2, borderRadius: 7, borderSkipped: false }] },
     options: lineOpts
+  });
+
+  // ====== NEW CHARTS ======
+
+  // Avg Response Time (line)
+  new Chart(document.getElementById('avgResponseChart'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Avg Response (min)', data: {{ chart_avg_response|safe }}, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.06)', fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2.5 }] },
+    options: lineOpts
+  });
+
+  // Avg First Response Time (line)
+  new Chart(document.getElementById('avgFirstResponseChart'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Avg First Response (min)', data: {{ chart_avg_first_response|safe }}, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.06)', fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2.5 }] },
+    options: lineOpts
+  });
+
+  // Avg Conversation Duration (line)
+  new Chart(document.getElementById('avgDurationChart'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Avg Duration (min)', data: {{ chart_avg_duration|safe }}, borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.06)', fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2.5 }] },
+    options: lineOpts
+  });
+
+  // Bot Toggle (doughnut)
+  new Chart(document.getElementById('botToggleChart'), {
+    type: 'doughnut',
+    data: { labels: ['Human Takeover', 'Bot Active'], datasets: [{ data: [{{ bot_toggle_human }}, {{ bot_toggle_bot }}], backgroundColor: ['#f43f5e', '#10b981'], borderWidth: 0, hoverOffset: 8 }] },
+    options: donutOpts
+  });
+
+  // Source (doughnut)
+  const sourceColors = ['#6366f1','#10b981','#f59e0b','#f43f5e','#8b5cf6','#06b6d4','#ec4899','#84cc16'];
+  new Chart(document.getElementById('sourceChart'), {
+    type: 'doughnut',
+    data: { labels: {{ source_labels|safe }}, datasets: [{ data: {{ source_counts|safe }}, backgroundColor: sourceColors.slice(0, {{ source_counts|safe }}.length), borderWidth: 0, hoverOffset: 8 }] },
+    options: donutOpts
+  });
+
+  // Country (horizontal bar)
+  new Chart(document.getElementById('countryChart'), {
+    type: 'bar',
+    data: { labels: {{ country_labels|safe }}, datasets: [{ label: 'Contacts', data: {{ country_values|safe }}, backgroundColor: 'rgba(99,102,241,0.18)', borderColor: '#6366f1', borderWidth: 2, borderRadius: 7, borderSkipped: false }] },
+    options: { ...lineOpts, indexAxis: 'y' }
+  });
+
+  // Tag Distribution (horizontal bar)
+  new Chart(document.getElementById('tagChart'), {
+    type: 'bar',
+    data: { labels: {{ tag_labels|safe }}, datasets: [{ label: 'Contacts', data: {{ tag_counts|safe }}, backgroundColor: 'rgba(16,185,129,0.18)', borderColor: '#10b981', borderWidth: 2, borderRadius: 7, borderSkipped: false }] },
+    options: { ...lineOpts, indexAxis: 'y' }
   });
 })();
 </script>

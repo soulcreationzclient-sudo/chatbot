@@ -828,6 +828,128 @@ def dashboard_view(request):
 
     user_phone = f"https://wa.me/{display_phone_number}" if display_phone_number else "#"
 
+    # ---------- NEW ANALYTICS: Fill placeholder charts ----------
+
+    # 12) Average response time per day (seconds between human msg → next bot msg, per user)
+    from django.db.models import F, Subquery, OuterRef, Avg as DjAvg
+    chart_avg_response = []
+    for d in date_range:
+        from datetime import datetime as _dt
+        day_start = timezone.make_aware(_dt.combine(d, _dt.min.time())) if timezone.is_naive(_dt.combine(d, _dt.min.time())) else _dt.combine(d, _dt.min.time())
+        day_end = day_start + timedelta(days=1)
+        # Get human messages for this day
+        human_msgs = msg_qs.filter(created_at__gte=day_start, created_at__lt=day_end, who='human').order_by('created_at')
+        response_times = []
+        for hm in human_msgs[:200]:  # Cap for performance
+            bot_reply = msg_qs.filter(
+                user_id=hm.user_id, who='bot',
+                created_at__gt=hm.created_at,
+                created_at__lt=hm.created_at + timedelta(hours=1)
+            ).order_by('created_at').first()
+            if bot_reply:
+                diff = (bot_reply.created_at - hm.created_at).total_seconds()
+                if diff < 3600:  # Ignore gaps > 1 hour (likely not related)
+                    response_times.append(diff / 60.0)  # Convert to minutes
+        avg = round(sum(response_times) / len(response_times), 1) if response_times else 0
+        chart_avg_response.append(avg)
+
+    # 13) Average first response time (first bot reply to first human msg per user, 7d)
+    chart_avg_first_response = []
+    for d in date_range:
+        day_start = timezone.make_aware(_dt.combine(d, _dt.min.time())) if timezone.is_naive(_dt.combine(d, _dt.min.time())) else _dt.combine(d, _dt.min.time())
+        day_end = day_start + timedelta(days=1)
+        # Users who sent their first-ever message on this day
+        first_msgs = msg_qs.filter(
+            created_at__gte=day_start, created_at__lt=day_end, who='human'
+        ).order_by('user_id', 'created_at').distinct('user_id') if hasattr(msg_qs, 'distinct') else []
+        # Fallback for SQLite (no DISTINCT ON)
+        try:
+            first_msgs_list = list(first_msgs[:100])
+        except Exception:
+            first_msgs_list = []
+            seen_users = set()
+            for m in msg_qs.filter(created_at__gte=day_start, created_at__lt=day_end, who='human').order_by('created_at')[:200]:
+                uid = m.user_id_id
+                if uid not in seen_users:
+                    seen_users.add(uid)
+                    first_msgs_list.append(m)
+
+        first_times = []
+        for hm in first_msgs_list:
+            bot_reply = msg_qs.filter(
+                user_id=hm.user_id, who='bot',
+                created_at__gt=hm.created_at,
+                created_at__lt=hm.created_at + timedelta(hours=1)
+            ).order_by('created_at').first()
+            if bot_reply:
+                diff = (bot_reply.created_at - hm.created_at).total_seconds() / 60.0
+                if diff < 60:
+                    first_times.append(diff)
+        avg_first = round(sum(first_times) / len(first_times), 1) if first_times else 0
+        chart_avg_first_response.append(avg_first)
+
+    # 14) Average conversation duration per day (minutes between first and last msg per user)
+    chart_avg_duration = []
+    for d in date_range:
+        day_start = timezone.make_aware(_dt.combine(d, _dt.min.time())) if timezone.is_naive(_dt.combine(d, _dt.min.time())) else _dt.combine(d, _dt.min.time())
+        day_end = day_start + timedelta(days=1)
+        day_msgs = msg_qs.filter(created_at__gte=day_start, created_at__lt=day_end)
+        # Group by user, get min/max created_at
+        from django.db.models import Min, Max
+        user_durations = day_msgs.values('user_id').annotate(
+            first_msg=Min('created_at'), last_msg=Max('created_at')
+        ).filter(first_msg__lt=F('last_msg'))
+        durations = []
+        for ud in user_durations:
+            diff = (ud['last_msg'] - ud['first_msg']).total_seconds() / 60.0
+            if diff > 0:
+                durations.append(diff)
+        avg_dur = round(sum(durations) / len(durations), 1) if durations else 0
+        chart_avg_duration.append(avg_dur)
+
+    # 15) Bot toggle tracking per day (users currently with bot_enabled=False as proxy for human takeovers)
+    # Since we don't have historical toggle data, use current counts as a doughnut
+    bot_toggle_human = bot_off  # Contacts currently handled by human
+    bot_toggle_bot = bot_on     # Contacts currently handled by bot
+
+    # 16) New contacts by source (7d)
+    source_data = list(
+        user_qs.filter(created_at__gte=seven_days_ago)
+        .values('source')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:8]
+    )
+    source_labels = [s['source'] or 'Unknown' for s in source_data]
+    source_counts = [s['count'] for s in source_data]
+
+    # 17) Contacts by country (parse phone number country code prefix)
+    COUNTRY_CODES = {
+        '1': 'US/CA', '44': 'UK', '91': 'India', '60': 'Malaysia',
+        '65': 'Singapore', '61': 'Australia', '971': 'UAE', '966': 'Saudi Arabia',
+        '27': 'South Africa', '234': 'Nigeria', '254': 'Kenya',
+        '62': 'Indonesia', '63': 'Philippines', '66': 'Thailand',
+        '81': 'Japan', '82': 'South Korea', '86': 'China',
+        '49': 'Germany', '33': 'France', '39': 'Italy', '34': 'Spain',
+        '55': 'Brazil', '52': 'Mexico', '7': 'Russia',
+    }
+    country_counts = {}
+    for u in user_qs.exclude(phone_no__startswith='webchat_').values_list('phone_no', flat=True)[:5000]:
+        phone = str(u or '').lstrip('+')
+        matched = False
+        for code_len in [3, 2, 1]:  # Try longest code first
+            prefix = phone[:code_len]
+            if prefix in COUNTRY_CODES:
+                country = COUNTRY_CODES[prefix]
+                country_counts[country] = country_counts.get(country, 0) + 1
+                matched = True
+                break
+        if not matched:
+            country_counts['Other'] = country_counts.get('Other', 0) + 1
+
+    sorted_countries = sorted(country_counts.items(), key=lambda x: x[1], reverse=True)[:8]
+    country_labels = [c[0] for c in sorted_countries]
+    country_values = [c[1] for c in sorted_countries]
+
     context = {
         'count': total_contacts,
         'phone_id': user_phone,
@@ -857,9 +979,18 @@ def dashboard_view(request):
         'total_bot_msgs': total_bot_msgs,
         'tag_labels': _json.dumps(tag_labels),
         'tag_counts': _json.dumps(tag_counts),
-
         'bot_on': bot_on,
         'bot_off': bot_off,
+        # NEW analytics data
+        'chart_avg_response': _json.dumps(chart_avg_response),
+        'chart_avg_first_response': _json.dumps(chart_avg_first_response),
+        'chart_avg_duration': _json.dumps(chart_avg_duration),
+        'bot_toggle_human': bot_toggle_human,
+        'bot_toggle_bot': bot_toggle_bot,
+        'source_labels': _json.dumps(source_labels),
+        'source_counts': _json.dumps(source_counts),
+        'country_labels': _json.dumps(country_labels),
+        'country_values': _json.dumps(country_values),
     }
     return render(request, 'dashboard.html', context)
 
