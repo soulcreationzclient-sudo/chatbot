@@ -302,8 +302,17 @@
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { labels: { usePointStyle: true, padding: 14, font: { size: 11 } } } },
     scales: {
-      y: { beginAtZero: true, grid: { color: '#f0f2f6' }, ticks: { font: { size: 11 } }, border: { dash: [4,4] } },
-      x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      y: { beginAtZero: true, grid: { color: '#f0f2f6' }, ticks: { font: { size: 11 }, precision: 0 }, border: { dash: [4,4] } },
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, precision: 0 } }
+    }
+  };
+  // Horizontal bar chart options (for country / tag charts)
+  const barHOpts = {
+    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+    plugins: { legend: { labels: { usePointStyle: true, padding: 14, font: { size: 11 } } } },
+    scales: {
+      x: { beginAtZero: true, grid: { color: '#f0f2f6' }, ticks: { font: { size: 11 }, precision: 0 }, border: { dash: [4,4] } },
+      y: { grid: { display: false }, ticks: { font: { size: 11 } } }
     }
   };
   const donutOpts = {
@@ -419,14 +428,14 @@
   new Chart(document.getElementById('countryChart'), {
     type: 'bar',
     data: { labels: {{ country_labels|safe }}, datasets: [{ label: 'Contacts', data: {{ country_values|safe }}, backgroundColor: 'rgba(99,102,241,0.18)', borderColor: '#6366f1', borderWidth: 2, borderRadius: 7, borderSkipped: false }] },
-    options: { ...lineOpts, indexAxis: 'y' }
+    options: barHOpts
   });
 
   // Tag Distribution (horizontal bar)
   new Chart(document.getElementById('tagChart'), {
     type: 'bar',
     data: { labels: {{ tag_labels|safe }}, datasets: [{ label: 'Contacts', data: {{ tag_counts|safe }}, backgroundColor: 'rgba(16,185,129,0.18)', borderColor: '#10b981', borderWidth: 2, borderRadius: 7, borderSkipped: false }] },
-    options: { ...lineOpts, indexAxis: 'y' }
+    options: barHOpts
   });
 })();
 </script>
