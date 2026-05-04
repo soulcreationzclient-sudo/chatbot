@@ -184,7 +184,50 @@
         }
         .action-btn:hover { background: #f0f0f0; color: #555; }
         .action-btn svg { width: 20px; height: 20px; }
-        .action-btn.recording { background: #fee2e2; color: #ef4444; }
+        .action-btn.recording { background: #ef4444; color: #fff; animation: pulse-rec 1.5s infinite; }
+        @keyframes pulse-rec {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+        }
+        .voice-preview {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: #f0f4ff;
+            border-top: 1px solid #e0e0e0;
+        }
+        .voice-preview.active { display: flex; }
+        .voice-preview audio { flex: 1; height: 36px; }
+        .vp-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+            transition: transform 0.15s;
+        }
+        .vp-btn:hover { transform: scale(1.1); }
+        .vp-send { background: #22c55e; color: #fff; }
+        .vp-delete { background: #ef4444; color: #fff; }
+        .recording-bar {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: #fef2f2;
+            border-top: 1px solid #fca5a5;
+        }
+        .recording-bar.active { display: flex; }
+        .rec-dot { width: 10px; height: 10px; background: #ef4444; border-radius: 50%; animation: pulse-rec 1s infinite; }
+        .recording-bar span { flex: 1; font-size: 14px; color: #b91c1c; font-weight: 500; }
+        .recording-bar button {
+            padding: 6px 16px; border-radius: 20px; border: none;
+            background: #ef4444; color: #fff; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .recording-bar button:hover { background: #dc2626; }
         .powered-by {
             text-align: center;
             padding: 8px;
@@ -220,12 +263,25 @@
         <div class="typing-indicator" id="typingIndicator">
             <span></span><span></span><span></span>
         </div>
-        <div class="chat-input">
+        <!-- Recording indicator bar -->
+        <div class="recording-bar" id="recordingBar">
+            <div class="rec-dot"></div>
+            <span id="recTimer">Recording... 0:00</span>
+            <button onclick="stopRecording()">⏹ Stop</button>
+        </div>
+        <!-- Voice preview bar (after recording) -->
+        <div class="voice-preview" id="voicePreview">
+            <audio id="previewAudio" controls style="flex:1;height:36px;"></audio>
+            <button class="vp-btn vp-send" onclick="sendVoicePreview()" title="Send">▶</button>
+            <button class="vp-btn vp-delete" onclick="discardVoicePreview()" title="Delete">✕</button>
+        </div>
+        <!-- Normal input bar -->
+        <div class="chat-input" id="chatInputBar">
             <input type="file" id="fileInput" style="display:none" accept="image/*,audio/*,.pdf,.doc,.docx">
             <button class="action-btn" id="attachBtn" onclick="document.getElementById('fileInput').click()" title="Attach file">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
             </button>
-            <button class="action-btn" id="voiceBtn" onclick="toggleVoiceRecord()" title="Record voice note">
+            <button class="action-btn" id="voiceBtn" onclick="startRecording()" title="Record voice note">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
             </button>
             <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off">
@@ -447,103 +503,160 @@
             }
         });
 
-        // ---- Voice Recording ----
+        // ---- Voice Recording (Record → Preview → Send/Delete) ----
         let _isRecording = false;
         let _recorder = null;
         let _chunks = [];
+        let _recStream = null;
+        let _recTimer = null;
+        let _recSeconds = 0;
+        let _pendingBlob = null;
+        let _pendingMime = null;
 
-        async function toggleVoiceRecord() {
-            const btn = document.getElementById('voiceBtn');
-            if (!sessionId) { alert('Start a chat first'); return; }
+        async function startRecording() {
+            if (!sessionId) { addMessage('Please wait for the chat to connect.', 'bot'); return; }
+            if (_isRecording) return;
 
-            if (_isRecording) {
-                _recorder.stop();
-                return;
-            }
-
-            // Pre-check 1: Secure context (HTTPS)
+            // Pre-checks
             if (!window.isSecureContext) {
-                addMessage('🔒 Voice recording requires HTTPS. Please open this page using https:// instead of http://', 'bot');
-                return;
+                addMessage('🔒 Voice requires HTTPS. Please use https://', 'bot'); return;
             }
-
-            // Pre-check 2: MediaDevices API available
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                addMessage('⚠️ Your browser does not support audio recording. Please use Chrome, Firefox, or Edge.', 'bot');
-                return;
+                addMessage('⚠️ Your browser does not support audio recording.', 'bot'); return;
             }
-
-            // Pre-check 3: Check current permission state
             try {
                 if (navigator.permissions && navigator.permissions.query) {
-                    const permStatus = await navigator.permissions.query({ name: 'microphone' });
-                    if (permStatus.state === 'denied') {
-                        addMessage('🎤 Microphone is blocked. To fix:\n1. Click the lock/site-info icon in the address bar\n2. Find "Microphone" and set it to "Allow"\n3. Reload this page and try again', 'bot');
-                        return;
+                    const ps = await navigator.permissions.query({ name: 'microphone' });
+                    if (ps.state === 'denied') {
+                        addMessage('🎤 Mic blocked. Click lock icon → Allow Microphone → Reload.', 'bot'); return;
                     }
                 }
-            } catch(permErr) {
-                // permissions.query might not support 'microphone' in all browsers - continue anyway
-            }
+            } catch(e) {}
 
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
-                _recorder = new MediaRecorder(stream, { mimeType });
+                _recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                _pendingMime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+                _recorder = new MediaRecorder(_recStream, { mimeType: _pendingMime });
                 _chunks = [];
 
                 _recorder.ondataavailable = (e) => { if (e.data.size > 0) _chunks.push(e.data); };
 
-                _recorder.onstop = async () => {
+                _recorder.onstop = () => {
                     _isRecording = false;
-                    btn.classList.remove('recording');
-                    stream.getTracks().forEach(t => t.stop());
+                    clearInterval(_recTimer);
+                    _recStream.getTracks().forEach(t => t.stop());
 
-                    const blob = new Blob(_chunks, { type: mimeType });
-                    if (blob.size < 1000) return;
+                    // Hide recording bar
+                    document.getElementById('recordingBar').classList.remove('active');
 
-                    addMessage('🎤 Sending voice note...', 'user');
-                    document.getElementById('typingIndicator').classList.add('active');
-
-                    try {
-                        const fd = new FormData();
-                        const ext = mimeType.includes('webm') ? 'webm' : 'ogg';
-                        fd.append('file', blob, 'voice_note.' + ext);
-                        const uploadRes = await fetch(API_BASE + '/api/inbox/upload_media/', { method: 'POST', body: fd });
-                        const uploadData = await uploadRes.json();
-
-                        if (!uploadRes.ok || !uploadData.url) {
-                            document.getElementById('typingIndicator').classList.remove('active');
-                            addMessage('Upload failed. Try again.', 'bot');
-                            return;
-                        }
-
-                        // Remove placeholder
-                        const msgs = document.querySelectorAll('#chatMessages .message.user');
-                        const last = msgs[msgs.length - 1];
-                        if (last && last.textContent.includes('Sending voice note')) last.remove();
-
-                        addMessage('[Audio: ' + uploadData.url + ']', 'user');
-                        await sendAudioMessage(uploadData.url);
-                    } catch(err) {
-                        document.getElementById('typingIndicator').classList.remove('active');
-                        addMessage('Voice note error. Try again.', 'bot');
+                    const blob = new Blob(_chunks, { type: _pendingMime });
+                    if (blob.size < 1000) {
+                        showInputBar(); return;
                     }
+
+                    // Store blob and show preview
+                    _pendingBlob = blob;
+                    const previewAudio = document.getElementById('previewAudio');
+                    previewAudio.src = URL.createObjectURL(blob);
+
+                    // Hide input bar, show preview bar
+                    document.getElementById('chatInputBar').style.display = 'none';
+                    document.getElementById('voicePreview').classList.add('active');
                 };
 
                 _recorder.start();
                 _isRecording = true;
-                btn.classList.add('recording');
+                _recSeconds = 0;
+
+                // Show recording bar, hide input bar
+                document.getElementById('chatInputBar').style.display = 'none';
+                document.getElementById('recordingBar').classList.add('active');
+                updateRecTimer();
+                _recTimer = setInterval(updateRecTimer, 1000);
+
             } catch(err) {
-                console.error('Microphone error:', err);
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    addMessage('🎤 Microphone permission was denied.\n\nTo enable it:\n1. Click the lock icon 🔒 in the address bar\n2. Set Microphone to "Allow"\n3. Reload the page', 'bot');
+                console.error('Mic error:', err);
+                if (err.name === 'NotAllowedError') {
+                    addMessage('🎤 Microphone denied. Click lock icon → Allow → Reload.', 'bot');
                 } else if (err.name === 'NotFoundError') {
-                    addMessage('🎤 No microphone detected. Please connect a microphone and try again.', 'bot');
+                    addMessage('🎤 No microphone found.', 'bot');
                 } else {
-                    addMessage('🎤 Could not access microphone: ' + err.message, 'bot');
+                    addMessage('🎤 Mic error: ' + err.message, 'bot');
                 }
             }
+        }
+
+        function updateRecTimer() {
+            _recSeconds++;
+            const m = Math.floor(_recSeconds / 60);
+            const s = _recSeconds % 60;
+            document.getElementById('recTimer').textContent = 'Recording... ' + m + ':' + s.toString().padStart(2, '0');
+        }
+
+        function stopRecording() {
+            if (_recorder && _isRecording) _recorder.stop();
+        }
+
+        function showInputBar() {
+            document.getElementById('voicePreview').classList.remove('active');
+            document.getElementById('recordingBar').classList.remove('active');
+            document.getElementById('chatInputBar').style.display = '';
+        }
+
+        function discardVoicePreview() {
+            _pendingBlob = null;
+            const pa = document.getElementById('previewAudio');
+            if (pa.src) { URL.revokeObjectURL(pa.src); pa.src = ''; }
+            showInputBar();
+        }
+
+        async function sendVoicePreview() {
+            if (!_pendingBlob) return;
+            const blob = _pendingBlob;
+            _pendingBlob = null;
+
+            // Clean up preview
+            const pa = document.getElementById('previewAudio');
+            if (pa.src) { URL.revokeObjectURL(pa.src); pa.src = ''; }
+            showInputBar();
+
+            // Show sending state
+            addMessage('🎤 Sending voice note...', 'user');
+            document.getElementById('typingIndicator').classList.add('active');
+            scrollToBottom();
+
+            try {
+                // Upload
+                const fd = new FormData();
+                const ext = (_pendingMime || 'audio/webm').includes('webm') ? 'webm' : 'ogg';
+                fd.append('file', blob, 'voice_note.' + ext);
+                const uploadRes = await fetch(API_BASE + '/api/inbox/upload_media/', { method: 'POST', body: fd });
+                const uploadData = await uploadRes.json();
+
+                if (!uploadRes.ok || !uploadData.url) {
+                    document.getElementById('typingIndicator').classList.remove('active');
+                    removePlaceholder('Sending voice note');
+                    addMessage('Upload failed. Try again.', 'bot');
+                    return;
+                }
+
+                // Replace placeholder with audio player
+                removePlaceholder('Sending voice note');
+                addMessage('[Audio: ' + uploadData.url + ']', 'user');
+
+                // Send to AI
+                await sendAudioMessage(uploadData.url);
+            } catch(err) {
+                document.getElementById('typingIndicator').classList.remove('active');
+                removePlaceholder('Sending voice note');
+                addMessage('Voice note error. Try again.', 'bot');
+            }
+        }
+
+        function removePlaceholder(text) {
+            const msgs = document.querySelectorAll('#chatMessages .message.user');
+            const last = msgs[msgs.length - 1];
+            if (last && last.textContent.includes(text)) last.remove();
         }
 
         async function sendAudioMessage(audioUrl) {

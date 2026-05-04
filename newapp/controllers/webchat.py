@@ -16,7 +16,8 @@ from ..models import (
     WebChatAnalytics,
     User,
     Admin,
-    Organization
+    Organization,
+    Message,
 )
 import re
 
@@ -252,6 +253,18 @@ session=session,
                 sender='user',
                 content_type=content_type
             )
+            
+            # Mirror to inbox Message model so it appears in the main inbox
+            try:
+                if session.user:
+                    Message.objects.create(
+                        user_id=session.user,
+                        messages=message_content,
+                        created_at=timezone.now(),
+                        who='human'
+                    )
+            except Exception as mirror_err:
+                logger.error(f"Inbox mirror error (user msg): {mirror_err}")
             
             # If audio message, transcribe the audio to text for AI processing
             ai_input_text = message_content  # default: use raw message
@@ -506,6 +519,18 @@ session=session,
                 content_type='text',
                 ai_response=ai_response if isinstance(ai_response, str) else json.dumps(ai_response) if ai_response else None
             )
+            
+            # Mirror bot message to inbox
+            try:
+                if session.user:
+                    Message.objects.create(
+                        user_id=session.user,
+                        messages=bot_response_text or '',
+                        created_at=timezone.now(),
+                        who='bot'
+                    )
+            except Exception as mirror_err:
+                logger.error(f"Inbox mirror error (bot msg): {mirror_err}")
             
             # Update analytics
             try:
