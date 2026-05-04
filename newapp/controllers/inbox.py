@@ -169,6 +169,8 @@ class Inboxcontroller:
                 ftype = 'image'
             elif f.content_type.startswith('video'):
                 ftype = 'video'
+            elif f.content_type.startswith('audio'):
+                ftype = 'audio'
             elif f.content_type in ('application/pdf', 'application/msword', 
                                      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                                      'application/vnd.ms-excel',

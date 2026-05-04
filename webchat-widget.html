@@ -610,7 +610,10 @@
             sessionId: null,
             currentLang: 'en',
             isTyping: false,
-            welcomeShown: false
+            welcomeShown: false,
+            isRecording: false,
+            mediaRecorder: null,
+            audioChunks: []
         };
 
         // DOM Elements
@@ -859,6 +862,15 @@
             // Handle multiline messages
             let formattedContent = content.replace(/\n/g, '<br>');
 
+            // Render audio player if content is an audio URL
+            const audioMatch = content.match(/^\[Audio:\s*(.*?)\]/i);
+            if (audioMatch) {
+                const audioUrl = audioMatch[1].trim();
+                const rest = content.replace(audioMatch[0], '').trim();
+                formattedContent = `<div style="padding:4px 0;"><audio controls style="width:100%;max-width:220px;height:32px;" preload="metadata"><source src="${audioUrl}"></audio></div>`;
+                if (rest) formattedContent += `<div style="font-size:12px;color:#888;margin-top:4px;">${rest.replace(/\n/g, '<br>')}</div>`;
+            }
+
             // Render images if present
             if (images && images.length > 0 && sender === 'bot') {
                 formattedContent += '<div style="margin-top: 8px;">';
@@ -925,33 +937,106 @@
             input.click();
         }
 
-        // Handle voice input
-        function handleVoiceInput() {
-            // TODO: Implement voice input using Web Speech API
-            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                const recognition = new SpeechRecognition();
+        // Handle voice input — record audio via MediaRecorder
+        async function handleVoiceInput() {
+            if (!state.sessionId) {
+                addMessage('Please start a chat session first.', 'bot');
+                return;
+            }
 
-                recognition.lang = state.currentLang === 'ar' ? 'ar-SA' : 'en-US';
-                recognition.interimResults = false;
+            if (state.isRecording) {
+                // Stop recording
+                state.mediaRecorder.stop();
+                return;
+            }
 
-                recognition.onstart = () => {
-                    elements.voiceBtn.style.fill = '#007bff';
+            // Request microphone access and start recording
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+                state.mediaRecorder = new MediaRecorder(stream, { mimeType });
+                state.audioChunks = [];
+
+                state.mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) state.audioChunks.push(e.data);
                 };
 
-                recognition.onend = () => {
+                state.mediaRecorder.onstop = async () => {
+                    state.isRecording = false;
                     elements.voiceBtn.style.fill = '#666';
+                    elements.voiceBtn.closest('button').style.background = '';
+
+                    // Stop mic tracks
+                    stream.getTracks().forEach(t => t.stop());
+
+                    const blob = new Blob(state.audioChunks, { type: mimeType });
+                    if (blob.size < 1000) return; // Too short
+
+                    // Show sending state
+                    addMessage('🎤 Sending voice note...', 'user');
+                    showTyping();
+
+                    try {
+                        // 1. Upload audio blob
+                        const fd = new FormData();
+                        const ext = mimeType.includes('webm') ? 'webm' : 'ogg';
+                        fd.append('file', blob, `voice_note.${ext}`);
+
+                        const uploadRes = await fetch('/api/inbox/upload_media/', {
+                            method: 'POST',
+                            body: fd
+                        });
+                        const uploadData = await uploadRes.json();
+
+                        if (!uploadRes.ok || !uploadData.url) {
+                            hideTyping();
+                            addMessage('Failed to upload voice note. Please try again.', 'bot');
+                            return;
+                        }
+
+                        // Remove the "sending" placeholder
+                        const msgs = elements.messages.querySelectorAll('.message.user');
+                        const lastUserMsg = msgs[msgs.length - 1];
+                        if (lastUserMsg && lastUserMsg.textContent.includes('Sending voice note')) {
+                            lastUserMsg.remove();
+                        }
+
+                        // Show audio player for user's message
+                        addMessage(`[Audio: ${uploadData.url}]`, 'user');
+
+                        // 2. Send to webchat API with content_type: audio
+                        const response = await fetch(`${CONFIG.apiBaseUrl}/message/`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                session_id: state.sessionId,
+                                message: uploadData.url,
+                                content_type: 'audio'
+                            })
+                        });
+
+                        const data = await response.json();
+                        hideTyping();
+
+                        if (data.success) {
+                            addMessage(data.bot_message.content, 'bot', data.bot_message.images || []);
+                        } else {
+                            addMessage('Sorry, something went wrong processing your voice note.', 'bot');
+                        }
+                    } catch (error) {
+                        console.error('Voice note error:', error);
+                        hideTyping();
+                        addMessage('Sorry, I could not process your voice note. Please try again.', 'bot');
+                    }
                 };
 
-                recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    elements.input.value = transcript;
-                    handleInputChange();
-                };
-
-                recognition.start();
-            } else {
-                addMessage('Voice input is not supported in your browser.', 'bot');
+                state.mediaRecorder.start();
+                state.isRecording = true;
+                elements.voiceBtn.style.fill = '#ef4444';
+                elements.voiceBtn.closest('button').style.background = '#fee2e2';
+            } catch (err) {
+                console.error('Mic access error:', err);
+                addMessage('Microphone access denied. Please allow microphone permissions in your browser.', 'bot');
             }
         }
 

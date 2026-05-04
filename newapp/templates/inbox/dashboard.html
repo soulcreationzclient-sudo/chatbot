@@ -1,4 +1,4 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
 {% load static %}
 {% load tz %}
 {% block title %}Inbox{% endblock %}
@@ -588,6 +588,18 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
     </button>
 
+    <!-- Voice record -->
+    <button type="button" id="voiceRecordBtn" onclick="toggleVoiceRecording()" title="Record voice note"
+      style="width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:background .15s;"
+      onmouseover="this.style.background='#e5e7eb'" onmouseout="if(!window._isRecording)this.style.background='transparent'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+      </svg>
+    </button>
+
     <!-- Text input pill -->
     <div style="flex:1;background:#fff;border-radius:24px;display:flex;align-items:center;padding:8px 14px;box-shadow:0 1px 2px rgba(0,0,0,.06);">
       <input id="userMessage" type="text" placeholder="Type your message…" autocomplete="off" required
@@ -1031,6 +1043,99 @@
     }
   }
 
+  // ============================================
+  // VOICE RECORDING (MediaRecorder)
+  // ============================================
+  window._isRecording = false;
+  let _mediaRecorder = null;
+  let _audioChunks = [];
+
+  async function toggleVoiceRecording() {
+    const btn = document.getElementById('voiceRecordBtn');
+    const currentUserId = "{{ selected_user.id|default:'' }}";
+    if (!currentUserId) {
+      alert('Please select a conversation first');
+      return;
+    }
+
+    if (window._isRecording) {
+      // Stop recording
+      _mediaRecorder.stop();
+      return;
+    }
+
+    // Start recording
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      _mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      _audioChunks = [];
+
+      _mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) _audioChunks.push(e.data);
+      };
+
+      _mediaRecorder.onstop = async () => {
+        window._isRecording = false;
+        btn.style.background = 'transparent';
+        btn.style.color = '#6b7280';
+
+        // Stop all tracks
+        stream.getTracks().forEach(t => t.stop());
+
+        const blob = new Blob(_audioChunks, { type: 'audio/webm' });
+        if (blob.size < 1000) return; // Ignore very short clips
+
+        const msgInput = document.getElementById('userMessage');
+        msgInput.value = '🎤 Sending voice note...';
+        msgInput.disabled = true;
+
+        try {
+          // Upload
+          const fd = new FormData();
+          fd.append('file', blob, 'voice_note.webm');
+          const uploadRes = await fetch('/api/inbox/upload_media/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            body: fd
+          });
+          const uploadData = await uploadRes.json();
+
+          if (uploadRes.ok && uploadData.url) {
+            const audioMsg = `[Audio: ${uploadData.url}]`;
+            const sendData = new FormData();
+            sendData.append('message', '');
+            sendData.append('user_id', currentUserId);
+            sendData.append('media_url', uploadData.url);
+            sendData.append('media_type', 'audio');
+
+            await fetch('/inbox/send/', {
+              method: 'POST',
+              headers: { 'X-CSRFToken': getCookie('csrftoken') },
+              body: sendData
+            });
+            appendMessage(audioMsg, 'bot');
+          } else {
+            alert('Failed to upload voice note');
+          }
+        } catch (err) {
+          alert('Voice note send error');
+          console.error(err);
+        } finally {
+          msgInput.disabled = false;
+          msgInput.value = '';
+        }
+      };
+
+      _mediaRecorder.start();
+      window._isRecording = true;
+      btn.style.background = '#ef4444';
+      btn.style.color = '#fff';
+    } catch (err) {
+      alert('Microphone access denied. Please allow microphone permissions.');
+      console.error(err);
+    }
+  }
+
   // Filter Logic
   // SEARCH & FILTER
   let searchTimeout;
@@ -1228,6 +1333,22 @@
         </a>
         ${caption ? `<div class="mt-1">${caption}</div>` : ''}
       `;
+    }
+    // Audio
+    const audioMatch = text.match(/^\[Audio:\s*(.*?)\]/is);
+    if (audioMatch) {
+      const url = audioMatch[1].trim();
+      const rest = text.replace(audioMatch[0], '').trim();
+      if (url.startsWith('/') || url.startsWith('http')) {
+        return `
+          <div style="padding:6px 0;">
+            <audio controls style="width:100%;max-width:280px;height:36px;" preload="metadata">
+              <source src="${url}">
+            </audio>
+          </div>
+          ${rest ? `<div class="mt-1 small" style="color:#555;">${rest.replace(/\n/g, '<br>')}</div>` : ''}
+        `;
+      }
     }
     // Document
     const docMatch = text.match(/^\[Document:\s*(.*?)\]\s*(.*)/is);

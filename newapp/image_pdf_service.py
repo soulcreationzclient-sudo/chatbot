@@ -486,6 +486,63 @@ def transcribe_audio(media_id: str, openai_key: str, whatsapp_token: str) -> Opt
                 print(f"[Audio] Warning: Could not delete temp file: {cleanup_error}")
 
 
+def transcribe_audio_from_file(audio_bytes: bytes, openai_key: str, file_ext: str = 'webm') -> Optional[str]:
+    """
+    Transcribe audio from raw bytes using OpenAI Whisper.
+    Used for webchat/inbox voice recordings (not from WhatsApp media IDs).
+    
+    Args:
+        audio_bytes: Raw audio file bytes
+        openai_key: OpenAI API key
+        file_ext: File extension hint (webm, ogg, mp3, wav, m4a)
+        
+    Returns:
+        Transcription text, or None if failed
+    """
+    if not openai_key:
+        print("[Audio] No OpenAI key for transcription")
+        return None
+    
+    if not audio_bytes:
+        print("[Audio] No audio bytes provided")
+        return None
+    
+    temp_path = None
+    try:
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=f'.{file_ext}', delete=False) as f:
+            f.write(audio_bytes)
+            temp_path = f.name
+        
+        from openai import OpenAI
+        client = OpenAI(api_key=openai_key)
+        
+        with open(temp_path, 'rb') as audio_file:
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                prompt="This is a voice message."
+            )
+        
+        transcribed_text = transcript.text.strip() if transcript.text else None
+        if transcribed_text:
+            print(f"[Audio] Transcribed from file: {transcribed_text[:100]}...")
+        else:
+            print("[Audio] Whisper returned empty transcription")
+        
+        return transcribed_text
+        
+    except Exception as e:
+        print(f"[Audio] File transcription error: {e}")
+        return None
+    finally:
+        if temp_path:
+            try:
+                os.unlink(temp_path)
+            except Exception:
+                pass
+
+
 def save_chat_media(media_id: str, access_token: str) -> Optional[str]:
     """
     Downloads media from WhatsApp and saves it to MEDIA_ROOT/chat_uploads.

@@ -1460,8 +1460,8 @@ def send_inbox_message(request):
         }
         
         # Determine if this is a media message or text message
-        if media_url and media_type in ('image', 'video', 'document'):
-            # Send as WhatsApp media message (image/document/video)
+        if media_url and media_type in ('image', 'video', 'document', 'audio'):
+            # Send as WhatsApp media message (image/document/video/audio)
             if media_type == 'image':
                 payload = {
                     "messaging_product": "whatsapp",
@@ -1484,6 +1484,16 @@ def send_inbox_message(request):
                     }
                 }
                 db_message = f"[Video: {media_url}]" + (f" {message}" if message else "")
+            elif media_type == 'audio':
+                payload = {
+                    "messaging_product": "whatsapp",
+                    "to": user_obj.phone_no,
+                    "type": "audio",
+                    "audio": {
+                        "link": media_url
+                    }
+                }
+                db_message = f"[Audio: {media_url}]"
             else:  # document
                 payload = {
                     "messaging_product": "whatsapp",

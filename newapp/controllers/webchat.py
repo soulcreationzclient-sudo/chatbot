@@ -253,6 +253,54 @@ session=session,
                 content_type=content_type
             )
             
+            # If audio message, transcribe the audio to text for AI processing
+            ai_input_text = message_content  # default: use raw message
+            if content_type == 'audio' and message_content:
+                try:
+                    import requests as http_requests
+                    from ..image_pdf_service import transcribe_audio_from_file
+                    
+                    # Get OpenAI key for transcription
+                    _openai_key = None
+                    if session.organization_id:
+                        _org = Organization.objects.filter(id=session.organization_id).first()
+                        if _org:
+                            _openai_key = _org.openai_api_key
+                    if not _openai_key and session.admin_id:
+                        _admin = Admin.objects.filter(id=session.admin_id).first()
+                        if _admin:
+                            _openai_key = _admin.openai_api_key
+                    
+                    # Download the audio file from our own server
+                    audio_url = message_content
+                    audio_resp = http_requests.get(audio_url, timeout=30)
+                    if audio_resp.status_code == 200 and _openai_key:
+                        # Determine extension from URL
+                        ext = 'webm'
+                        if '.ogg' in audio_url:
+                            ext = 'ogg'
+                        elif '.mp3' in audio_url:
+                            ext = 'mp3'
+                        elif '.wav' in audio_url:
+                            ext = 'wav'
+                        
+                        transcription = transcribe_audio_from_file(
+                            audio_resp.content, _openai_key, file_ext=ext
+                        )
+                        if transcription:
+                            ai_input_text = transcription
+                            # Update the DB message to include both audio link and transcript
+                            user_message.content = f"[Audio: {audio_url}]\n🗣️ {transcription}"
+                            user_message.save(update_fields=['content'])
+                            logger.info(f"Webchat audio transcribed: {transcription[:80]}...")
+                        else:
+                            ai_input_text = "[User sent a voice message that could not be transcribed]"
+                    else:
+                        ai_input_text = "[User sent a voice message]"
+                except Exception as audio_err:
+                    logger.error(f"Webchat audio transcription error: {audio_err}")
+                    ai_input_text = "[User sent a voice message]"
+            
             # Process message through AI system
             ai_response = None
             bot_response_text = None
