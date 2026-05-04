@@ -171,6 +171,20 @@
         .chat-input button:hover { transform: scale(1.05); }
         .chat-input button:disabled { opacity: 0.5; cursor: not-allowed; }
         .chat-input button svg { width: 20px; height: 20px; }
+        .action-btn {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: #999;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s, color 0.2s;
+            flex-shrink: 0;
+        }
+        .action-btn:hover { background: #f0f0f0; color: #555; }
+        .action-btn svg { width: 20px; height: 20px; }
+        .action-btn.recording { background: #fee2e2; color: #ef4444; }
         .powered-by {
             text-align: center;
             padding: 8px;
@@ -207,6 +221,13 @@
             <span></span><span></span><span></span>
         </div>
         <div class="chat-input">
+            <input type="file" id="fileInput" style="display:none" accept="image/*,audio/*,.pdf,.doc,.docx">
+            <button class="action-btn" id="attachBtn" onclick="document.getElementById('fileInput').click()" title="Attach file">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <button class="action-btn" id="voiceBtn" onclick="toggleVoiceRecord()" title="Record voice note">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
             <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off">
             <button id="sendBtn" onclick="sendMessage()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -348,6 +369,20 @@
             const container = document.getElementById('chatMessages');
             const div = document.createElement('div');
             div.className = 'message ' + sender;
+
+            // Render audio player if [Audio: url]
+            const audioMatch = text.match(/^\[Audio:\s*(.*?)\]/i);
+            if (audioMatch) {
+                const audioUrl = audioMatch[1].trim();
+                const rest = text.replace(audioMatch[0], '').trim();
+                let html = '<div style="padding:4px 0;"><audio controls style="width:100%;max-width:240px;height:36px;" preload="metadata"><source src="' + audioUrl + '"></audio></div>';
+                if (rest) html += '<div style="font-size:12px;opacity:0.7;margin-top:4px;">' + rest.replace(/\n/g, '<br>') + '</div>';
+                div.innerHTML = html;
+                container.appendChild(div);
+                scrollToBottom();
+                return;
+            }
+
             // Auto-link URLs
             let html = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:' + (sender === 'user' ? '#fff' : '#2563eb') + '; text-decoration:underline;">$1</a>');
             html = html.replace(/\n/g, '<br>');
@@ -378,6 +413,133 @@
         function scrollToBottom() {
             const container = document.getElementById('chatMessages');
             setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50);
+        }
+
+        // ---- File Upload ----
+        document.getElementById('fileInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file || !sessionId) return;
+            const input = document.getElementById('messageInput');
+            input.value = 'Uploading...';
+            input.disabled = true;
+            try {
+                const fd = new FormData();
+                fd.append('file', file);
+                const res = await fetch(API_BASE + '/api/inbox/upload_media/', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (res.ok && data.url) {
+                    if (data.type === 'audio') {
+                        // Send as audio message for transcription
+                        addMessage('[Audio: ' + data.url + ']', 'user');
+                        await sendAudioMessage(data.url);
+                    } else {
+                        addMessage('📎 ' + file.name, 'user');
+                    }
+                } else {
+                    alert('Upload failed');
+                }
+            } catch(err) {
+                alert('Upload error');
+            } finally {
+                input.disabled = false;
+                input.value = '';
+                e.target.value = '';
+            }
+        });
+
+        // ---- Voice Recording ----
+        let _isRecording = false;
+        let _recorder = null;
+        let _chunks = [];
+
+        async function toggleVoiceRecord() {
+            const btn = document.getElementById('voiceBtn');
+            if (!sessionId) { alert('Start a chat first'); return; }
+
+            if (_isRecording) {
+                _recorder.stop();
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+                _recorder = new MediaRecorder(stream, { mimeType });
+                _chunks = [];
+
+                _recorder.ondataavailable = (e) => { if (e.data.size > 0) _chunks.push(e.data); };
+
+                _recorder.onstop = async () => {
+                    _isRecording = false;
+                    btn.classList.remove('recording');
+                    stream.getTracks().forEach(t => t.stop());
+
+                    const blob = new Blob(_chunks, { type: mimeType });
+                    if (blob.size < 1000) return;
+
+                    addMessage('🎤 Sending voice note...', 'user');
+                    document.getElementById('typingIndicator').classList.add('active');
+
+                    try {
+                        const fd = new FormData();
+                        const ext = mimeType.includes('webm') ? 'webm' : 'ogg';
+                        fd.append('file', blob, 'voice_note.' + ext);
+                        const uploadRes = await fetch(API_BASE + '/api/inbox/upload_media/', { method: 'POST', body: fd });
+                        const uploadData = await uploadRes.json();
+
+                        if (!uploadRes.ok || !uploadData.url) {
+                            document.getElementById('typingIndicator').classList.remove('active');
+                            addMessage('Upload failed. Try again.', 'bot');
+                            return;
+                        }
+
+                        // Remove placeholder
+                        const msgs = document.querySelectorAll('#chatMessages .message.user');
+                        const last = msgs[msgs.length - 1];
+                        if (last && last.textContent.includes('Sending voice note')) last.remove();
+
+                        addMessage('[Audio: ' + uploadData.url + ']', 'user');
+                        await sendAudioMessage(uploadData.url);
+                    } catch(err) {
+                        document.getElementById('typingIndicator').classList.remove('active');
+                        addMessage('Voice note error. Try again.', 'bot');
+                    }
+                };
+
+                _recorder.start();
+                _isRecording = true;
+                btn.classList.add('recording');
+            } catch(err) {
+                addMessage('Microphone access denied.', 'bot');
+            }
+        }
+
+        async function sendAudioMessage(audioUrl) {
+            sending = true;
+            document.getElementById('sendBtn').disabled = true;
+            document.getElementById('typingIndicator').classList.add('active');
+            try {
+                const res = await fetch(API_BASE + '/api/webchat/message/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ session_id: sessionId, message: audioUrl, content_type: 'audio' })
+                });
+                const data = await res.json();
+                document.getElementById('typingIndicator').classList.remove('active');
+                if (data.success && data.bot_message) {
+                    addMessage(data.bot_message.content, 'bot');
+                    if (data.bot_message.images && data.bot_message.images.length > 0) {
+                        data.bot_message.images.forEach(img => addImage(img.url, img.name));
+                    }
+                } else {
+                    addMessage('Sorry, something went wrong.', 'bot');
+                }
+            } catch(err) {
+                document.getElementById('typingIndicator').classList.remove('active');
+                addMessage('Connection error.', 'bot');
+            }
+            sending = false;
+            document.getElementById('sendBtn').disabled = false;
         }
 
         // Enter key to send

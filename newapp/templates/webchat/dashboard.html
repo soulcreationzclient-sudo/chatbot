@@ -685,6 +685,13 @@
 
                         <div class="chat-input-wrapper">
                             <div class="chat-input-container">
+                                <input type="file" id="test-file-input" style="display:none" accept="image/*,audio/*,.pdf,.doc,.docx">
+                                <button class="icon-btn" onclick="document.getElementById('test-file-input').click()" title="Attach file">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                                </button>
+                                <button class="icon-btn" id="testVoiceBtn" onclick="toggleTestVoice()" title="Record voice note">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                                </button>
                                 <textarea class="chat-input" id="chat-input" rows="1"
                                     placeholder="Type a message to test... (Shift+Enter for new line)" onkeydown="handleKeyDown(event)"></textarea>
                                 <button class="icon-btn send-btn" onclick="sendMessage()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
@@ -1035,6 +1042,20 @@
 
             const div = document.createElement('div');
             div.className = `message ${role}`;
+
+            // Render audio player if [Audio: url]
+            const audioMatch = text ? text.match(/^\[Audio:\s*(.*?)\]/i) : null;
+            if (audioMatch) {
+                const audioUrl = audioMatch[1].trim();
+                const rest = text.replace(audioMatch[0], '').trim();
+                let html = '<div style="padding:4px 0;"><audio controls style="width:100%;max-width:260px;height:36px;" preload="metadata"><source src="' + audioUrl + '"></audio></div>';
+                if (rest) html += '<div style="font-size:12px;color:#888;margin-top:4px;">' + rest.replace(/\n/g, '<br>') + '</div>';
+                div.innerHTML = html;
+                container.appendChild(div);
+                container.scrollTop = container.scrollHeight;
+                return;
+            }
+
             if (role === 'bot') {
                 // Auto-link URLs, then render line breaks
                 let html = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:#2563eb; text-decoration:underline;">$1</a>');
@@ -1073,6 +1094,98 @@
         function getCookie(name) {
             let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
             return v ? v[2] : null;
+        }
+
+        // ---- Test Chat: File Upload ----
+        document.getElementById('test-file-input').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                const fd = new FormData();
+                fd.append('file', file);
+                const res = await fetch('/api/inbox/upload_media/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    body: fd
+                });
+                const data = await res.json();
+                if (res.ok && data.url) {
+                    addMessage('user', '📎 ' + file.name);
+                }
+            } catch(err) {
+                console.error(err);
+            } finally {
+                e.target.value = '';
+            }
+        });
+
+        // ---- Test Chat: Voice Recording ----
+        let _testRecording = false;
+        let _testRecorder = null;
+        let _testChunks = [];
+
+        async function toggleTestVoice() {
+            const btn = document.getElementById('testVoiceBtn');
+
+            if (_testRecording) {
+                _testRecorder.stop();
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+                _testRecorder = new MediaRecorder(stream, { mimeType: mime });
+                _testChunks = [];
+
+                _testRecorder.ondataavailable = (e) => { if (e.data.size > 0) _testChunks.push(e.data); };
+
+                _testRecorder.onstop = async () => {
+                    _testRecording = false;
+                    btn.style.background = '';
+                    btn.style.color = '';
+                    stream.getTracks().forEach(t => t.stop());
+
+                    const blob = new Blob(_testChunks, { type: mime });
+                    if (blob.size < 1000) return;
+
+                    addMessage('user', '🎤 Recording voice note...');
+                    showTyping();
+
+                    try {
+                        const fd = new FormData();
+                        fd.append('file', blob, 'voice_note.' + (mime.includes('webm') ? 'webm' : 'ogg'));
+                        const upRes = await fetch('/api/inbox/upload_media/', {
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                            body: fd
+                        });
+                        const upData = await upRes.json();
+                        removeTyping();
+
+                        if (upRes.ok && upData.url) {
+                            // Remove placeholder
+                            const msgs = document.querySelectorAll('#chat-messages .message.user');
+                            const last = msgs[msgs.length - 1];
+                            if (last && last.textContent.includes('Recording voice note')) last.remove();
+
+                            addMessage('user', '[Audio: ' + upData.url + ']');
+                        } else {
+                            addMessage('system', 'Upload failed');
+                        }
+                    } catch(err) {
+                        removeTyping();
+                        addMessage('system', 'Voice upload error');
+                    }
+                };
+
+                _testRecorder.start();
+                _testRecording = true;
+                btn.style.background = '#fee2e2';
+                btn.style.color = '#ef4444';
+            } catch(err) {
+                addMessage('system', 'Microphone access denied.');
+            }
         }
     </script>
 </body>
