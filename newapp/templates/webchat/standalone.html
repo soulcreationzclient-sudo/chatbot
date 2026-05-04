@@ -510,7 +510,11 @@
                 _isRecording = true;
                 btn.classList.add('recording');
             } catch(err) {
-                addMessage('Microphone access denied.', 'bot');
+                if (!window.isSecureContext) {
+                    addMessage('Voice recording requires HTTPS. Please visit https://chatbotad.io instead.', 'bot');
+                } else {
+                    addMessage('Microphone access denied. Please click the lock icon in your browser address bar and allow microphone access, then try again.', 'bot');
+                }
             }
         }
 
