@@ -258,6 +258,39 @@ grep "ERROR\|❌" ~/speedbot/logs/combined.log
 grep "wamid.HBgM" ~/speedbot/logs/webhook.log
 ```
 
+---
+
+## Deployment Update - 2026-05-04
+
+Deployed commit: `e8095cc` (`Fix pipeline inbox and webchat sync issues`)
+
+Fixes deployed:
+- Pipeline opportunity amount edits now validate numeric input, persist as Decimal, return updated totals, and refresh the visible board card/stage amount without a full page reload.
+- Inbox tag add/remove endpoints were added at `/api/inbox/user_tag/add/` and `/api/inbox/user_tag/remove/`; both support tag names from the inbox panel and trigger pipeline automations.
+- Contact tag removal now triggers `tag_removed` pipeline automations.
+- Inbox email editing now persists through the existing `CustomField`/`CustomFieldValue` system instead of pretending `User.email` exists.
+- Inbox archive now preserves messages, tags, custom fields, logs, and opportunities; it only hides the contact from inbox and cancels pending follow-ups.
+- Webchat visitor emails are stored in the email custom field when provided.
+- Webchat AI responses now process `{{custom_field:name:value}}` tags for linked webchat users.
+- Test chat now respects the selected `prompt_id`, creates/links a test inbox user, mirrors test messages into inbox, persists detected tags/custom fields, and sends the selected prompt for audio tests too.
+
+Validation:
+- Local syntax check passed with `python -m py_compile` for all changed Python files.
+- Local `python manage.py check` could not run because local Python does not have Django installed.
+- Server check passed: `cd /home/ubuntu/speedbot && source venv/bin/activate && python manage.py check`.
+- Server smoke check after reload returned HTTP `302` from `http://127.0.0.1:8000/`.
+
+Deployment actions:
+- Pushed `main` to `origin`.
+- Pulled on server with `git pull origin main`.
+- No migration was required.
+- Reloaded Django Gunicorn master PID `511076` with `kill -HUP 511076`.
+- Confirmed Django Gunicorn workers restarted under master PID `511076`.
+
+Local SSH key note:
+- Older docs mention `C:\Users\Meet\Downloads\speedbot-key.pem`.
+- On this workstation the key was found at `C:\Users\Meet Vaghasiya\.ssh\speedbot-key.pem`.
+
 ### Sample Log Output
 ```
 2026-02-03 09:39:23 | 🔍 DEBUG    | [RAW_WEBHOOK] Received data: {"object": "whatsapp_business_account"...
