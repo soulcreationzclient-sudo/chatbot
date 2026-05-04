@@ -16,6 +16,11 @@
     --danger: #ef4444;
   }
 
+  .main-content,
+  .page-content {
+    min-width: 0;
+  }
+
   .board-header {
     display: flex; justify-content: space-between; align-items: center;
     padding: 0 0 16px; flex-wrap: nowrap; gap: 12px; min-width: 0;
@@ -31,7 +36,7 @@
   .board-header a { color: var(--text-muted); text-decoration: none; font-size: 14px; }
   .board-header a:hover { color: var(--accent); }
 
-  .board-actions { display: flex; gap: 10px; align-items: center; }
+  .board-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
   .search-input {
     padding: 8px 14px; border: 1px solid var(--border); border-radius: 10px;
     font-size: 14px; width: 220px;
@@ -47,15 +52,73 @@
   .btn-danger-outline { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
 
   /* Kanban */
+  .kanban-shell {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
   .kanban {
-    display: flex; gap: 16px; overflow-x: auto; padding-bottom: 20px;
+    display: flex; gap: 16px; overflow-x: auto; overflow-y: hidden;
+    width: 100%; max-width: 100%; min-width: 0; padding: 0 8px 20px;
     min-height: calc(100vh - 200px);
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  .kanban::-webkit-scrollbar { height: 10px; }
+  .kanban::-webkit-scrollbar-track { background: transparent; }
+  .kanban::-webkit-scrollbar-thumb {
+    background: #cbd5e1; border-radius: 999px; border: 2px solid #f8fafc;
+  }
+  .kanban::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+  .kanban-scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 42px;
+    height: 54px;
+    border-radius: 999px;
+    border: 1px solid #dbe3ed;
+    background: rgba(255,255,255,0.94);
+    color: #1e293b;
+    box-shadow: 0 12px 30px rgba(15,23,42,0.14);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+  }
+  .kanban-scroll-btn:hover {
+    transform: translateY(-50%) scale(1.04);
+    box-shadow: 0 16px 36px rgba(15,23,42,0.18);
+  }
+  .kanban-scroll-btn:focus-visible {
+    outline: 3px solid rgba(37,99,235,0.22);
+    outline-offset: 2px;
+  }
+  .kanban-scroll-btn.left { left: -10px; }
+  .kanban-scroll-btn.right { right: -10px; }
+  .kanban-scroll-btn[disabled] {
+    opacity: 0;
+    pointer-events: none;
   }
 
   .column {
-    min-width: 280px; max-width: 280px; flex-shrink: 0;
+    flex: 0 0 clamp(280px, 26vw, 320px);
+    min-width: clamp(280px, 26vw, 320px);
+    max-width: clamp(280px, 26vw, 320px);
+    scroll-snap-align: start;
     display: flex; flex-direction: column;
   }
+  .column.add-stage-col { flex: 0 0 180px; }
 
   .col-header {
     padding: 12px 14px; border-radius: 12px 12px 0 0; font-weight: 700;
@@ -74,6 +137,7 @@
   .col-body {
     background: var(--bg-board); border-radius: 0 0 12px 12px; padding: 10px;
     flex: 1; min-height: 100px; border: 1px solid var(--border); border-top: none;
+    overflow-y: auto;
   }
   .col-body.drag-over { background: #eff6ff; border-color: #2563eb; }
 
@@ -328,6 +392,56 @@
     border-color: #2563eb !important;
     box-shadow: 0 0 0 3px rgba(37,99,235,0.08) !important;
   }
+
+  @media (max-width: 1100px) {
+    .board-header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+    .board-actions {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+    .search-input {
+      flex: 1 1 220px;
+      min-width: 180px;
+    }
+    .column {
+      flex-basis: min(78vw, 320px);
+      min-width: min(78vw, 320px);
+      max-width: min(78vw, 320px);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .board-header h1 { font-size: 24px; }
+    .board-actions { gap: 8px; }
+    .search-input { flex-basis: 100%; width: 100%; }
+    .btn { padding: 8px 12px; }
+    .kanban {
+      gap: 12px;
+      padding-left: 2px;
+      padding-right: 18px;
+      scroll-snap-type: x mandatory;
+      min-height: calc(100vh - 260px);
+    }
+    .kanban-scroll-btn {
+      width: 36px;
+      height: 46px;
+    }
+    .kanban-scroll-btn.left { left: -6px; }
+    .kanban-scroll-btn.right { right: -6px; }
+    .column {
+      flex-basis: min(86vw, 320px);
+      min-width: min(86vw, 320px);
+      max-width: min(86vw, 320px);
+    }
+    .column.add-stage-col {
+      min-width: min(54vw, 180px) !important;
+      max-width: min(54vw, 180px) !important;
+      flex-basis: min(54vw, 180px) !important;
+    }
+  }
 </style>
 <style>
 /* ── Rose Theme Polish ── */
@@ -554,7 +668,11 @@ table tr:last-child td { border-bottom: none !important; }
   </div>
 </div>
 
-<div class="kanban" id="kanban">
+<div class="kanban-shell" id="kanbanShell">
+  <button class="kanban-scroll-btn left" type="button" onclick="scrollKanban(-1)" aria-label="Scroll pipeline left" title="Scroll left">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+  <div class="kanban" id="kanban">
   {% for stage in stages %}
   <div class="column" data-stage-id="{{ stage.id }}">
     <div class="col-header" style="background:#f1f5f9; color:#374151;">
@@ -614,6 +732,10 @@ table tr:last-child td { border-bottom: none !important; }
       <span style="font-size:20px;">+ Add Stage</span>
     </div>
   </div>
+  </div>
+  <button class="kanban-scroll-btn right" type="button" onclick="scrollKanban(1)" aria-label="Scroll pipeline right" title="Scroll right">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+  </button>
 </div>
 
 <!-- Add Opportunity Modal -->
@@ -874,6 +996,54 @@ table tr:last-child td { border-bottom: none !important; }
     const valueEl = card.querySelector('.opp-value');
     if (valueEl) valueEl.textContent = formatMoney(opp.opportunity_value, 2);
     refreshStageTotal(opp.stage_id || card.dataset.stageId, stageTotal);
+  }
+
+  function getKanbanBoard() {
+    return document.getElementById('kanban');
+  }
+
+  function getKanbanStep(board) {
+    const firstColumn = board ? board.querySelector('.column') : null;
+    const styles = board ? window.getComputedStyle(board) : null;
+    const gap = styles ? (parseFloat(styles.columnGap || styles.gap) || 16) : 16;
+    return (firstColumn ? firstColumn.getBoundingClientRect().width : 300) + gap;
+  }
+
+  function updateKanbanScrollControls() {
+    const board = getKanbanBoard();
+    const shell = document.getElementById('kanbanShell');
+    if (!board || !shell) return;
+
+    const maxScroll = Math.max(0, board.scrollWidth - board.clientWidth);
+    const leftBtn = shell.querySelector('.kanban-scroll-btn.left');
+    const rightBtn = shell.querySelector('.kanban-scroll-btn.right');
+    const canScroll = maxScroll > 4;
+    const atStart = board.scrollLeft <= 4;
+    const atEnd = board.scrollLeft >= maxScroll - 4;
+
+    if (leftBtn) leftBtn.disabled = !canScroll || atStart;
+    if (rightBtn) rightBtn.disabled = !canScroll || atEnd;
+  }
+
+  function scrollKanban(direction) {
+    const board = getKanbanBoard();
+    if (!board) return;
+    board.scrollBy({ left: direction * getKanbanStep(board), behavior: 'smooth' });
+  }
+
+  function initKanbanSlider() {
+    const board = getKanbanBoard();
+    if (!board || board.dataset.sliderReady) return;
+    board.dataset.sliderReady = 'true';
+    updateKanbanScrollControls();
+    board.addEventListener('scroll', updateKanbanScrollControls, { passive: true });
+    window.addEventListener('resize', () => requestAnimationFrame(updateKanbanScrollControls));
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initKanbanSlider);
+  } else {
+    initKanbanSlider();
   }
 
   // ====== Dropdown Menus ======
