@@ -158,6 +158,41 @@ def test_chat_send(request):
                 from openai import OpenAI
                 client = OpenAI(api_key=openai_key)
 
+                # Audio transcription: if content_type is 'audio', transcribe first
+                content_type = data.get('content_type', 'text')
+                ai_input_text = user_message
+                if content_type == 'audio' and user_message:
+                    try:
+                        import requests as http_requests
+                        from newapp.image_pdf_service import transcribe_audio_from_file
+                        
+                        audio_url = user_message
+                        # Ensure we can reach the URL (use internal URL if needed)
+                        if audio_url.startswith('http://chatbotad.io') or audio_url.startswith('https://chatbotad.io'):
+                            # Try fetching internally
+                            audio_resp = http_requests.get(audio_url, timeout=30, verify=False)
+                        else:
+                            audio_resp = http_requests.get(audio_url, timeout=30)
+                        
+                        if audio_resp.status_code == 200:
+                            ext = 'webm'
+                            if '.ogg' in audio_url: ext = 'ogg'
+                            elif '.mp3' in audio_url: ext = 'mp3'
+                            elif '.wav' in audio_url: ext = 'wav'
+                            
+                            transcription = transcribe_audio_from_file(
+                                audio_resp.content, openai_key, file_ext=ext
+                            )
+                            if transcription:
+                                ai_input_text = transcription
+                            else:
+                                ai_input_text = "[User sent a voice message that could not be transcribed]"
+                        else:
+                            ai_input_text = "[User sent a voice message]"
+                    except Exception as audio_err:
+                        print(f"[TestChat] Audio transcription error: {audio_err}")
+                        ai_input_text = "[User sent a voice message]"
+
                 # Build conversation history from existing session
                 openai_messages = [{"role": "system", "content": system_prompt}]
 
@@ -172,8 +207,8 @@ def test_chat_send(request):
                             role = 'user' if m.sender == 'user' else 'assistant'
                             openai_messages.append({"role": role, "content": m.content})
 
-                # Append the current user message
-                openai_messages.append({"role": "user", "content": user_message})
+                # Append the current user message (transcribed if audio)
+                openai_messages.append({"role": "user", "content": ai_input_text})
                 
                 response = client.chat.completions.create(
                     model=gpt_model,
