@@ -1132,6 +1132,27 @@
                 return;
             }
 
+            // Pre-check: Secure context
+            if (!window.isSecureContext) {
+                addMessage('system', '🔒 Voice requires HTTPS. Open https://chatbotad.io');
+                return;
+            }
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                addMessage('system', '⚠️ Browser does not support audio recording.');
+                return;
+            }
+
+            // Check permission state
+            try {
+                if (navigator.permissions && navigator.permissions.query) {
+                    const ps = await navigator.permissions.query({ name: 'microphone' });
+                    if (ps.state === 'denied') {
+                        addMessage('system', '🎤 Mic is blocked. Click lock icon → Allow Microphone → Reload.');
+                        return;
+                    }
+                }
+            } catch(e) {}
+
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
@@ -1164,11 +1185,9 @@
                         removeTyping();
 
                         if (upRes.ok && upData.url) {
-                            // Remove placeholder
                             const msgs = document.querySelectorAll('#chat-messages .message.user');
                             const last = msgs[msgs.length - 1];
                             if (last && last.textContent.includes('Recording voice note')) last.remove();
-
                             addMessage('user', '[Audio: ' + upData.url + ']');
                         } else {
                             addMessage('system', 'Upload failed');
@@ -1184,10 +1203,13 @@
                 btn.style.background = '#fee2e2';
                 btn.style.color = '#ef4444';
             } catch(err) {
-                if (!window.isSecureContext) {
-                    addMessage('system', 'Voice recording requires HTTPS. Use https://chatbotad.io.');
+                console.error('Mic error:', err);
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    addMessage('system', '🎤 Mic denied. Click lock icon → Allow Microphone → Reload page.');
+                } else if (err.name === 'NotFoundError') {
+                    addMessage('system', '🎤 No microphone found. Connect one and retry.');
                 } else {
-                    addMessage('system', 'Microphone blocked. Click the lock icon in your address bar to allow mic access.');
+                    addMessage('system', '🎤 Mic error: ' + err.message);
                 }
             }
         }

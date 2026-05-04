@@ -461,6 +461,31 @@
                 return;
             }
 
+            // Pre-check 1: Secure context (HTTPS)
+            if (!window.isSecureContext) {
+                addMessage('🔒 Voice recording requires HTTPS. Please open this page using https:// instead of http://', 'bot');
+                return;
+            }
+
+            // Pre-check 2: MediaDevices API available
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                addMessage('⚠️ Your browser does not support audio recording. Please use Chrome, Firefox, or Edge.', 'bot');
+                return;
+            }
+
+            // Pre-check 3: Check current permission state
+            try {
+                if (navigator.permissions && navigator.permissions.query) {
+                    const permStatus = await navigator.permissions.query({ name: 'microphone' });
+                    if (permStatus.state === 'denied') {
+                        addMessage('🎤 Microphone is blocked. To fix:\n1. Click the lock/site-info icon in the address bar\n2. Find "Microphone" and set it to "Allow"\n3. Reload this page and try again', 'bot');
+                        return;
+                    }
+                }
+            } catch(permErr) {
+                // permissions.query might not support 'microphone' in all browsers - continue anyway
+            }
+
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
@@ -510,10 +535,13 @@
                 _isRecording = true;
                 btn.classList.add('recording');
             } catch(err) {
-                if (!window.isSecureContext) {
-                    addMessage('Voice recording requires HTTPS. Please visit https://chatbotad.io instead.', 'bot');
+                console.error('Microphone error:', err);
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    addMessage('🎤 Microphone permission was denied.\n\nTo enable it:\n1. Click the lock icon 🔒 in the address bar\n2. Set Microphone to "Allow"\n3. Reload the page', 'bot');
+                } else if (err.name === 'NotFoundError') {
+                    addMessage('🎤 No microphone detected. Please connect a microphone and try again.', 'bot');
                 } else {
-                    addMessage('Microphone access denied. Please click the lock icon in your browser address bar and allow microphone access, then try again.', 'bot');
+                    addMessage('🎤 Could not access microphone: ' + err.message, 'bot');
                 }
             }
         }
