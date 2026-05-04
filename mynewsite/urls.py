@@ -302,6 +302,8 @@ urlpatterns = [
     path('api/inbox/user_log/create/', Inboxcontroller.create_user_log, name='inbox_create_user_log'),
     # Inbox User Tags API
     path('api/inbox/user_tags/', Inboxcontroller.get_user_tags, name='inbox_get_user_tags'),
+    path('api/inbox/user_tag/add/', Inboxcontroller.add_user_tag, name='inbox_add_user_tag'),
+    path('api/inbox/user_tag/remove/', Inboxcontroller.remove_user_tag, name='inbox_remove_user_tag'),
     path('api/inbox/export/<int:user_id>/csv/', Inboxcontroller.export_chat_csv, name='inbox_export_csv'),
     
     # ==================== WEBCHAT API ====================

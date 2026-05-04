@@ -1283,7 +1283,7 @@
                 addMessage('user', '[Audio: ' + upData.url + ']');
 
                 // Now send the audio URL as a message to the test chat API for AI processing
-                const payload = { message: upData.url, content_type: 'audio' };
+                const payload = { message: upData.url, content_type: 'audio', prompt_id: selectedPromptId };
                 if (currentSessionId) payload.session_id = currentSessionId;
 
                 const aiRes = await fetch('/api/test/chat/send/', {

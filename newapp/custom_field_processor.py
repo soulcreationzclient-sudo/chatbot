@@ -433,6 +433,10 @@ def format_custom_fields_for_inbox(user, admin, organization=None):
         ).select_related('custom_field').order_by('custom_field__name')
 
         result = []
+        email_field_value = next(
+            (fv for fv in field_values if fv.custom_field.name.lower() == 'email'),
+            None
+        )
         
         # Inject standard user fields
         result.append({
@@ -443,15 +447,14 @@ def format_custom_fields_for_inbox(user, admin, organization=None):
             'value': user.phone_no or '',
             'updated_at': user.created_at
         })
-        if getattr(user, 'email', None) or True:  # Always show email 
-            result.append({
-                'id': 'std_email',
-                'field_name': 'email',
-                'field_type': 'email',
-                'description': 'Standard Email',
-                'value': getattr(user, 'email', '') or '',
-                'updated_at': user.created_at
-            })
+        result.append({
+            'id': 'std_email',
+            'field_name': 'email',
+            'field_type': 'email',
+            'description': 'Standard Email',
+            'value': (email_field_value.value if email_field_value else getattr(user, 'email', '')) or '',
+            'updated_at': email_field_value.updated_at if email_field_value else user.created_at
+        })
         if getattr(user, 'name', None):
             result.append({
                 'id': 'std_name',
@@ -462,6 +465,8 @@ def format_custom_fields_for_inbox(user, admin, organization=None):
                 'updated_at': user.created_at
             })
         for fv in field_values:
+            if fv.custom_field.name.lower() == 'email':
+                continue
             result.append({
                 'id': fv.id,
                 'field_name': fv.custom_field.name,

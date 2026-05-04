@@ -574,7 +574,7 @@ table tr:last-child td { border-bottom: none !important; }
     <div class="col-body" data-stage-id="{{ stage.id }}"
          ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
       {% for opp in stage.opp_list %}
-      <div class="opp-card" draggable="true" data-opp-id="{{ opp.id }}"
+      <div class="opp-card" draggable="true" data-opp-id="{{ opp.id }}" data-stage-id="{{ stage.id }}" data-value="{{ opp.opportunity_value }}"
            ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)"
            onclick="openOppDetail({{ opp.id }})" style="cursor:pointer;">
         <div class="opp-name">
@@ -843,6 +843,39 @@ table tr:last-child td { border-bottom: none !important; }
     });
   }
 
+  function formatMoney(value, decimals) {
+    const amount = Number(value || 0);
+    return '$' + amount.toLocaleString(undefined, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    });
+  }
+
+  function refreshStageTotal(stageId, serverTotal) {
+    const column = document.querySelector(`.column[data-stage-id="${stageId}"]`);
+    if (!column) return;
+    const valueEl = column.querySelector('.col-value');
+    if (!valueEl) return;
+    let total = Number(serverTotal);
+    if (!Number.isFinite(total)) {
+      total = Array.from(column.querySelectorAll('.opp-card')).reduce((sum, card) => {
+        return sum + Number(card.dataset.value || 0);
+      }, 0);
+    }
+    valueEl.textContent = formatMoney(total, 0);
+  }
+
+  function updateOpportunityCard(opp, stageTotal) {
+    if (!opp || !opp.id) return;
+    const card = document.querySelector(`.opp-card[data-opp-id="${opp.id}"]`);
+    if (!card) return;
+    card.dataset.value = String(opp.opportunity_value || 0);
+    if (opp.stage_id) card.dataset.stageId = String(opp.stage_id);
+    const valueEl = card.querySelector('.opp-value');
+    if (valueEl) valueEl.textContent = formatMoney(opp.opportunity_value, 2);
+    refreshStageTotal(opp.stage_id || card.dataset.stageId, stageTotal);
+  }
+
   // ====== Dropdown Menus ======
   function toggleMenu(event, menuId) {
     event.stopPropagation();
@@ -1056,15 +1089,30 @@ table tr:last-child td { border-bottom: none !important; }
     } else if (field === 'value') {
       newVal = prompt('Opportunity value ($):', opp.opportunity_value);
       if (newVal === null) return;
-      newVal = parseFloat(newVal) || 0;
+      newVal = String(newVal).replace(/[$,]/g, '').trim();
+      if (newVal === '') newVal = '0';
+      if (!Number.isFinite(Number(newVal)) || Number(newVal) < 0) {
+        alert('Enter a valid non-negative amount.');
+        return;
+      }
     }
     const payload = {};
     payload[field] = newVal;
     const res = await api(`/api/pipeline/opportunity/${currentOppId}/update/`, payload);
     if (res.ok) {
-      // Re-fetch
-      openOppDetail(currentOppId);
-    } else { alert('Failed to update'); }
+      const data = await res.json();
+      if (data.opportunity) {
+        currentOppData.opportunity = Object.assign(currentOppData.opportunity, data.opportunity);
+        populateDetail(currentOppData);
+        updateOpportunityCard(data.opportunity, data.stage_total);
+      } else {
+        openOppDetail(currentOppId);
+      }
+    } else {
+      let data = {};
+      try { data = await res.json(); } catch(e) {}
+      alert(data.error || 'Failed to update');
+    }
   }
 
   // Legacy alias

@@ -6,7 +6,7 @@ from django.utils import timezone
 import json
 import re
 import uuid
-from newapp.models import ChatGPTPrompt, Admin, Organization, WebChatSession, WebChatMessage
+from newapp.models import ChatGPTPrompt, Admin, Organization, WebChatSession, WebChatMessage, User, Message
 from datetime import datetime
 
 
@@ -115,16 +115,67 @@ def test_chat_send(request):
         # Feature 1: prefer is_default prompt, fallback to latest
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
+
+        session_id_str = data.get('session_id', None)
+        chat_session = None
+        try:
+            if session_id_str:
+                chat_session = WebChatSession.objects.filter(session_id=session_id_str).first()
+
+            if not chat_session:
+                session_id_str = f"test_{uuid.uuid4().hex[:12]}"
+                chat_session = WebChatSession.objects.create(
+                    session_id=session_id_str,
+                    visitor_name='Test Chat',
+                    status='active',
+                    admin_id=admin_id,
+                    organization_id=org_id,
+                )
+
+            if (org_id or admin_id) and not chat_session.user_id:
+                test_phone = f"webchat_test_{chat_session.session_id[:16]}"
+                user_lookup = {'phone_no': test_phone}
+                user_defaults = {
+                    'name': 'Test Chat User',
+                    'created_at': timezone.now(),
+                    'source': 'Webchat Test',
+                    'bot_enabled': True,
+                    'is_in_inbox': True,
+                }
+                if org_id:
+                    user_lookup['organization_id'] = org_id
+                    user_defaults['organization_id'] = org_id
+                if admin_id:
+                    user_lookup['admin_id_id'] = admin_id
+                    user_defaults['admin_id_id'] = admin_id
+
+                test_user, _ = User.objects.get_or_create(
+                    **user_lookup,
+                    defaults=user_defaults
+                )
+                chat_session.user = test_user
+                chat_session.save(update_fields=['user', 'last_activity'])
+        except Exception as session_err:
+            print(f"[TestChat] Session setup error: {session_err}")
         
-        if org_id:
+        prompt_obj = None
+        if prompt_id:
+            prompt_qs = ChatGPTPrompt.objects.filter(id=prompt_id)
+            if org_id:
+                prompt_qs = prompt_qs.filter(organization_id=org_id)
+            elif admin_id:
+                prompt_qs = prompt_qs.filter(admin_id=admin_id)
+            prompt_obj = prompt_qs.first()
+
+        if not prompt_obj and org_id:
             prompt_obj = ChatGPTPrompt.objects.filter(organization_id=org_id, is_default=True).first()
             if not prompt_obj:
                 prompt_obj = ChatGPTPrompt.objects.filter(organization_id=org_id).order_by('-updated_at').first()
-        elif admin_id:
+        elif not prompt_obj and admin_id:
             prompt_obj = ChatGPTPrompt.objects.filter(admin_id=admin_id, is_default=True).first()
             if not prompt_obj:
                 prompt_obj = ChatGPTPrompt.objects.filter(admin_id=admin_id).order_by('-updated_at').first()
-        else:
+        elif not prompt_obj:
             prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
         system_prompt = prompt_obj.prompt_text if prompt_obj else "You are a helpful assistant."
 
@@ -196,16 +247,13 @@ def test_chat_send(request):
                 # Build conversation history from existing session
                 openai_messages = [{"role": "system", "content": system_prompt}]
 
-                session_id_str = data.get('session_id', None)
-                if session_id_str:
-                    chat_session = WebChatSession.objects.filter(session_id=session_id_str).first()
-                    if chat_session:
-                        past_msgs = WebChatMessage.objects.filter(
-                            session=chat_session
-                        ).order_by('created_at')
-                        for m in past_msgs:
-                            role = 'user' if m.sender == 'user' else 'assistant'
-                            openai_messages.append({"role": role, "content": m.content})
+                if chat_session:
+                    past_msgs = WebChatMessage.objects.filter(
+                        session=chat_session
+                    ).order_by('created_at')
+                    for m in past_msgs:
+                        role = 'user' if m.sender == 'user' else 'assistant'
+                        openai_messages.append({"role": role, "content": m.content})
 
                 # Append the current user message (transcribed if audio)
                 openai_messages.append({"role": "user", "content": ai_input_text})
@@ -280,18 +328,21 @@ def test_chat_send(request):
                     redirect_url = f"https://chatbotad.io/book/{booking_token}/"
                     clean_text = clean_text.replace(full_tag, redirect_url)
                     
-                    # Create a test user and tracker record so /book/<token>/ works
+                    # Create or reuse the linked test user so /book/<token>/ works.
                     try:
-                        test_phone = f"webchat_test_{uuid.uuid4().hex[:8]}"
-                        test_user = UserModel.objects.create(
-                            phone_no=test_phone,
-                            name='Test Chat User',
-                            admin_id=admin_obj,
-                            organization=org_obj,
-                            source='webchat',
-                            bot_enabled=True,
-                            created_at=timezone.now(),
-                        )
+                        test_user = chat_session.user if chat_session and chat_session.user_id else None
+                        if not test_user:
+                            test_phone = f"webchat_test_{uuid.uuid4().hex[:8]}"
+                            test_user = UserModel.objects.create(
+                                phone_no=test_phone,
+                                name='Test Chat User',
+                                admin_id=admin_obj,
+                                organization=org_obj,
+                                source='Webchat Test',
+                                bot_enabled=True,
+                                is_in_inbox=True,
+                                created_at=timezone.now(),
+                            )
                         _booking_test_user = test_user
                         CalendlyBookingTracker.objects.create(
                             user=test_user,
@@ -308,13 +359,7 @@ def test_chat_send(request):
             pass
 
         # --- Persist to DB ---
-        session_id_str = data.get('session_id', None)
         try:
-            if session_id_str:
-                chat_session = WebChatSession.objects.filter(session_id=session_id_str).first()
-            else:
-                chat_session = None
-            
             if not chat_session:
                 session_id_str = f"test_{uuid.uuid4().hex[:12]}"
                 chat_session = WebChatSession.objects.create(
@@ -324,6 +369,60 @@ def test_chat_send(request):
                     admin_id=admin_id,
                     organization_id=org_id,
                 )
+
+            if chat_session.user:
+                try:
+                    from newapp.models import Tag, UserTag, CustomField, CustomFieldValue
+                    for tag_name in parsed['tags']:
+                        tag_name = (tag_name or '').strip()
+                        if not tag_name:
+                            continue
+                        tag_qs = Tag.objects.filter(
+                            organization_id=org_id
+                        ) if org_id else Tag.objects.filter(admin_id=admin_id)
+                        tag = tag_qs.filter(name__iexact=tag_name).first()
+                        if not tag:
+                            create_kwargs = {'name': tag_name}
+                            if org_id:
+                                create_kwargs['organization_id'] = org_id
+                            elif admin_id:
+                                create_kwargs['admin_id'] = admin_id
+                            tag = Tag.objects.create(**create_kwargs)
+                        _, created = UserTag.objects.get_or_create(user=chat_session.user, tag=tag)
+                        if created:
+                            try:
+                                from newapp.controllers.pipeline import run_pipeline_automations
+                                run_pipeline_automations(chat_session.user.id, 'tag_applied', tag_id=tag.id)
+                            except Exception:
+                                pass
+
+                    for field in parsed['custom_fields']:
+                        field_name = (field.get('name') or '').strip()
+                        field_value = field.get('value') or ''
+                        if not field_name:
+                            continue
+                        field_qs = CustomField.objects.filter(
+                            organization_id=org_id
+                        ) if org_id else CustomField.objects.filter(admin_id=admin_id)
+                        custom_field = field_qs.filter(name__iexact=field_name, is_active=True).first()
+                        if custom_field:
+                            CustomFieldValue.objects.update_or_create(
+                                custom_field=custom_field,
+                                user=chat_session.user,
+                                defaults={'value': field_value}
+                            )
+                            try:
+                                from newapp.controllers.pipeline import run_pipeline_automations
+                                run_pipeline_automations(
+                                    chat_session.user.id,
+                                    'custom_field_changed',
+                                    field_name=field_name,
+                                    field_value=str(field_value)
+                                )
+                            except Exception:
+                                pass
+                except Exception as meta_err:
+                    print(f"[TestChat] Metadata persistence error: {meta_err}")
             
             # Save user message
             WebChatMessage.objects.create(
@@ -332,6 +431,13 @@ def test_chat_send(request):
                 sender='user',
                 content_type='text',
             )
+            if chat_session.user:
+                Message.objects.create(
+                    user_id=chat_session.user,
+                    messages=user_message,
+                    created_at=timezone.now(),
+                    who='human'
+                )
             
             # Save bot message (with tags/custom_fields in ai_response for persistence)
             bot_meta = {}
@@ -346,6 +452,13 @@ def test_chat_send(request):
                 content_type='text',
                 ai_response=json.dumps(bot_meta) if bot_meta else None,
             )
+            if chat_session.user:
+                Message.objects.create(
+                    user_id=chat_session.user,
+                    messages=clean_text,
+                    created_at=timezone.now(),
+                    who='bot'
+                )
             
             # Update message count
             chat_session.message_count = WebChatMessage.objects.filter(session=chat_session).count()

@@ -100,6 +100,42 @@ class WebChatController:
                 if visitor_name and user_obj.name != visitor_name:
                     user_obj.name = visitor_name
                     user_obj.save(update_fields=['name'])
+                if visitor_email:
+                    try:
+                        from ..models import CustomField, CustomFieldValue
+                        email_field = None
+                        if organization_id:
+                            email_field = CustomField.objects.filter(
+                                organization_id=organization_id, name__iexact='email'
+                            ).first()
+                            if not email_field:
+                                email_field = CustomField.objects.create(
+                                    organization_id=organization_id,
+                                    name='email',
+                                    field_type='email',
+                                    description='Standard Email',
+                                    is_active=True,
+                                )
+                        elif admin_id:
+                            email_field = CustomField.objects.filter(
+                                admin_id=admin_id, name__iexact='email'
+                            ).first()
+                            if not email_field:
+                                email_field = CustomField.objects.create(
+                                    admin_id=admin_id,
+                                    name='email',
+                                    field_type='email',
+                                    description='Standard Email',
+                                    is_active=True,
+                                )
+                        if email_field:
+                            CustomFieldValue.objects.update_or_create(
+                                custom_field=email_field,
+                                user=user_obj,
+                                defaults={'value': visitor_email}
+                            )
+                    except Exception as email_err:
+                        logger.error(f"Error saving webchat visitor email: {email_err}")
             except Exception as user_err:
                 logger.error(f"Error creating webchat user: {user_err}")
                 user_obj = None
@@ -504,6 +540,23 @@ session=session,
                         bot_response_text = tag_result
                 except Exception as tag_error:
                     logger.error(f"Action tag processing error: {str(tag_error)}")
+
+            # Process custom-field capture tags for linked webchat users.
+            if bot_response_text and session.user:
+                try:
+                    from ..custom_field_processor import process_response_with_custom_fields
+                    admin_obj = Admin.objects.filter(id=session.admin_id).first() if session.admin_id else None
+                    org_obj = Organization.objects.filter(id=session.organization_id).first() if session.organization_id else None
+                    cf_result = process_response_with_custom_fields(
+                        bot_response_text,
+                        admin_obj,
+                        session.user,
+                        organization=org_obj
+                    )
+                    if isinstance(cf_result, dict):
+                        bot_response_text = cf_result.get('final_text', bot_response_text)
+                except Exception as cf_error:
+                    logger.error(f"Custom field processing error: {str(cf_error)}")
             
             # Strip any remaining metadata tags not meant for end users
             if bot_response_text:

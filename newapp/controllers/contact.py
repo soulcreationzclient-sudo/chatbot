@@ -246,9 +246,10 @@ class Contactcontroller:
             data = json.loads(request.body)
             user_id = data.get('user_id')
             tag_id = data.get('tag_id')
+            tag_name = (data.get('tag_name') or '').strip()
             
-            if not user_id or not tag_id:
-                return JsonResponse({'error': 'Missing user_id or tag_id'}, status=400)
+            if not user_id or (not tag_id and not tag_name):
+                return JsonResponse({'error': 'Missing user_id or tag'}, status=400)
             
             # Support both organization and admin auth
             org_id = request.session.get('organization_id')
@@ -256,13 +257,24 @@ class Contactcontroller:
             
             if org_id:
                 user = User.objects.filter(id=user_id, organization_id=org_id).first()
-                tag = Tag.objects.filter(id=tag_id, organization_id=org_id).first()
+                tag_qs = Tag.objects.filter(organization_id=org_id)
             elif admin_id:
                 user = User.objects.filter(id=user_id, admin_id=admin_id).first()
-                tag = Tag.objects.filter(id=tag_id, admin_id=admin_id).first()
+                tag_qs = Tag.objects.filter(admin_id=admin_id)
             else:
                 return JsonResponse({'error': 'Not authenticated'}, status=401)
             
+            tag = tag_qs.filter(id=tag_id).first() if tag_id else None
+            if not tag and tag_name:
+                tag = tag_qs.filter(name__iexact=tag_name).first()
+                if not tag:
+                    create_kwargs = {'name': tag_name}
+                    if org_id:
+                        create_kwargs['organization_id'] = org_id
+                    else:
+                        create_kwargs['admin_id'] = admin_id
+                    tag = Tag.objects.create(**create_kwargs)
+
             if not user or not tag:
                 return JsonResponse({'error': 'User or Tag not found'}, status=404)
             
@@ -294,9 +306,10 @@ class Contactcontroller:
             data = json.loads(request.body)
             user_id = data.get('user_id')
             tag_id = data.get('tag_id')
+            tag_name = (data.get('tag_name') or '').strip()
             
-            if not user_id or not tag_id:
-                return JsonResponse({'error': 'Missing user_id or tag_id'}, status=400)
+            if not user_id or (not tag_id and not tag_name):
+                return JsonResponse({'error': 'Missing user_id or tag'}, status=400)
             
             # Support both organization and admin auth
             org_id = request.session.get('organization_id')
@@ -304,10 +317,10 @@ class Contactcontroller:
             
             if org_id:
                 user = User.objects.filter(id=user_id, organization_id=org_id).first()
-                tag = Tag.objects.filter(id=tag_id, organization_id=org_id).first()
+                tag_qs = Tag.objects.filter(organization_id=org_id)
             elif admin_id:
                 user = User.objects.filter(id=user_id, admin_id=admin_id).first()
-                tag = Tag.objects.filter(id=tag_id, admin_id=admin_id).first()
+                tag_qs = Tag.objects.filter(admin_id=admin_id)
             else:
                 return JsonResponse({'error': 'Not authenticated'}, status=401)
             
@@ -315,9 +328,18 @@ class Contactcontroller:
                 return JsonResponse({'error': 'User not found'}, status=404)
             
             # If tag exists, delete normally. If tag was deleted, clean up orphan UserTag
+            tag = tag_qs.filter(id=tag_id).first() if tag_id else tag_qs.filter(name__iexact=tag_name).first()
             if tag:
-                UserTag.objects.filter(user=user, tag=tag).delete()
+                deleted_count, _ = UserTag.objects.filter(user=user, tag=tag).delete()
+                if deleted_count:
+                    try:
+                        from newapp.controllers.pipeline import run_pipeline_automations
+                        run_pipeline_automations(user.id, 'tag_removed', tag_id=tag.id)
+                    except Exception:
+                        pass
             else:
+                if not tag_id:
+                    return JsonResponse({'error': 'Tag not found'}, status=404)
                 # Tag was deleted - clean up orphan UserTag by tag_id directly
                 deleted_count, _ = UserTag.objects.filter(user=user, tag_id=tag_id).delete()
                 if deleted_count == 0:

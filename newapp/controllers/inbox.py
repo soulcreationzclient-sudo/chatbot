@@ -68,17 +68,16 @@ class Inboxcontroller:
         hours_since_last_message = None
 
         if selected_user_id:
-            selected_user = User.objects.filter(id=selected_user_id).first()
+            selected_user = User.objects.filter(id=selected_user_id, is_in_inbox=True).first()
             
             # SECURITY: Verify selected user belongs to current org/admin
             if selected_user:
-                # BUG FIX: Add null check for organization_id
-                if org_id and selected_user.organization_id and selected_user.organization_id != org_id:
+                if org_id and selected_user.organization_id != org_id:
                     selected_user = None  # Don't show cross-tenant data
                 elif admin_id:
                     # Handle both admin_id as integer and as Admin object
                     user_admin_id = getattr(selected_user, 'admin_id_id', None)
-                    if user_admin_id and str(user_admin_id) != str(admin_id):
+                    if str(user_admin_id) != str(admin_id):
                         selected_user = None
             
             if selected_user:
@@ -203,33 +202,20 @@ class Inboxcontroller:
         if admin_id and str(user.admin_id_id) != str(admin_id):
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
-        # SOFT DELETE: Archive from inbox instead of deleting
-        # Contact record is kept but all associated data is wiped clean
+        # SOFT DELETE: Archive from inbox without wiping historical data.
         user.is_in_inbox = False
         user.archived_at = timezone.now()
         user.followup_count = 0
         user.bot_enabled = True
         user.save(update_fields=['is_in_inbox', 'archived_at', 'followup_count', 'bot_enabled'])
-        
-        # DELETE ALL ASSOCIATED DATA (wrapped in transaction for consistency):
-        # Remove tags, messages, custom fields, logs, follow-ups, and pipeline opportunities
-        from ..models import UserTag, Message, CustomFieldValue, UserLog, ScheduledFollowUp, Opportunity
-        from django.db import transaction
-        with transaction.atomic():
-            # 1. Remove all tags
-            UserTag.objects.filter(user=user).delete()
-            # 2. Delete message history (Message FK field is named 'user_id', not 'user')
-            Message.objects.filter(user_id=user).delete()
-            # 3. Delete custom field values
-            CustomFieldValue.objects.filter(user=user).delete()
-            # 4. Delete user logs
-            UserLog.objects.filter(user=user).delete()
-            # 5. Cancel scheduled follow-ups
-            ScheduledFollowUp.objects.filter(user=user).delete()
-            # 6. Delete pipeline opportunities
-            Opportunity.objects.filter(user=user).delete()
-        
-        return JsonResponse({'success': True, 'msg': 'Contact archived and all data cleared'})
+
+        try:
+            from ..models import ScheduledFollowUp
+            ScheduledFollowUp.objects.filter(user=user, status='pending').update(status='cancelled')
+        except Exception:
+            pass
+
+        return JsonResponse({'success': True, 'msg': 'Contact archived'})
 
     @csrf_exempt
     def restore_user(request, user_id):
@@ -352,6 +338,120 @@ class Inboxcontroller:
             traceback.print_exc()
             return JsonResponse({'error': str(e)}, status=500)
 
+    @staticmethod
+    @csrf_exempt
+    def add_user_tag(request):
+        """Add an existing or newly named tag to a user from the inbox panel."""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+
+        import json
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        user_id = data.get('user_id')
+        tag_id = data.get('tag_id')
+        tag_name = (data.get('tag_name') or '').strip()
+        if not user_id or (not tag_id and not tag_name):
+            return JsonResponse({'error': 'Missing user_id and tag'}, status=400)
+
+        from ..models import UserTag
+
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        if not org_id and not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+        if org_id:
+            user = User.objects.filter(id=user_id, organization_id=org_id).first()
+            tag_qs = Tag.objects.filter(organization_id=org_id)
+        else:
+            user = User.objects.filter(id=user_id, admin_id=admin_id).first()
+            tag_qs = Tag.objects.filter(admin_id=admin_id)
+
+        if not user:
+            return JsonResponse({'error': 'User not found'}, status=404)
+
+        tag = tag_qs.filter(id=tag_id).first() if tag_id else None
+        if not tag and tag_name:
+            tag = tag_qs.filter(name__iexact=tag_name).first()
+            if not tag:
+                create_kwargs = {'name': tag_name}
+                if org_id:
+                    create_kwargs['organization_id'] = org_id
+                else:
+                    create_kwargs['admin_id'] = admin_id
+                tag = Tag.objects.create(**create_kwargs)
+
+        if not tag:
+            return JsonResponse({'error': 'Tag not found'}, status=404)
+
+        _, created = UserTag.objects.get_or_create(user=user, tag=tag)
+        if created:
+            try:
+                from newapp.controllers.pipeline import run_pipeline_automations
+                run_pipeline_automations(user.id, 'tag_applied', tag_id=tag.id)
+            except Exception:
+                pass
+
+        return JsonResponse({
+            'success': True,
+            'tag': {'id': tag.id, 'name': tag.name},
+            'created': created,
+        })
+
+    @staticmethod
+    @csrf_exempt
+    def remove_user_tag(request):
+        """Remove a tag from a user from the inbox panel."""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+
+        import json
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        user_id = data.get('user_id')
+        tag_id = data.get('tag_id')
+        tag_name = (data.get('tag_name') or '').strip()
+        if not user_id or (not tag_id and not tag_name):
+            return JsonResponse({'error': 'Missing user_id and tag'}, status=400)
+
+        from ..models import UserTag
+
+        org_id = request.session.get('organization_id')
+        admin_id = request.session.get('admin_id')
+        if not org_id and not admin_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+        if org_id:
+            user = User.objects.filter(id=user_id, organization_id=org_id).first()
+            tag_qs = Tag.objects.filter(organization_id=org_id)
+        else:
+            user = User.objects.filter(id=user_id, admin_id=admin_id).first()
+            tag_qs = Tag.objects.filter(admin_id=admin_id)
+
+        if not user:
+            return JsonResponse({'error': 'User not found'}, status=404)
+
+        tag = tag_qs.filter(id=tag_id).first() if tag_id else tag_qs.filter(name__iexact=tag_name).first()
+        if not tag:
+            return JsonResponse({'error': 'Tag not found'}, status=404)
+
+        deleted_count, _ = UserTag.objects.filter(user=user, tag=tag).delete()
+        if deleted_count:
+            try:
+                from newapp.controllers.pipeline import run_pipeline_automations
+                run_pipeline_automations(user.id, 'tag_removed', tag_id=tag.id)
+            except Exception:
+                pass
+
+        return JsonResponse({'success': True, 'removed': bool(deleted_count)})
+
 
     @staticmethod
     @csrf_exempt
@@ -438,20 +538,87 @@ class Inboxcontroller:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         if admin_id and str(user.admin_id_id) != str(admin_id):
             return JsonResponse({'error': 'Permission denied'}, status=403)
+
+        field_key = field_name.strip().lower()
             
         # Handle standard fields
-        if field_name in ['phone_no', 'email', 'name']:
-            setattr(user, field_name, field_value)
-            user.save()
+        if field_key in ['phone_no', 'name']:
+            setattr(user, field_key, field_value)
+            user.save(update_fields=[field_key])
             return JsonResponse({
                 'success': True,
-                'message': f"Updated {field_name}: {field_value}",
+                'message': f"Updated {field_key}: {field_value}",
                 'custom_field': {
-                    'id': f'std_{field_name}',
-                    'name': field_name,
+                    'id': f'std_{field_key}',
+                    'name': field_key,
                     'field_type': 'text',
-                    'description': f'Standard {field_name.title()}',
+                    'description': f'Standard {field_key.title()}',
                     'value': field_value
+                }
+            })
+
+        if field_key == 'email':
+            from django.core.exceptions import ValidationError
+            from django.core.validators import validate_email
+            if field_value:
+                try:
+                    validate_email(field_value)
+                except ValidationError:
+                    return JsonResponse({'error': 'Invalid email format'}, status=400)
+
+            custom_field = None
+            if org_id:
+                custom_field = CustomField.objects.filter(
+                    organization_id=org_id, name__iexact='email'
+                ).first()
+                if not custom_field:
+                    custom_field = CustomField.objects.create(
+                        organization_id=org_id,
+                        name='email',
+                        field_type='email',
+                        description='Standard Email',
+                        is_active=True,
+                    )
+            elif admin_id:
+                custom_field = CustomField.objects.filter(
+                    admin_id=admin_id, name__iexact='email'
+                ).first()
+                if not custom_field:
+                    custom_field = CustomField.objects.create(
+                        admin_id=admin_id,
+                        name='email',
+                        field_type='email',
+                        description='Standard Email',
+                        is_active=True,
+                    )
+
+            if not custom_field:
+                return JsonResponse({'error': "Custom field 'email' not found"}, status=404)
+
+            cf_value, _ = CustomFieldValue.objects.update_or_create(
+                custom_field=custom_field,
+                user=user,
+                defaults={'value': field_value}
+            )
+
+            try:
+                from newapp.controllers.pipeline import run_pipeline_automations
+                run_pipeline_automations(
+                    user.id, 'custom_field_changed',
+                    field_name='email', field_value=str(field_value)
+                )
+            except Exception:
+                pass
+
+            return JsonResponse({
+                'success': True,
+                'message': f"Updated email: {field_value}",
+                'custom_field': {
+                    'id': 'std_email',
+                    'name': 'email',
+                    'field_type': 'email',
+                    'description': 'Standard Email',
+                    'value': cf_value.value or ''
                 }
             })
         
@@ -545,14 +712,41 @@ class Inboxcontroller:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         if admin_id and str(user.admin_id_id) != str(admin_id):
             return JsonResponse({'error': 'Permission denied'}, status=403)
+
+        field_key = field_name.strip().lower()
             
         # Handle standard fields
-        if field_name in ['phone_no', 'email', 'name']:
-            setattr(user, field_name, '')
-            user.save()
+        if field_key in ['phone_no', 'name']:
+            setattr(user, field_key, '')
+            user.save(update_fields=[field_key])
             return JsonResponse({
                 'success': True,
-                'message': f"Cleared {field_name}"
+                'message': f"Cleared {field_key}"
+            })
+
+        if field_key == 'email':
+            custom_field = None
+            if org_id:
+                custom_field = CustomField.objects.filter(
+                    organization_id=org_id, name__iexact='email'
+                ).first()
+            elif admin_id:
+                custom_field = CustomField.objects.filter(
+                    admin_id=admin_id, name__iexact='email'
+                ).first()
+            if custom_field:
+                CustomFieldValue.objects.filter(custom_field=custom_field, user=user).delete()
+                try:
+                    from newapp.controllers.pipeline import run_pipeline_automations
+                    run_pipeline_automations(
+                        user.id, 'custom_field_changed',
+                        field_name='email', field_value=''
+                    )
+                except Exception:
+                    pass
+            return JsonResponse({
+                'success': True,
+                'message': 'Cleared email'
             })
         
         # Find the custom field

@@ -1,5 +1,6 @@
 """Pipeline CRM views — list, kanban board, opportunity management."""
 import json
+from decimal import Decimal, InvalidOperation
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.db.models import Q as models_Q
@@ -288,19 +289,57 @@ def opportunity_update(request, opp_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
 
-    data = json.loads(request.body)
-    opp = get_object_or_404(Opportunity, id=opp_id)
+    org_id = request.session.get('organization_id')
+    if not org_id:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    opp = get_object_or_404(Opportunity, id=opp_id, organization_id=org_id)
 
     for field in ['title', 'description', 'priority', 'status']:
         if field in data:
             setattr(opp, field, data[field])
     if 'value' in data:
-        opp.opportunity_value = data['value']
+        raw_value = str(data.get('value', '')).replace('$', '').replace(',', '').strip()
+        if raw_value == '':
+            raw_value = '0'
+        try:
+            value = Decimal(raw_value)
+        except (InvalidOperation, ValueError):
+            return JsonResponse({'error': 'Opportunity value must be a valid number'}, status=400)
+        if value < 0:
+            return JsonResponse({'error': 'Opportunity value cannot be negative'}, status=400)
+        opp.opportunity_value = value
     if 'due_date' in data:
         opp.due_date = data['due_date'] or None
 
     opp.save()
-    return JsonResponse({'success': True})
+    stage_total = sum(
+        o.opportunity_value for o in opp.stage.opportunities.filter(status='open')
+    )
+    pipeline_total = sum(
+        o.opportunity_value for o in Opportunity.objects.filter(pipeline=opp.pipeline, status='open')
+    )
+    return JsonResponse({
+        'success': True,
+        'opportunity': {
+            'id': opp.id,
+            'title': opp.title,
+            'description': opp.description,
+            'opportunity_value': float(opp.opportunity_value),
+            'priority': opp.priority,
+            'status': opp.status,
+            'due_date': opp.due_date.isoformat() if opp.due_date else '',
+            'stage_id': opp.stage_id,
+            'stage_name': opp.stage.name if opp.stage else '',
+        },
+        'stage_total': float(stage_total),
+        'pipeline_total': float(pipeline_total),
+    })
 
 
 @csrf_exempt
@@ -587,6 +626,18 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
                     if not org:
                         auto_logger.error(f"[Automation] Cannot create opportunity: no organization found for user {user_id}, rule {rule.id}")
                         return
+
+                    opportunity_value = Decimal('0')
+                    if trigger_type == 'custom_field_changed' and field_name and field_value:
+                        amount_fields = {'amount', 'value', 'opportunity_value', 'deal_value', 'lead_value'}
+                        if field_name.strip().lower() in amount_fields:
+                            raw_amount = str(field_value).replace('$', '').replace(',', '').strip()
+                            try:
+                                opportunity_value = Decimal(raw_amount)
+                                if opportunity_value < 0:
+                                    opportunity_value = Decimal('0')
+                            except (InvalidOperation, ValueError):
+                                opportunity_value = Decimal('0')
                     
                     auto_logger.info(f"[Automation] Creating opp: pipeline={rule.pipeline.name}, stage={rule.target_stage.name}, user={user_id}, org={org}")
                     opp = Opportunity.objects.create(
@@ -595,6 +646,7 @@ def run_pipeline_automations(user_id, trigger_type, tag_id=None, field_name=None
                         user=user,
                         organization=org,
                         title=display_name,
+                        opportunity_value=opportunity_value,
                         status='open',
                         created_by='Automation'
                     )
