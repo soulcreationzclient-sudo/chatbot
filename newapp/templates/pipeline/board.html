@@ -27,7 +27,7 @@
 }
 .board-actions {
     display: flex; gap: 8px; align-items: center;
-    flex-shrink: 0;  /* ADD THIS â€” prevents buttons from being squeezed */
+    flex-shrink: 0;  /* ADD THIS — prevents buttons from being squeezed */
 }
 .search-input {
     width: 180px;  /* reduce from 220px to give buttons more room */
@@ -232,7 +232,7 @@
     margin-left: auto; display: flex; gap: 4px;
   }
 
-  /* â”€â”€ Detail Slide-Out Panel â”€â”€ */
+  /* ── Detail Slide-Out Panel ── */
   .detail-overlay {
     display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.35); z-index: 3000;
@@ -358,7 +358,7 @@
   .toggle-switch.active::after { transform: translateX(20px); }
 </style>
 <style>
-  /* â”€â”€ SpeedBots Rose Theme Patch â”€â”€ */
+  /* ── SpeedBots Rose Theme Patch ── */
   :root {
     --accent: #2563eb !important;
     --accent-soft: #eff6ff !important;
@@ -448,7 +448,7 @@
   }
 </style>
 <style>
-/* â”€â”€ Rose Theme Polish â”€â”€ */
+/* ── Rose Theme Polish ── */
 :root {
   --accent: #2563eb;
   --accent-soft: #eff6ff;
@@ -587,7 +587,7 @@ table tr:last-child td { border-bottom: none !important; }
       {% elif rule.trigger_field_name %}
         <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> {{ rule.trigger_field_name }} = {{ rule.trigger_field_value }}</span>
       {% endif %}
-      <span class="arrow">â†’</span>
+      <span class="arrow">→</span>
       <span style="font-weight:600;">{{ rule.target_stage.name }}</span>
       <span class="rule-actions">
         <button class="edit-auto" onclick="editAuto({{ rule.id }}, '{{ rule.trigger_type }}', '{{ rule.trigger_tag_id|default:"" }}', '{{ rule.trigger_field_name|escapejs }}', '{{ rule.trigger_field_value|escapejs }}', '{{ rule.target_stage_id }}')" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -602,7 +602,7 @@ table tr:last-child td { border-bottom: none !important; }
       <div class="auto-rule">
         <span>Opportunity moves to stage</span>
         <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:12px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> {{ stage.name }}</span>
-        <span class="arrow">â†’</span>
+        <span class="arrow">→</span>
         <span style="font-weight:600;">Send Template ({{ stage.auto_send_template.name }})</span>
         <span class="rule-actions">
           <button class="edit-auto" onclick="openStageSettings({{ stage.id }}, '{{ stage.name|escapejs }}', true, '{{ stage.auto_send_template_id }}')" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -684,7 +684,7 @@ table tr:last-child td { border-bottom: none !important; }
       <div style="display:flex;align-items:center;gap:4px;">
         <span class="col-value">${{ stage.total_value|floatformat:0 }}</span>
         <div style="position:relative;">
-          <button class="col-menu-btn" onclick="toggleMenu(event, 'stage-menu-{{ stage.id }}')">â‹®</button>
+          <button class="col-menu-btn" onclick="toggleMenu(event, 'stage-menu-{{ stage.id }}')">⋮</button>
           <div class="dropdown-menu" id="stage-menu-{{ stage.id }}">
             <div class="dropdown-item" onclick="renameStage({{ stage.id }}, '{{ stage.name|escapejs }}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Rename</div>
             <div class="dropdown-item" onclick="openStageSettings({{ stage.id }}, '{{ stage.name|escapejs }}', {{ stage.auto_send_enabled|yesno:'true,false' }}, '{{ stage.auto_send_template_id|default:'' }}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Auto-Send Template</div>
@@ -705,7 +705,7 @@ table tr:last-child td { border-bottom: none !important; }
             {% if opp.user %}{{ opp.user.name|default:opp.user.phone_no }}{% else %}{{ opp.title|default:"Untitled" }}{% endif %}
           </span>
           <div style="position:relative;">
-            <button class="card-menu-btn" onclick="toggleMenu(event, 'card-menu-{{ opp.id }}')">â‹®</button>
+            <button class="card-menu-btn" onclick="toggleMenu(event, 'card-menu-{{ opp.id }}')">⋮</button>
             <div class="dropdown-menu" id="card-menu-{{ opp.id }}">
               <div class="dropdown-item" onclick="editOpp({{ opp.id }})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</div>
               <div class="dropdown-item danger" onclick="deleteOpp({{ opp.id }})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg> Delete</div>
@@ -948,7 +948,7 @@ table tr:last-child td { border-bottom: none !important; }
 
     <!-- Comments -->
     <div class="detail-section" style="border-bottom:none;">
-      <div class="detail-section-title">ðŸ’¬ Comments</div>
+      <div class="detail-section-title">💬 Comments</div>
       <div id="detailComments"></div>
       <div class="comment-input-row">
         <input type="text" class="comment-input" id="commentInput" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')submitComment()">
@@ -1228,12 +1228,12 @@ table tr:last-child td { border-bottom: none !important; }
     // Details grid
     document.getElementById('detailTitle').textContent = opp.title || 'Untitled';
     document.getElementById('detailId').textContent = opp.id;
-    document.getElementById('detailCreatedBy').textContent = opp.created_by || 'â€”';
-    document.getElementById('detailDueDate').textContent = opp.due_date ? new Date(opp.due_date).toLocaleDateString('en-US', {month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'â€”';
+    document.getElementById('detailCreatedBy').textContent = opp.created_by || '—';
+    document.getElementById('detailDueDate').textContent = opp.due_date ? new Date(opp.due_date).toLocaleDateString('en-US', {month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
     document.getElementById('detailStatus').innerHTML = `<span class="status-badge ${opp.status}">${opp.status.charAt(0).toUpperCase()+opp.status.slice(1)}</span>`;
     document.getElementById('detailPriority').innerHTML = `<span class="priority-badge ${opp.priority}">${opp.priority.charAt(0).toUpperCase()+opp.priority.slice(1)}</span>`;
     document.getElementById('detailValue').textContent = '$' + opp.opportunity_value.toFixed(2);
-    document.getElementById('detailStage').textContent = opp.stage_name || 'â€”';
+    document.getElementById('detailStage').textContent = opp.stage_name || '—';
     document.getElementById('detailCreatedAt').textContent = new Date(opp.created_at).toLocaleDateString();
 
     // Description

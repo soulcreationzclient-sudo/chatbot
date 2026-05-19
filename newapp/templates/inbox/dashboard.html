@@ -320,7 +320,7 @@
     }
   }
 
-  /* Mobile panel close button â€” hidden on desktop */
+  /* Mobile panel close button — hidden on desktop */
   .mobile-panel-close {
     display: none;
     align-items: center; gap: 8px;
@@ -368,7 +368,7 @@
   .bot-banner.bot-on  .bot-dot { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
   .bot-banner.bot-off .bot-dot { background: #d1d5db; }
 
-  /* right-panel-body scroll â€” defined above */
+  /* right-panel-body scroll — defined above */
 
   /* â”€â”€ Custom field action buttons (bootstrap overrides) â”€â”€ */
   .custom-field-actions {
@@ -549,7 +549,7 @@
   {% endif %}
 </div>
 
-<!-- Bot Banner â€” add this immediately AFTER the closing </div> of thread-head -->
+<!-- Bot Banner — add this immediately AFTER the closing </div> of thread-head -->
 {% if selected_user %}
 <div class="bot-banner {% if selected_user.bot_enabled %}bot-on{% else %}bot-off{% endif %}"
      id="botBanner"
@@ -625,7 +625,7 @@
 
     <!-- Text input pill -->
     <div style="flex:1;background:#fff;border-radius:24px;display:flex;align-items:center;padding:8px 14px;box-shadow:0 1px 2px rgba(0,0,0,.06);">
-      <input id="userMessage" type="text" placeholder="Type your messageâ€¦" autocomplete="off" required
+      <input id="userMessage" type="text" placeholder="Type your message…" autocomplete="off" required
         style="flex:1;border:none;outline:none;font-size:14px;background:transparent;color:#111827;"/>
     </div>
 
@@ -686,7 +686,7 @@
       </div>
       <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
         <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Email</div>
-        <div style="width:58%;font-size:12px;color:var(--text-main);word-break:break-all;" id="contactEmailDisplay">â€”</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);word-break:break-all;" id="contactEmailDisplay">—</div>
       </div>
       <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
         <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Phone</div>
@@ -694,12 +694,12 @@
           {% if selected_user.phone_no|slice:":7" != "webchat" %}
           +{{ selected_user.phone_no }}
           <svg width="12" height="12" viewBox="0 0 24 24" fill="#22c55e" style="vertical-align:middle;margin-left:4px;"><path d="M9 12l2 2 4-4M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>
-          {% else %}â€”{% endif %}
+          {% else %}—{% endif %}
         </div>
       </div>
       <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
         <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Local time</div>
-        <div style="width:58%;font-size:12px;color:var(--text-main);" id="localTimeDisplay">â€”</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);" id="localTimeDisplay">—</div>
       </div>
       <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
         <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Contact</div>
@@ -707,15 +707,15 @@
       </div>
       <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
         <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Source</div>
-        <div style="width:58%;font-size:12px;color:var(--text-main);">â€”</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);">—</div>
       </div>
       <div style="display:flex;padding:5px 0;border-bottom:1px solid #f1f5f9;">
         <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Language</div>
-        <div style="width:58%;font-size:12px;color:var(--text-main);">â€”</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);">—</div>
       </div>
       <div style="display:flex;padding:5px 0;">
         <div style="width:42%;color:var(--text-muted);font-size:12px;font-weight:600;">Country</div>
-        <div style="width:58%;font-size:12px;color:var(--text-main);">â€”</div>
+        <div style="width:58%;font-size:12px;color:var(--text-main);">—</div>
       </div>
     </div>
 
@@ -765,7 +765,7 @@
     <div class="accordion-section">
       <div class="accordion-header" onclick="toggleAccordion('errorLogsAccordion')">
         <span class="accordion-title">Error Logs</span>
-        <span class="accordion-icon" id="errorLogsAccordionIcon">â€º</span>
+        <span class="accordion-icon" id="errorLogsAccordionIcon">›</span>
       </div>
       <div class="accordion-content" id="errorLogsAccordion">
         <div id="errorLogsContainer">
@@ -781,7 +781,7 @@
     <div class="accordion-section">
       <div class="accordion-header" onclick="toggleAccordion('mediaFilesAccordion')">
         <span class="accordion-title">Media and Files</span>
-        <span class="accordion-icon" id="mediaFilesAccordionIcon">â€º</span>
+        <span class="accordion-icon" id="mediaFilesAccordionIcon">›</span>
       </div>
       <div class="accordion-content" id="mediaFilesAccordion">
         <div class="logs-empty">No files</div>
@@ -792,7 +792,7 @@
     <div class="accordion-section">
       <div class="accordion-header" onclick="toggleAccordion('executedFlowsAccordion')">
         <span class="accordion-title">Executed Flows/Steps</span>
-        <span class="accordion-icon" id="executedFlowsAccordionIcon">â€º</span>
+        <span class="accordion-icon" id="executedFlowsAccordionIcon">›</span>
       </div>
       <div class="accordion-content" id="executedFlowsAccordion">
         <div class="logs-empty">No flows executed</div>
@@ -970,7 +970,7 @@
           </div>
         `).join('');
       } else {
-        grid.innerHTML = '<p class="text-muted">No image assets found. Add them at Settings â†’ Image Assets</p>';
+        grid.innerHTML = '<p class="text-muted">No image assets found. Add them at Settings → Image Assets</p>';
       }
     } catch (e) {
       grid.innerHTML = '<p class="text-danger">Failed to load assets</p>';
@@ -1115,7 +1115,7 @@
         if (blob.size < 1000) return; // Ignore very short clips
 
         const msgInput = document.getElementById('userMessage');
-        msgInput.value = 'ðŸŽ¤ Sending voice note...';
+        msgInput.value = '🎙️ Sending voice note...';
         msgInput.disabled = true;
 
         try {
@@ -1516,7 +1516,7 @@
                onclick="editCustomField('${f.field_name}', '${escapeHtml(f.value || '')}')"
                id="cf-value-${f.field_name}"
                title="Click to edit">
-            ${escapeHtml(f.value || 'â€”')}
+            ${escapeHtml(f.value || '—')}
           </div>
           <div style="width:8%;display:flex;align-items:center;justify-content:center;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" style="cursor:pointer;opacity:0.5;" onclick="deleteCustomField('${f.field_name}')" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5">
@@ -1531,7 +1531,7 @@
       var emailField = fields.find(f => f.field_name.toLowerCase() === 'email');
       var emailDisplay = document.getElementById('contactEmailDisplay');
       if (emailDisplay) {
-        emailDisplay.textContent = (emailField && emailField.value) ? emailField.value : 'â€”';
+        emailDisplay.textContent = (emailField && emailField.value) ? emailField.value : '—';
       }
     } catch (e) {
       body.innerHTML = '<p class="text-danger text-center">Failed to load custom fields</p>';
@@ -2002,7 +2002,7 @@
             <span class="tag-pill" style="background-color: ${tag.color || '#e5e7eb'}; color: ${getContrastColor(tag.color || '#e5e7eb')}"
                   onclick="removeTag('${tag.id}')" title="Click to remove">
                 ${escapeHtml(tag.name)}
-                <span class="tag-remove">Ã—</span>
+                <span class="tag-remove">×</span>
             </span>
         `).join('');
     } catch (e) {

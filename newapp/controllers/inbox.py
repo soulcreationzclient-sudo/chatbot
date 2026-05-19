@@ -13,7 +13,10 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
+from django.views.decorators.clickjacking import xframe_options_sameorigin
+
 class Inboxcontroller:
+    @xframe_options_sameorigin
     def dashboard(request):
         # 1. Initialize variables from Request FIRST
         selected_user_id = request.GET.get('user_id')
