@@ -13,7 +13,7 @@ class AdminAuthMiddleware:
         # Don't block login, logout, static/media, API webhooks, Super Admin routes, T&C, or Guide
         allowlist = (
             "/login", "/logout", "/static/", "/media/",
-            '/get_message', '/send_whatsapp_message', '/send_trigger',
+            '/get_message', '/webhook', '/send_whatsapp_message', '/send_trigger',
             '/appointment_date', '/create-event', '/api/calendly/webhook',
             '/super-admin/', '/favicon.ico', '/book/', '/booking-confirmed/',
             '/terms/', '/guide/',
