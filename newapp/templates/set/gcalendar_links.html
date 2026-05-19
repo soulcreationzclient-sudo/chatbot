@@ -1,4 +1,4 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
 {% load static %}
 {% block title %}Google Calendar Booking Links{% endblock %}
 
@@ -55,7 +55,7 @@ body.modal-open { overflow: auto !important; padding-right: 0 !important; }
 }
 .modal-body .form-control,
 .modal-body .form-select,
-.modal-body input,
+.modal-body input:not([type=checkbox]):not([type=radio]),
 .modal-body textarea,
 .modal-body select {
   background: #f8fafc !important;
@@ -71,7 +71,7 @@ body.modal-open { overflow: auto !important; padding-right: 0 !important; }
 }
 .modal-body .form-control:focus,
 .modal-body .form-select:focus,
-.modal-body input:focus,
+.modal-body input:not([type=checkbox]):not([type=radio]):focus,
 .modal-body textarea:focus,
 .modal-body select:focus {
   background: #ffffff !important;
@@ -227,9 +227,9 @@ body, *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not([class*="
   box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important;
 }
 /* Modal inputs — always clean white */
-.modal-body input, .modal-body textarea, .modal-body select,
-.modal-content input, .modal-content textarea, .modal-content select,
-.modal-box input, .modal-box textarea, .modal-box select {
+.modal-body input:not([type=checkbox]):not([type=radio]), .modal-body textarea, .modal-body select,
+.modal-content input:not([type=checkbox]):not([type=radio]), .modal-content textarea, .modal-content select,
+.modal-box input:not([type=checkbox]):not([type=radio]), .modal-box textarea, .modal-box select {
   background: #ffffff !important; border: 1px solid #e5e7eb !important;
   border-radius: 10px !important; padding: 9px 13px !important;
   font-size: 14px !important; color: #111827 !important;
@@ -237,8 +237,8 @@ body, *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not([class*="
   outline: none !important; transition: all 0.15s !important;
   width: 100%;
 }
-.modal-body input:focus, .modal-body textarea:focus, .modal-body select:focus,
-.modal-content input:focus, .modal-content textarea:focus, .modal-content select:focus {
+.modal-body input:not([type=checkbox]):not([type=radio]):focus, .modal-body textarea:focus, .modal-body select:focus,
+.modal-content input:not([type=checkbox]):not([type=radio]):focus, .modal-content textarea:focus, .modal-content select:focus {
   background: #fff !important; border-color: #2563eb !important;
   box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important;
 }

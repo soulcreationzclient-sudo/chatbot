@@ -1,4 +1,4 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
 {% load static %}
 {% block title %}Custom Field Management{% endblock %}
 
@@ -359,7 +359,7 @@ table tr:last-child td { border-bottom: none !important; }
     <div id="fieldsList">
         {% for field in custom_fields %}
         <div class="field-card" data-id="{{ field.id }}">
-            <div>
+            <div style="flex: 1; min-width: 0; padding-right: 16px;">
                 <div class="d-flex align-items-center gap-2">
                     <span class="field-name">{{ field.name }}</span>
                     <span class="field-type-badge type-{{ field.field_type }}">{{ field.get_field_type_display }}</span>
@@ -374,7 +374,7 @@ table tr:last-child td { border-bottom: none !important; }
                     <span class="text-muted small">Use: <code class="bg-light border rounded px-1">{% templatetag openvariable %}custom_field:{{ field.name }}:value{% templatetag closevariable %}</code></span>
                 </div>
             </div>
-            <div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
                 <button class="btn-edit" onclick="editField({{ field.id }}, '{{ field.name|escapejs }}', '{{ field.field_type|escapejs }}', '{{ field.description|escapejs }}', {{ field.is_required|yesno:'true,false' }})">Edit</button>
                 <button class="btn-delete" onclick="deleteField({{ field.id }})">Delete</button>
             </div>

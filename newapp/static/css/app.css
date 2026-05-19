@@ -630,7 +630,7 @@ select.form-control, select.form-select {
 /* ============================================================
    MODAL INPUT FIX
    ============================================================ */
-.modal-body input,
+.modal-body input:not([type=checkbox]):not([type=radio]),
 .modal-body textarea,
 .modal-body select,
 .modal-content input[type=text],
@@ -649,10 +649,10 @@ select.form-control, select.form-select {
   outline: none !important;
   width: 100%;
 }
-.modal-body input:focus,
+.modal-body input:not([type=checkbox]):not([type=radio]):focus,
 .modal-body textarea:focus,
 .modal-body select:focus,
-.modal-content input:focus,
+.modal-content input:not([type=checkbox]):not([type=radio]):focus,
 .modal-content textarea:focus,
 .modal-content select:focus {
   background: #fff !important;
