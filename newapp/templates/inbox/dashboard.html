@@ -44,6 +44,36 @@
     border-radius: 0;
     box-shadow: none;
     margin: 0;
+    position: relative !important;
+  }
+  body.embed-mode .mobile-info-btn {
+    display: inline-flex !important;
+  }
+  body.embed-mode .right-panel {
+    display: flex !important;
+    width: 280px !important;
+  }
+  @media (max-width: 992px) {
+    body.embed-mode .right-panel {
+      display: none !important;
+    }
+    body.embed-mode .right-panel.embed-open {
+      display: flex !important;
+      position: absolute !important;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 280px !important;
+      z-index: 100;
+      box-shadow: -4px 0 12px rgba(0,0,0,0.1);
+      border-left: 1px solid var(--border);
+      background: var(--bg-panel);
+    }
+  }
+  @media (min-width: 993px) {
+    body.embed-mode .right-panel.embed-hidden {
+      display: none !important;
+    }
   }
 
   .inbox-container {
@@ -885,7 +915,14 @@
 
   function toggleMobilePanel() {
     var panel = document.getElementById('rightPanel');
-    if (panel) panel.classList.toggle('mobile-open');
+    if (panel) {
+      if (document.body.classList.contains('embed-mode')) {
+        panel.classList.toggle('embed-hidden');
+        panel.classList.toggle('embed-open');
+      } else {
+        panel.classList.toggle('mobile-open');
+      }
+    }
   }
 
   // Robust Scroll & Auto-Refresh Logic (Final)
