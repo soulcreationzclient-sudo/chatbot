@@ -26,6 +26,8 @@ from newapp.controllers import team_views
 from newapp.controllers import broadcast as broadcast_views
 from newapp.controllers import pipeline as pipeline_views
 from newapp.controllers import guide_views
+from newapp.controllers.instagram import InstagramController
+from newapp.controllers.facebook import FacebookController
 
 # Controller instances
 integration_controller = Integrationcontroller()
@@ -78,26 +80,26 @@ urlpatterns = [
     path('super-admin/users/create/', superadmin_views.super_admin_user_create, name='super_admin_user_create'),
     path('super-admin/users/<int:pk>/toggle/', superadmin_views.super_admin_user_toggle_status, name='super_admin_user_toggle_status'),
     path('super-admin/users/<int:pk>/update/', superadmin_views.super_admin_user_update, name='super_admin_user_update'),
-    
+
     # ==================== CLIENT PORTAL AUTH ====================
     path('login/', auth_views.client_login, name='login'),
     path('client-logout/', auth_views.client_logout, name='client_logout'),
-    
+
     # ==================== TERMS & CONDITIONS + SETUP GUIDE ====================
     path('terms/', guide_views.terms_and_conditions, name='terms_and_conditions'),
     path('guide/', guide_views.setup_guide, name='setup_guide'),
-    
+
     # ==================== CLIENT SETTINGS ====================
     path('client/settings/', client_views.client_settings, name='client_settings'),
     path('client/settings/update/', client_views.client_settings_update, name='client_settings_update'),
-    
+
     # ==================== TEAM MANAGEMENT (Feature 4) ====================
     path('settings/team/', team_views.team_list, name='team_list'),
     path('settings/team/add/', team_views.team_add, name='team_add'),
     path('settings/team/<int:member_id>/update/', team_views.team_update, name='team_update'),
     path('settings/team/<int:member_id>/toggle/', team_views.team_toggle, name='team_toggle'),
     path('settings/team/<int:member_id>/delete/', team_views.team_delete, name='team_delete'),
-    
+
     # ==================== PIPELINE CRM ====================
     path('pipeline/', pipeline_views.pipeline_list, name='pipeline_list'),
     path('pipeline/create/', pipeline_views.pipeline_create, name='pipeline_create'),
@@ -114,24 +116,24 @@ urlpatterns = [
     path('pipeline/automation/create/', pipeline_views.automation_create, name='automation_create'),
     path('pipeline/automation/<int:auto_id>/delete/', pipeline_views.automation_delete, name='automation_delete'),
     path('pipeline/automation/<int:auto_id>/update/', pipeline_views.automation_update, name='automation_update'),
-    
+
     # ==================== GOOGLE CALENDAR BOOKING (Feature 6) ====================
     path('gcalendar/book/<str:token>/', gcalendar_views.gcalendar_booking_page, name='gcalendar_booking_page'),
     path('gcalendar/book/<str:token>/confirm/', gcalendar_views.gcalendar_confirm_booking, name='gcalendar_confirm_booking'),
-    
+
     # Google Calendar Admin/Settings
     path('settings/gcalendar/', Settingcontroller.gcalendar_links, name='gcalendar_links_view'),
     path('settings/gcalendar/save/', Settingcontroller.gcalendar_link_save, name='gcalendar_link_save'),
     path('settings/gcalendar/<int:link_id>/delete/', Settingcontroller.gcalendar_link_delete, name='gcalendar_link_delete'),
-    
+
     # ==================== LEGACY ROUTES (backward compatibility) ====================
     # logout
     path('',Logincontroller.enter,name=''),
     path('logout/',Logincontroller.logout,name='logout'),
-    
+
     path('login_view/',Logincontroller.login_view, name='login_view'),
     path('login_post/',Logincontroller.login_post,name='login_post'),
-    
+
     path('dashboard/', views.dashboard_view, name='dashboard'),
     # inbox
     path('inbox/dashboard', Inboxcontroller.dashboard, name='inbox_dashboard'),
@@ -140,7 +142,9 @@ urlpatterns = [
     path('api/inbox/toggle_bot/<int:user_id>/', Inboxcontroller.toggle_bot, name='inbox_toggle_bot'),
     path('api/inbox/upload_media/', Inboxcontroller.upload_media, name='inbox_upload_media'),
     path('api/inbox/list_assets/', Inboxcontroller.list_assets, name='inbox_list_assets'),
-    
+    path('api/inbox/user_pipelines/', Inboxcontroller.get_user_pipelines, name='inbox_user_pipelines'),
+    path('api/inbox/user_media/', Inboxcontroller.get_user_media, name='inbox_user_media'),
+
     # contact
     path('contact/dashboard',Contactcontroller.dashboard,name='contact_dashboard'),
     path('contact/add',Contactcontroller.add_user,name='add_user'),
@@ -153,7 +157,7 @@ urlpatterns = [
     path('api/user/tag/add/', Contactcontroller.add_user_tag, name='add_user_tag'),
     path('api/user/tag/remove/', Contactcontroller.remove_user_tag, name='remove_user_tag'),
     path('api/contact/search/', Contactcontroller.contact_search_api, name='contact_search_api'),
-    
+
     # setting
     path('settings/',Settingcontroller.dashboard , name='settings'),
    # channels
@@ -190,6 +194,11 @@ urlpatterns = [
     path('api/custom-field/<int:field_id>/update/', Settingcontroller.custom_field_update, name='custom_field_update'),
     path('api/custom-field/<int:field_id>/delete/', Settingcontroller.custom_field_delete, name='custom_field_delete'),
     path('api/custom-field/list/', Settingcontroller.custom_field_list, name='custom_field_list'),
+    # Interactive Buttons
+    path('setting/buttons', Settingcontroller.button_groups, name='button_groups_view'),
+    path('api/button-group/create/', Settingcontroller.button_group_create, name='button_group_create'),
+    path('api/button-group/<int:group_id>/update/', Settingcontroller.button_group_update, name='button_group_update'),
+    path('api/button-group/<int:group_id>/delete/', Settingcontroller.button_group_delete, name='button_group_delete'),
     path('whatsapp_connect',whatsappcontroller.connect,name='whatsapp_connect'),
     #path('admin/connect_google_calendar/', Integrationcontroller.connect_google_calendar, name='connect_google_calendar'),
     #path('admin/disconnect_google_calendar/', Integrationcontroller.disconnect_google_calendar, name='disconnect_google_calendar'),
@@ -200,42 +209,54 @@ urlpatterns = [
     path('api/prompt/<int:prompt_id>/update/', Settingcontroller.prompt_update, name='prompt_update'),
     path('api/prompt/<int:prompt_id>/delete/', Settingcontroller.prompt_delete, name='prompt_delete'),
 
-    
-    
+
+
     # whatsapp
     path('webhook/', whatsappcontroller.get_message, name='webhook'),
     path('webhook', whatsappcontroller.get_message, name='webhook_no_slash'),
     path('get_message/', whatsappcontroller.get_message, name='get_message'),
     path('get_message', whatsappcontroller.get_message, name='get_message_no_slash'),  # For Meta webhook
     path('send_whatsapp_message/', whatsappcontroller.send_whatsapp_message,name='send_whatsapp_message'),
-    path('disconnect/',whatsappcontroller.disconnect,name='disconnect'), 
+    path('disconnect/',whatsappcontroller.disconnect,name='disconnect'),
     path('send_trigger/',whatsappcontroller.send_trigger,name='send_trigger'),
     path('appointment_date/',whatsappcontroller.appointment_date,name='appointment_date'),
 
+    # ==================== INSTAGRAM & FACEBOOK WEBHOOKS ====================
+    path('webhook/instagram/', InstagramController.webhook, name='instagram_webhook'),
+    path('webhook/instagram', InstagramController.webhook, name='instagram_webhook_no_slash'),
+    path('webhook/facebook/', FacebookController.webhook, name='facebook_webhook'),
+    path('webhook/facebook', FacebookController.webhook, name='facebook_webhook_no_slash'),
+
+    # ==================== CHANNEL CONNECTION (Instagram/Facebook) ====================
+    path('api/channel/instagram/connect/', Settingcontroller.channel_instagram_connect, name='instagram_connect'),
+    path('api/channel/instagram/disconnect/', Settingcontroller.channel_instagram_disconnect, name='instagram_disconnect'),
+    path('api/channel/facebook/connect/', Settingcontroller.channel_facebook_connect, name='facebook_connect'),
+    path('api/channel/facebook/disconnect/', Settingcontroller.channel_facebook_disconnect, name='facebook_disconnect'),
+
     # Google Calendar event creation API endpoint
     path('create-event/', views.create_event_api, name='create_event_api'),
-    
-    
-    
+
+
+
     # pinecone
     path('disconnect_pinecone/',Integrationcontroller.disconnect,name='disconnect'),
     path('connect_pinecone_token/',Integrationcontroller.connect,name='pinecone_connect'),
-    
-    
+
+
     path('flows/', views.flows_view, name='flows'),
     path('admin/', admin.site.urls),
-    
+
     path('connect_whatsapp/', views.connect_whatsapp, name='connect_whatsapp'),
     path('voice_bot/', views.voice_bot, name='voice_bot'),
     path('send_voice_bot/', views.send_voice_bot, name='send_voice_bot'),
-    
+
     path('show_people/',views.show_people,name='show_people'),
     path('chatbox/', views.show_chatbox, name='chatbox'),
     path('broadcast_msg/',views.broadcast_msg,name='broadcast_msg'),
     path('send_broadcast/', views.send_broadcast, name='send_broadcast'),
     path('import_contacts/', views.import_contacts, name='import_contacts'),
     path('api/whatsapp_templates/', whatsapp_templates, name='whatsapp_templates'),
-    
+
 
 
     #chatgpt
@@ -251,11 +272,11 @@ urlpatterns = [
     path('api/ai_agent/delete/<int:agent_id>/', Integrationcontroller.delete_agent, name='ai_agent_delete'),
     path('ai_agent/delete/<int:pk>/', delete_pdf, name='delete_pdf'),
     path('whatsapp/chatgpt_webhook/', views.get_message_chatgpt, name='chatgpt_webhook'),
- 
 
 
-    # path('new/',views.new,name='new')  # ✅ This line is correct
-    
+
+    # path('new/',views.new,name='new')  # âœ… This line is correct
+
     # ==================== CALENDLY API ENDPOINTS ====================
     path('api/calendly/user/', calendly_views.calendly_user_info, name='calendly_user_info'),
     path('api/calendly/event-types/', calendly_views.calendly_event_types, name='calendly_event_types'),
@@ -267,22 +288,22 @@ urlpatterns = [
     path('api/calendly/chatbot/', calendly_views.calendly_chatbot_handler, name='calendly_chatbot_handler'),
     path('api/calendly/webhook/', calendly_views.calendly_webhook, name='calendly_webhook'),
     path('api/calendly/webhook', calendly_views.calendly_webhook, name='calendly_webhook_no_slash'),
-    
+
     # ==================== CALENDLY INTEGRATION UI ====================
     path('connect_calendly/', calendly_integration_views.connect_calendly, name='connect_calendly'),
     path('disconnect_calendly/', calendly_integration_views.disconnect_calendly, name='disconnect_calendly'),
     path('update_followup_settings/', calendly_integration_views.update_followup_settings, name='update_followup_settings'),
-    
+
     # Calendly Booking Links (Tag-based)
     path('setting/calendly_links', Settingcontroller.calendly_links, name='calendly_links_view'),
     path('api/calendly-link/create/', Settingcontroller.calendly_link_create, name='calendly_link_create'),
     path('api/calendly-link/<int:link_id>/update/', Settingcontroller.calendly_link_update, name='calendly_link_update'),
     path('api/calendly-link/<int:link_id>/delete/', Settingcontroller.calendly_link_delete, name='calendly_link_delete'),
-    
+
     # Calendly Redirect Booking Flow (no paid plan required)
     path('book/<str:token>/', calendly_redirect_views.book_redirect, name='calendly_book_redirect'),
     path('booking-confirmed/<str:token>/', calendly_redirect_views.booking_confirmed, name='calendly_booking_confirmed'),
-    
+
     # ==================== BROADCAST SYSTEM ====================
     path('api/broadcast/templates/sync/', broadcast_views.BroadcastController.sync_templates, name='broadcast_sync_templates'),
     path('api/broadcast/templates/', broadcast_views.BroadcastController.list_templates, name='broadcast_list_templates'),
@@ -290,7 +311,7 @@ urlpatterns = [
     path('api/broadcast/<int:job_id>/status/', broadcast_views.BroadcastController.get_broadcast_status, name='broadcast_status'),
     path('api/broadcast/', broadcast_views.BroadcastController.list_broadcasts, name='broadcast_list'),
     path('broadcast/', broadcast_views.BroadcastController.broadcast_dashboard, name='broadcast_dashboard'),
-    
+
     # ==================== INBOX RESTORE (Soft-delete support) ====================
     path('api/inbox/restore_user/<int:user_id>/', Inboxcontroller.restore_user, name='inbox_restore_user'),
     # Inbox Custom Fields API
@@ -305,7 +326,7 @@ urlpatterns = [
     path('api/inbox/user_tag/add/', Inboxcontroller.add_user_tag, name='inbox_add_user_tag'),
     path('api/inbox/user_tag/remove/', Inboxcontroller.remove_user_tag, name='inbox_remove_user_tag'),
     path('api/inbox/export/<int:user_id>/csv/', Inboxcontroller.export_chat_csv, name='inbox_export_csv'),
-    
+
     # ==================== WEBCHAT API ====================
     path('api/webchat/start/', api_webchat_start, name='webchat_start'),
     path('api/webchat/message/', api_webchat_message, name='webchat_message'),
@@ -313,7 +334,7 @@ urlpatterns = [
     path('api/webchat/end/', api_webchat_end, name='webchat_end'),
     path('api/webchat/feedback/', api_webchat_feedback, name='webchat_feedback'),
     path('api/webchat/language/', api_webchat_language, name='webchat_language'),
-    
+
     # ==================== WEBCHAT ADMIN ====================
     path('webchat/dashboard/', webchat_dashboard, name='webchat_dashboard'),
     path('webchat/session/<str:session_id>/', webchat_session_detail, name='webchat_session_detail'),
@@ -327,15 +348,15 @@ urlpatterns = [
     path('api/webchat/widget/<int:widget_id>/embed/', get_widget_embed_code, name='webchat_embed_code'),
     path('api/webchat/sessions/', list_sessions_api, name='webchat_list_sessions'),
     path('api/webchat/sessions/<str:session_id>/messages/', get_session_messages_api, name='webchat_session_messages'),
-    
+
     # ==================== WEBCHAT STANDALONE (Shareable Links) ====================
     path('webchat/w/<int:widget_id>/', webchat_standalone_page, name='webchat_standalone'),
-    
+
     # ==================== TEST CHAT (Prompt Testing) ====================
     path('test/chat/', test_chat, name='test_chat'),
     path('api/test/chat/send/', test_chat_send, name='test_chat_send'),
     path('api/test/chat/quick/', test_chat_quick, name='test_chat_quick'),
-    
+
     # ==================== PIPELINE CRM ====================
     path('pipeline/', pipeline_views.pipeline_list, name='pipeline_list'),
     path('pipeline/<int:pipeline_id>/board/', pipeline_views.pipeline_board, name='pipeline_board'),
@@ -354,7 +375,7 @@ urlpatterns = [
     path('api/pipeline/automation/create/', pipeline_views.automation_create, name='pipeline_auto_create'),
     path('api/pipeline/automation/delete/<int:auto_id>/', pipeline_views.automation_delete, name='pipeline_auto_delete'),
     path('api/pipeline/automation/update/<int:auto_id>/', pipeline_views.automation_update, name='pipeline_auto_update'),
-    
+
 ]
 
 if settings.DEBUG:  # Add this block at the bottom of the file

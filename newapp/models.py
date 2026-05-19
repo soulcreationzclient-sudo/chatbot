@@ -26,10 +26,13 @@ class Organization(models.Model):
         ('gpt-5', 'GPT-5 (Advanced)'),
         ('gpt-5-mini', 'GPT-5 Mini (Fast & Smart)'),
         ('gpt-5-nano', 'GPT-5 Nano (Fastest & Cheapest)'),
+        ('o3', 'o3 (Advanced Reasoning)'),
         ('o3-mini', 'o3-mini (Reasoning)'),
+        ('o4-mini', 'o4-mini (Latest Reasoning)'),
         ('gpt-4.1', 'GPT-4.1 (Reliable)'),
         ('gpt-4.1-mini', 'GPT-4.1 Mini (Affordable)'),
         ('gpt-4.1-nano', 'GPT-4.1 Nano (Ultra Fast)'),
+        ('gpt-4o', 'GPT-4o (Multimodal)'),
         ('gpt-4o-mini', 'GPT-4o Mini (Legacy)'),
         ('gpt-4-turbo', 'GPT-4 Turbo (Legacy)'),
     )
@@ -54,6 +57,15 @@ class Organization(models.Model):
     
     # Google Calendar
     google_calendar = models.TextField(blank=True, default='')
+
+    # Instagram DM Configuration
+    instagram_page_id = models.TextField(blank=True, default='', help_text='Instagram-connected Facebook Page ID')
+    instagram_token = models.TextField(blank=True, default='', help_text='Page Access Token for Instagram')
+    instagram_account_id = models.TextField(blank=True, default='', help_text='Instagram Business Account ID')
+
+    # Facebook Messenger Configuration
+    facebook_page_id = models.TextField(blank=True, default='', help_text='Facebook Page ID')
+    facebook_token = models.TextField(blank=True, default='', help_text='Page Access Token for Messenger')
 
     # Organization Logo (shown in topbar)
     logo = models.ImageField(upload_to='org_logos/', blank=True, null=True, help_text="Custom logo for the topbar")
@@ -313,12 +325,19 @@ class Message(models.Model):
         ('user','User'),
         ('bot','Bot')
     ]
+    CHANNEL_CHOICES = [
+        ('whatsapp', 'WhatsApp'),
+        ('instagram', 'Instagram'),
+        ('facebook', 'Facebook'),
+        ('webchat', 'WebChat'),
+    ]
     id = models.AutoField(primary_key=True)
     user_id = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_column='user_id')
     # user_id = models.ForeignKey('newapp.User', on_delete=models.DO_NOTHING, db_column='user_id')
     messages = models.TextField()
     created_at = models.DateTimeField()
     who=models.CharField(max_length=10, choices=WHO_CHOICES)
+    channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES, default='whatsapp')
 
     class Meta:
         managed = True
@@ -377,6 +396,13 @@ class ChatGPTPrompt(models.Model):
     admin = models.ForeignKey('Admin', on_delete=models.CASCADE, null=True, blank=True)
     gpt_model = models.CharField(max_length=50, blank=True, default='', help_text="Override GPT model for this prompt (empty = use org default)")
     is_default = models.BooleanField(default=False, help_text="If true, this prompt is used for incoming messages")
+    # Channel assignment: which channels this prompt serves
+    # JSON list like ["whatsapp", "instagram", "facebook", "webchat"]
+    # Empty list or null = serves ALL channels (backward compatible)
+    channels = models.JSONField(
+        default=list, blank=True,
+        help_text='Channels this prompt is active on. Empty = all channels. Options: whatsapp, instagram, facebook, webchat'
+    )
 
     class Meta:
         db_table = 'chatgpt_prompts'
@@ -1255,3 +1281,49 @@ class GoogleCalendarBooking(models.Model):
             models.Index(fields=['user', 'status']),
         ]
 
+
+# ==================== INTERACTIVE BUTTON MODELS ====================
+
+class ButtonGroup(models.Model):
+    """A named group of interactive buttons (max 3) that can be sent via WhatsApp.
+    Referenced in AI prompts using {{button:group_name}} tag syntax."""
+    id = models.AutoField(primary_key=True)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True, related_name='button_groups')
+    name = models.CharField(max_length=100, help_text="Tag name used in prompt (e.g., main_menu)")
+    description = models.TextField(blank=True, help_text="Description for the AI explaining when to show these buttons")
+    header_text = models.CharField(max_length=60, blank=True, default='', help_text="Optional header text above buttons")
+    body_text = models.TextField(default='Please choose an option:', help_text="Message body text shown with the buttons")
+    footer_text = models.CharField(max_length=60, blank=True, default='', help_text="Optional footer text below buttons")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        if self.organization:
+            return f"{self.name} ({self.organization.name})"
+        return f"{self.name} ({self.admin.assistant_name if self.admin else 'No Admin'})"
+
+    class Meta:
+        db_table = 'button_groups'
+        unique_together = [('admin', 'name'), ('organization', 'name')]
+
+
+class ButtonItem(models.Model):
+    """Individual button within a ButtonGroup (max 3 per group for WhatsApp)."""
+    BUTTON_TYPE_CHOICES = [
+        ('reply', 'Quick Reply'),   # Reply button - sends payload back to webhook
+        ('url', 'URL Link'),        # CTA URL button - opens a link in browser
+    ]
+    id = models.AutoField(primary_key=True)
+    group = models.ForeignKey(ButtonGroup, on_delete=models.CASCADE, related_name='buttons')
+    title = models.CharField(max_length=20, help_text="Button display text (max 20 chars for WhatsApp)")
+    button_type = models.CharField(max_length=10, choices=BUTTON_TYPE_CHOICES, default='reply')
+    payload = models.TextField(help_text="For reply: description fed to AI when tapped. For URL: the target URL.")
+    order = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.title} ({self.group.name})"
+
+    class Meta:
+        db_table = 'button_items'
+        ordering = ['order']

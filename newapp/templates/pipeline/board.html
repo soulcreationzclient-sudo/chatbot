@@ -27,7 +27,7 @@
 }
 .board-actions {
     display: flex; gap: 8px; align-items: center;
-    flex-shrink: 0;  /* ADD THIS — prevents buttons from being squeezed */
+    flex-shrink: 0;  /* ADD THIS â€” prevents buttons from being squeezed */
 }
 .search-input {
     width: 180px;  /* reduce from 220px to give buttons more room */
@@ -232,7 +232,7 @@
     margin-left: auto; display: flex; gap: 4px;
   }
 
-  /* ── Detail Slide-Out Panel ── */
+  /* â”€â”€ Detail Slide-Out Panel â”€â”€ */
   .detail-overlay {
     display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.35); z-index: 3000;
@@ -240,12 +240,16 @@
   }
   .detail-overlay.active { display: block; }
   .detail-panel {
-    position: fixed; top: 0; right: -520px; width: 480px; max-width: 90vw;
+    position: fixed; top: 0; right: -600px; width: 480px; max-width: 90vw;
     height: 100vh; background: #fff; box-shadow: -8px 0 30px rgba(0,0,0,0.12);
-    z-index: 3001; transition: right 0.3s cubic-bezier(.4,0,.2,1);
-    display: flex; flex-direction: column; overflow: hidden;
+    z-index: 3001; transition: all 0.3s cubic-bezier(.4,0,.2,1);
+    display: flex; overflow: hidden;
   }
   .detail-panel.open { right: 0; }
+  .detail-panel.expanded { width: calc(100vw - 60px); max-width: 1400px; right: 0; }
+  .detail-panel-left { display: flex; flex-direction: column; width: 480px; max-width: 100vw; flex-shrink: 0; height: 100vh; }
+  .detail-panel-right { flex: 1; border-left: 1px solid #e5e7eb; display: none; height: 100vh; background: #f8fafc; }
+  .detail-panel.expanded .detail-panel-right { display: block; }
   .detail-panel-header {
     padding: 20px 24px 16px; border-bottom: 1px solid #e5e7eb;
     display: flex; align-items: center; gap: 12px;
@@ -354,7 +358,7 @@
   .toggle-switch.active::after { transform: translateX(20px); }
 </style>
 <style>
-  /* ── SpeedBots Rose Theme Patch ── */
+  /* â”€â”€ SpeedBots Rose Theme Patch â”€â”€ */
   :root {
     --accent: #2563eb !important;
     --accent-soft: #eff6ff !important;
@@ -444,7 +448,7 @@
   }
 </style>
 <style>
-/* ── Rose Theme Polish ── */
+/* â”€â”€ Rose Theme Polish â”€â”€ */
 :root {
   --accent: #2563eb;
   --accent-soft: #eff6ff;
@@ -559,7 +563,7 @@ table tr:last-child td { border-bottom: none !important; }
 {% block content %}
 <div class="board-header">
   <div>
-    <a href="{% url 'pipeline_list' %}">← Pipelines</a>
+    <a href="{% url 'pipeline_list' %}">â† Pipelines</a>
     <h1>{{ pipeline.name }}</h1>
   </div>
   <div class="board-actions">
@@ -583,7 +587,7 @@ table tr:last-child td { border-bottom: none !important; }
       {% elif rule.trigger_field_name %}
         <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> {{ rule.trigger_field_name }} = {{ rule.trigger_field_value }}</span>
       {% endif %}
-      <span class="arrow">→</span>
+      <span class="arrow">â†’</span>
       <span style="font-weight:600;">{{ rule.target_stage.name }}</span>
       <span class="rule-actions">
         <button class="edit-auto" onclick="editAuto({{ rule.id }}, '{{ rule.trigger_type }}', '{{ rule.trigger_tag_id|default:"" }}', '{{ rule.trigger_field_name|escapejs }}', '{{ rule.trigger_field_value|escapejs }}', '{{ rule.target_stage_id }}')" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -598,7 +602,7 @@ table tr:last-child td { border-bottom: none !important; }
       <div class="auto-rule">
         <span>Opportunity moves to stage</span>
         <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:12px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> {{ stage.name }}</span>
-        <span class="arrow">→</span>
+        <span class="arrow">â†’</span>
         <span style="font-weight:600;">Send Template ({{ stage.auto_send_template.name }})</span>
         <span class="rule-actions">
           <button class="edit-auto" onclick="openStageSettings({{ stage.id }}, '{{ stage.name|escapejs }}', true, '{{ stage.auto_send_template_id }}')" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -680,7 +684,7 @@ table tr:last-child td { border-bottom: none !important; }
       <div style="display:flex;align-items:center;gap:4px;">
         <span class="col-value">${{ stage.total_value|floatformat:0 }}</span>
         <div style="position:relative;">
-          <button class="col-menu-btn" onclick="toggleMenu(event, 'stage-menu-{{ stage.id }}')">⋮</button>
+          <button class="col-menu-btn" onclick="toggleMenu(event, 'stage-menu-{{ stage.id }}')">â‹®</button>
           <div class="dropdown-menu" id="stage-menu-{{ stage.id }}">
             <div class="dropdown-item" onclick="renameStage({{ stage.id }}, '{{ stage.name|escapejs }}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Rename</div>
             <div class="dropdown-item" onclick="openStageSettings({{ stage.id }}, '{{ stage.name|escapejs }}', {{ stage.auto_send_enabled|yesno:'true,false' }}, '{{ stage.auto_send_template_id|default:'' }}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Auto-Send Template</div>
@@ -701,7 +705,7 @@ table tr:last-child td { border-bottom: none !important; }
             {% if opp.user %}{{ opp.user.name|default:opp.user.phone_no }}{% else %}{{ opp.title|default:"Untitled" }}{% endif %}
           </span>
           <div style="position:relative;">
-            <button class="card-menu-btn" onclick="toggleMenu(event, 'card-menu-{{ opp.id }}')">⋮</button>
+            <button class="card-menu-btn" onclick="toggleMenu(event, 'card-menu-{{ opp.id }}')">â‹®</button>
             <div class="dropdown-menu" id="card-menu-{{ opp.id }}">
               <div class="dropdown-item" onclick="editOpp({{ opp.id }})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</div>
               <div class="dropdown-item danger" onclick="deleteOpp({{ opp.id }})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg> Delete</div>
@@ -716,7 +720,7 @@ table tr:last-child td { border-bottom: none !important; }
           <span class="opp-id">#{{ opp.id }}</span>
         </div>
         <div class="opp-indicators">
-          <span>⏱ {{ opp.created_at|timesince }}</span>
+          <span>â± {{ opp.created_at|timesince }}</span>
         </div>
       </div>
       {% empty %}
@@ -899,23 +903,24 @@ table tr:last-child td { border-bottom: none !important; }
 <!-- Opportunity Detail Slide-Out Panel -->
 <div class="detail-overlay" id="detailOverlay" onclick="closeOppDetail()"></div>
 <div class="detail-panel" id="detailPanel">
-  <div class="detail-panel-header">
-    <button class="back-btn" onclick="closeOppDetail()">← </button>
-    <span id="detailHeaderTitle" style="font-weight:700;font-size:15px;"></span>
-  </div>
-  <div class="detail-panel-body">
-    <!-- Profile -->
-    <div class="detail-profile">
-      <div class="detail-avatar" id="detailAvatar"></div>
-      <div class="detail-profile-info">
-        <div class="detail-profile-name" id="detailName"></div>
-        <div class="detail-profile-meta">
-          <span id="detailPhone"></span>
-          <span id="detailEmail"></span>
-        </div>
-      </div>
-      <a class="detail-inbox-btn" id="detailInboxLink" href="#" style="display:none;">Inbox</a>
+  <div class="detail-panel-left">
+    <div class="detail-panel-header">
+      <button class="back-btn" onclick="closeOppDetail()">â† </button>
+      <span id="detailHeaderTitle" style="font-weight:700;font-size:15px;"></span>
     </div>
+    <div class="detail-panel-body">
+      <!-- Profile -->
+      <div class="detail-profile">
+        <div class="detail-avatar" id="detailAvatar"></div>
+        <div class="detail-profile-info">
+          <div class="detail-profile-name" id="detailName"></div>
+          <div class="detail-profile-meta">
+            <span id="detailPhone"></span>
+            <span id="detailEmail"></span>
+          </div>
+        </div>
+        <button class="detail-inbox-btn" id="detailInboxBtn" onclick="toggleInboxPanel()" style="display:none;">Inbox</button>
+      </div>
 
     <!-- Opportunity Details -->
     <div class="detail-section">
@@ -937,19 +942,23 @@ table tr:last-child td { border-bottom: none !important; }
 
     <!-- Description -->
     <div class="detail-section">
-      <div class="detail-section-title">📝 Description</div>
+      <div class="detail-section-title">ðŸ“ Description</div>
       <textarea class="detail-textarea" id="detailDescription" placeholder="Add a description..." onblur="saveDescription()"></textarea>
     </div>
 
     <!-- Comments -->
     <div class="detail-section" style="border-bottom:none;">
-      <div class="detail-section-title">💬 Comments</div>
+      <div class="detail-section-title">ðŸ’¬ Comments</div>
       <div id="detailComments"></div>
       <div class="comment-input-row">
         <input type="text" class="comment-input" id="commentInput" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')submitComment()">
         <button class="comment-send-btn" onclick="submitComment()">Send</button>
       </div>
     </div>
+  </div>
+  </div>
+  <div class="detail-panel-right">
+    <iframe id="detailInboxIframe" src="about:blank" style="width:100%;height:100%;border:none;"></iframe>
   </div>
 </div>
 
@@ -1158,10 +1167,32 @@ table tr:last-child td { border-bottom: none !important; }
   }
 
   function closeOppDetail() {
-    document.getElementById('detailPanel').classList.remove('open');
+    const panel = document.getElementById('detailPanel');
+    panel.classList.remove('open');
+    panel.classList.remove('expanded');
+    document.getElementById('detailInboxIframe').src = 'about:blank';
+    document.getElementById('detailInboxBtn').textContent = 'Inbox';
     setTimeout(() => document.getElementById('detailOverlay').classList.remove('active'), 300);
     currentOppId = null;
     currentOppData = null;
+  }
+
+  function toggleInboxPanel() {
+    const panel = document.getElementById('detailPanel');
+    const iframe = document.getElementById('detailInboxIframe');
+    const inboxBtn = document.getElementById('detailInboxBtn');
+
+    if (panel.classList.contains('expanded')) {
+      panel.classList.remove('expanded');
+      inboxBtn.textContent = 'Inbox';
+    } else {
+      panel.classList.add('expanded');
+      inboxBtn.textContent = 'Close Inbox';
+      const userId = inboxBtn.dataset.userId;
+      if (userId && iframe.src.indexOf('user_id=' + userId) === -1) {
+        iframe.src = `/inbox/dashboard?user_id=${userId}&embed=true`;
+      }
+    }
   }
 
   function populateDetail(data) {
@@ -1179,26 +1210,30 @@ table tr:last-child td { border-bottom: none !important; }
       document.getElementById('detailName').textContent = user.name || user.phone_no || 'Unknown';
       document.getElementById('detailPhone').textContent = user.phone_no || '';
       document.getElementById('detailEmail').textContent = user.email || '';
-      const inboxLink = document.getElementById('detailInboxLink');
-      inboxLink.href = `/inbox/dashboard?user_id=${user.id}`;
-      inboxLink.style.display = 'inline-block';
+      const inboxBtn = document.getElementById('detailInboxBtn');
+      inboxBtn.dataset.userId = user.id;
+      inboxBtn.style.display = 'inline-block';
+      if (document.getElementById('detailPanel').classList.contains('expanded')) {
+          document.getElementById('detailInboxIframe').src = `/inbox/dashboard?user_id=${user.id}&embed=true`;
+      }
     } else {
       document.getElementById('detailAvatar').textContent = '?';
       document.getElementById('detailName').textContent = opp.title || 'No Contact';
       document.getElementById('detailPhone').textContent = '';
       document.getElementById('detailEmail').textContent = '';
-      document.getElementById('detailInboxLink').style.display = 'none';
+      document.getElementById('detailInboxBtn').style.display = 'none';
+      document.getElementById('detailInboxBtn').removeAttribute('data-user-id');
     }
 
     // Details grid
     document.getElementById('detailTitle').textContent = opp.title || 'Untitled';
     document.getElementById('detailId').textContent = opp.id;
-    document.getElementById('detailCreatedBy').textContent = opp.created_by || '—';
-    document.getElementById('detailDueDate').textContent = opp.due_date ? new Date(opp.due_date).toLocaleDateString('en-US', {month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    document.getElementById('detailCreatedBy').textContent = opp.created_by || 'â€”';
+    document.getElementById('detailDueDate').textContent = opp.due_date ? new Date(opp.due_date).toLocaleDateString('en-US', {month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'â€”';
     document.getElementById('detailStatus').innerHTML = `<span class="status-badge ${opp.status}">${opp.status.charAt(0).toUpperCase()+opp.status.slice(1)}</span>`;
     document.getElementById('detailPriority').innerHTML = `<span class="priority-badge ${opp.priority}">${opp.priority.charAt(0).toUpperCase()+opp.priority.slice(1)}</span>`;
     document.getElementById('detailValue').textContent = '$' + opp.opportunity_value.toFixed(2);
-    document.getElementById('detailStage').textContent = opp.stage_name || '—';
+    document.getElementById('detailStage').textContent = opp.stage_name || 'â€”';
     document.getElementById('detailCreatedAt').textContent = new Date(opp.created_at).toLocaleDateString();
 
     // Description
@@ -1324,7 +1359,7 @@ table tr:last-child td { border-bottom: none !important; }
     document.getElementById('autoFieldGroup').style.display = v === 'custom_field_changed' ? 'block' : 'none';
     document.getElementById('autoFieldValueGroup').style.display = v === 'custom_field_changed' ? 'block' : 'none';
     document.getElementById('autoStageTriggerGroup').style.display = v === 'stage_moved' ? 'block' : 'none';
-    
+
     // Change target selector
     if (v === 'stage_moved') {
         document.getElementById('autoTargetLabel').textContent = 'Action';
@@ -1339,7 +1374,7 @@ table tr:last-child td { border-bottom: none !important; }
 
   async function addAutomation() {
     const trigger = document.getElementById('autoTrigger').value;
-    
+
     // Handle Stage Moved to Template action
     if (trigger === 'stage_moved') {
         const stageId = document.getElementById('autoStageTrigger').value;

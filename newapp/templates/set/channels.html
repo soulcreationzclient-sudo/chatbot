@@ -1,4 +1,4 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
 {% load static %}
 {% block title %}Settings · Channels{% endblock %}
 
@@ -430,18 +430,30 @@ table tr:last-child td { border-bottom: none !important; }
         <span class="ci-right">›</span>
       </a>
 
-      <a class="channel-item" href="#">
+      <a href="javascript:void(0)" id="{% if ig_connected %}igDisconnect{% else %}openIgModal{% endif %}" class="channel-item">
         <div class="ci-left">
           <span class="ci-icon ig"><i class="fa-brands fa-instagram"></i></span>
-          <span class="ci-label">Instagram</span>
+          <span class="ci-label">Instagram
+            {% if ig_connected %}
+            <i class="fa-solid fa-circle-check text-success ms-1" title="connected"></i>
+            {% else %}
+            <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected"></i>
+            {% endif %}
+          </span>
         </div>
         <span class="ci-right">›</span>
       </a>
 
-      <a class="channel-item" href="#">
+      <a href="javascript:void(0)" id="{% if fb_connected %}fbDisconnect{% else %}openFbModal{% endif %}" class="channel-item">
         <div class="ci-left">
           <span class="ci-icon ms"><i class="fa-brands fa-facebook-messenger"></i></span>
-          <span class="ci-label">Messenger</span>
+          <span class="ci-label">Messenger
+            {% if fb_connected %}
+            <i class="fa-solid fa-circle-check text-success ms-1" title="connected"></i>
+            {% else %}
+            <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected"></i>
+            {% endif %}
+          </span>
         </div>
         <span class="ci-right">›</span>
       </a>
@@ -508,72 +520,153 @@ table tr:last-child td { border-bottom: none !important; }
     const phoneIdEl = document.getElementById("waPhoneId");
     const tokenEl = document.getElementById("waToken");
 
-    console.log("WhatsApp Modal Init:", {
-      openBtn: !!openBtn,
-      disconnect: !!disconnect,
-      backdrop: !!backdrop,
-      modal: !!modal
-    });
-
     function openModal() {
-      console.log("Opening modal...");
       if (backdrop) {
         backdrop.classList.add("show");
         backdrop.setAttribute("aria-hidden", "false");
-        console.log("Modal opened - backdrop classes:", backdrop.classList);
         setTimeout(() => phoneIdEl && phoneIdEl.focus(), 100);
-      } else {
-        console.error("Backdrop element not found!");
       }
     }
-
     function closeModal() {
       if (backdrop) {
         backdrop.classList.remove("show");
         backdrop.setAttribute("aria-hidden", "true");
       }
     }
-
     function dis() {
-      let baseurl = window.location.origin;
-      let disconnectUrl = baseurl + "/disconnect/";
-      let con = confirm("Are you sure you want to disconnect?");
-      if (con) {
-        window.location.assign(disconnectUrl);
+      if (confirm("Are you sure you want to disconnect WhatsApp?")) {
+        window.location.assign(window.location.origin + "/disconnect/");
       }
     }
 
-    if (openBtn) {
-      console.log("Adding click listener to openBtn");
-      openBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        openModal();
-      });
-    }
-    if (disconnect) {
-      console.log("Adding click listener to disconnect");
-      disconnect.addEventListener("click", function (e) {
-        e.preventDefault();
-        dis();
-      });
-    }
-
-    closeBtn.addEventListener("click", closeModal);
-    backdrop.addEventListener("click", (e) => {
-      if (e.target === backdrop) closeModal();
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeModal();
-    });
-
-    form.addEventListener("submit", function (e) {
+    if (openBtn) openBtn.addEventListener("click", (e) => { e.preventDefault(); openModal(); });
+    if (disconnect) disconnect.addEventListener("click", (e) => { e.preventDefault(); dis(); });
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    if (backdrop) backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeModal(); closeIgModal(); closeFbModal(); } });
+    if (form) form.addEventListener("submit", function (e) {
       errorEl.classList.remove("show");
-      if (!phoneIdEl.value.trim() || !tokenEl.value.trim()) {
-        e.preventDefault();
-        errorEl.classList.add("show");
-        return;
+      if (!phoneIdEl.value.trim() || !tokenEl.value.trim()) { e.preventDefault(); errorEl.classList.add("show"); }
+    });
+
+    // ==================== INSTAGRAM MODAL ====================
+    const igBackdrop = document.getElementById("igBackdrop");
+    const igOpenBtn = document.getElementById("openIgModal");
+    const igDisconnect = document.getElementById("igDisconnect");
+
+    function openIgModal() { if (igBackdrop) { igBackdrop.classList.add("show"); igBackdrop.setAttribute("aria-hidden", "false"); } }
+    function closeIgModal() { if (igBackdrop) { igBackdrop.classList.remove("show"); igBackdrop.setAttribute("aria-hidden", "true"); } }
+
+    if (igOpenBtn) igOpenBtn.addEventListener("click", (e) => { e.preventDefault(); openIgModal(); });
+    if (igDisconnect) igDisconnect.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (confirm("Disconnect Instagram DM?")) {
+        const form = document.createElement('form');
+        form.method = 'POST'; form.action = '{% url "instagram_disconnect" %}';
+        const csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = 'csrfmiddlewaretoken'; csrf.value = getCsrf();
+        form.appendChild(csrf); document.body.appendChild(form); form.submit();
       }
     });
+    const igClose = document.getElementById("igClose");
+    if (igClose) igClose.addEventListener("click", closeIgModal);
+    if (igBackdrop) igBackdrop.addEventListener("click", (e) => { if (e.target === igBackdrop) closeIgModal(); });
+
+    // ==================== FACEBOOK MODAL ====================
+    const fbBackdrop = document.getElementById("fbBackdrop");
+    const fbOpenBtn = document.getElementById("openFbModal");
+    const fbDisconnect = document.getElementById("fbDisconnect");
+
+    function openFbModal() { if (fbBackdrop) { fbBackdrop.classList.add("show"); fbBackdrop.setAttribute("aria-hidden", "false"); } }
+    function closeFbModal() { if (fbBackdrop) { fbBackdrop.classList.remove("show"); fbBackdrop.setAttribute("aria-hidden", "true"); } }
+
+    if (fbOpenBtn) fbOpenBtn.addEventListener("click", (e) => { e.preventDefault(); openFbModal(); });
+    if (fbDisconnect) fbDisconnect.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (confirm("Disconnect Facebook Messenger?")) {
+        const form = document.createElement('form');
+        form.method = 'POST'; form.action = '{% url "facebook_disconnect" %}';
+        const csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = 'csrfmiddlewaretoken'; csrf.value = getCsrf();
+        form.appendChild(csrf); document.body.appendChild(form); form.submit();
+      }
+    });
+    const fbClose = document.getElementById("fbClose");
+    if (fbClose) fbClose.addEventListener("click", closeFbModal);
+    if (fbBackdrop) fbBackdrop.addEventListener("click", (e) => { if (e.target === fbBackdrop) closeFbModal(); });
+
+    function getCsrf() {
+      const m = document.cookie.match(/csrftoken=([^;]+)/);
+      return m ? m[1] : '';
+    }
   })();
 </script>
+
+<!-- Instagram Modal -->
+<div id="igBackdrop" class="wa-backdrop" aria-hidden="true">
+  <div class="wa-modal-box" role="dialog">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="wa-dot" style="background:#e4405f;"><i class="fa-brands fa-instagram"></i></span>
+        Instagram DM
+      </div>
+      <button type="button" class="close" id="igClose">✕</button>
+    </div>
+    <form method="post" action="{% url 'instagram_connect' %}">
+      {% csrf_token %}
+      <div class="field">
+        <label class="label">Facebook Page ID (linked to Instagram)</label>
+        <input class="input" name="instagram_page_id" placeholder="e.g. 17841400000000000" required />
+        <small style="color:#64748b;font-size:11px;">The Facebook Page connected to your Instagram Business account</small>
+      </div>
+      <div class="field">
+        <label class="label">Page Access Token</label>
+        <input class="input" name="instagram_token" placeholder="EAAG..." required />
+        <small style="color:#64748b;font-size:11px;">Must have instagram_manage_messages permission</small>
+      </div>
+      <div class="field">
+        <label class="label">Instagram Business Account ID (Optional)</label>
+        <input class="input" name="instagram_account_id" placeholder="e.g. 17841400000000" />
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;margin-bottom:16px;">
+        <small><strong>Webhook URL:</strong> <code>{{ base_url }}/webhook/instagram/</code></small><br>
+        <small>Configure this in Meta Developer Console → Instagram → Webhooks</small>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" type="submit">Connect Instagram</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Facebook Messenger Modal -->
+<div id="fbBackdrop" class="wa-backdrop" aria-hidden="true">
+  <div class="wa-modal-box" role="dialog">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="wa-dot" style="background:#0084ff;"><i class="fa-brands fa-facebook-messenger"></i></span>
+        Facebook Messenger
+      </div>
+      <button type="button" class="close" id="fbClose">✕</button>
+    </div>
+    <form method="post" action="{% url 'facebook_connect' %}">
+      {% csrf_token %}
+      <div class="field">
+        <label class="label">Facebook Page ID</label>
+        <input class="input" name="facebook_page_id" placeholder="e.g. 123456789012345" required />
+        <small style="color:#64748b;font-size:11px;">Find in Facebook Page → About → Page ID</small>
+      </div>
+      <div class="field">
+        <label class="label">Page Access Token</label>
+        <input class="input" name="facebook_token" placeholder="EAAG..." required />
+        <small style="color:#64748b;font-size:11px;">Must have pages_messaging permission</small>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;margin-bottom:16px;">
+        <small><strong>Webhook URL:</strong> <code>{{ base_url }}/webhook/facebook/</code></small><br>
+        <small>Configure this in Meta Developer Console → Messenger → Webhooks</small>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" type="submit">Connect Messenger</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}

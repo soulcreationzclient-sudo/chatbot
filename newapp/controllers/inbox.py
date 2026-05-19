@@ -62,14 +62,14 @@ class Inboxcontroller:
             all_tags = Tag.objects.none()
         selected_user = None
         messages = []
-        
+
         # 24-hour window check variables
         window_expired = False
         hours_since_last_message = None
 
         if selected_user_id:
             selected_user = User.objects.filter(id=selected_user_id, is_in_inbox=True).first()
-            
+
             # SECURITY: Verify selected user belongs to current org/admin
             if selected_user:
                 if org_id and selected_user.organization_id != org_id:
@@ -79,20 +79,20 @@ class Inboxcontroller:
                     user_admin_id = getattr(selected_user, 'admin_id_id', None)
                     if str(user_admin_id) != str(admin_id):
                         selected_user = None
-            
+
             if selected_user:
                 messages = Message.objects.filter(user_id=selected_user_id).order_by('created_at', 'id')
             else:
                 messages = []
-            
+
             # Check 24-hour window for selected user
             if selected_user:
                 from datetime import timedelta
                 last_user_msg = Message.objects.filter(
-                    user_id=selected_user, 
+                    user_id=selected_user,
                     who='human'  # 'human' = inbound from customer
                 ).order_by('-created_at').first()
-                
+
                 if last_user_msg:
                     time_since_last_msg = timezone.now() - last_user_msg.created_at
                     hours_since_last_message = int(time_since_last_msg.total_seconds() / 3600)
@@ -102,7 +102,7 @@ class Inboxcontroller:
                     # No inbound messages from user ever - window never opened
                     window_expired = True
 
-        
+
         if request.GET.get('ajax'):
             return render(request, 'inbox/partials/user_list.html', {
                 'users': users,
@@ -121,10 +121,10 @@ class Inboxcontroller:
     def get_new_messages(request):
         user_id = request.GET.get('user_id')
         last_id = request.GET.get('last_id', 0)
-        
+
         if not user_id:
             return JsonResponse({'error': 'Missing user_id'}, status=400)
-        
+
         # SECURITY: Verify user belongs to current org/admin
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
@@ -134,12 +134,12 @@ class Inboxcontroller:
                 return JsonResponse({'error': 'Permission denied'}, status=403)
             if admin_id and str(user.admin_id_id) != str(admin_id):
                 return JsonResponse({'error': 'Permission denied'}, status=403)
-            
+
         new_msgs = Message.objects.filter(
-            user_id=user_id, 
+            user_id=user_id,
             id__gt=last_id
         ).order_by('id')
-        
+
         data = []
         for m in new_msgs:
             data.append({
@@ -148,7 +148,7 @@ class Inboxcontroller:
                 'who': m.who,
                 'created_at': m.created_at.isoformat()
             })
-            
+
         return JsonResponse({'messages': data})
 
     @csrf_exempt
@@ -158,10 +158,10 @@ class Inboxcontroller:
             # Save to specific folder
             path = default_storage.save(f'chat_uploads/{f.name}', ContentFile(f.read()))
             relative_url = os.path.join(settings.MEDIA_URL, path).replace('\\', '/')
-            
+
             # Build full absolute URL so it works when sent via WhatsApp API
             full_url = request.build_absolute_uri(relative_url)
-            
+
             # Determine type
             ftype = 'file'
             if f.content_type.startswith('image'):
@@ -170,12 +170,12 @@ class Inboxcontroller:
                 ftype = 'video'
             elif f.content_type.startswith('audio'):
                 ftype = 'audio'
-            elif f.content_type in ('application/pdf', 'application/msword', 
+            elif f.content_type in ('application/pdf', 'application/msword',
                                      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                                      'application/vnd.ms-excel',
                                      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'):
                 ftype = 'document'
-                
+
             return JsonResponse({'url': full_url, 'type': ftype})
         return JsonResponse({'error': 'No file provided'}, status=400)
 
@@ -184,24 +184,24 @@ class Inboxcontroller:
         """Archive a user from inbox (soft-delete - preserves data)"""
         if request.method != 'POST':
             return JsonResponse({'error': 'POST required'}, status=405)
-        
+
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
-        
+
         if not org_id and not admin_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         # Get user and verify ownership
         user = User.objects.filter(id=user_id).first()
         if not user:
             return JsonResponse({'error': 'User not found'}, status=404)
-        
+
         # Security check: ensure user belongs to same org/admin
         if org_id and user.organization_id != org_id:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         if admin_id and str(user.admin_id_id) != str(admin_id):
             return JsonResponse({'error': 'Permission denied'}, status=403)
-        
+
         # SOFT DELETE: Archive from inbox without wiping historical data.
         user.is_in_inbox = False
         user.archived_at = timezone.now()
@@ -222,28 +222,28 @@ class Inboxcontroller:
         """Restore an archived user back to the inbox"""
         if request.method != 'POST':
             return JsonResponse({'error': 'POST required'}, status=405)
-        
+
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
-        
+
         if not org_id and not admin_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         user = User.objects.filter(id=user_id).first()
         if not user:
             return JsonResponse({'error': 'User not found'}, status=404)
-        
+
         # Security check
         if org_id and user.organization_id != org_id:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         if admin_id and str(user.admin_id_id) != str(admin_id):
             return JsonResponse({'error': 'Permission denied'}, status=403)
-        
+
         # Restore to inbox
         user.is_in_inbox = True
         user.archived_at = None
         user.save(update_fields=['is_in_inbox', 'archived_at'])
-        
+
         return JsonResponse({'success': True, 'msg': 'Contact restored to inbox'})
 
     @csrf_exempt
@@ -251,27 +251,27 @@ class Inboxcontroller:
         """Toggle bot on/off for a specific user"""
         if request.method != 'POST':
             return JsonResponse({'error': 'POST required'}, status=405)
-        
+
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
-        
+
         if not org_id and not admin_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         user = User.objects.filter(id=user_id).first()
         if not user:
             return JsonResponse({'error': 'User not found'}, status=404)
-        
+
         # Security check
         if org_id and user.organization_id != org_id:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         if admin_id and str(user.admin_id_id) != str(admin_id):
             return JsonResponse({'error': 'Permission denied'}, status=403)
-        
+
         # Toggle bot_enabled field
         user.bot_enabled = not getattr(user, 'bot_enabled', True)
         user.save(update_fields=['bot_enabled'])
-        
+
         status = 'ON' if user.bot_enabled else 'OFF'
         return JsonResponse({'success': True, 'bot_enabled': user.bot_enabled, 'msg': f'Bot {status}'})
 
@@ -279,23 +279,23 @@ class Inboxcontroller:
     def list_assets(request):
         """List all image assets for the logged-in user's org/admin"""
         from ..models import ImageAsset
-        
+
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
-        
+
         if org_id:
             assets = ImageAsset.objects.filter(organization_id=org_id)
         elif admin_id:
             assets = ImageAsset.objects.filter(admin_id=admin_id)
         else:
             return JsonResponse({'assets': []})
-        
+
         asset_list = [{
             'id': a.id,
             'name': a.name,
             'url': a.image.url if a.image else ''
         } for a in assets]
-        
+
         return JsonResponse({'assets': asset_list})
 
     @staticmethod
@@ -303,31 +303,31 @@ class Inboxcontroller:
     def get_user_tags(request):
         """Get all tags for a specific user"""
         user_id = request.GET.get('user_id')
-        
+
         if not user_id:
             return JsonResponse({'error': 'Missing user_id'}, status=400)
-        
+
         from ..models import UserTag
-        
+
         try:
             # Get user and verify ownership
             user = User.objects.filter(id=user_id).first()
             if not user:
                 return JsonResponse({'error': 'User not found'}, status=404)
-            
+
             org_id = request.session.get('organization_id')
             admin_id = request.session.get('admin_id')
-            
+
             # Security check
             if org_id and user.organization_id != org_id:
                 return JsonResponse({'error': 'Permission denied'}, status=403)
             if admin_id and str(user.admin_id_id) != str(admin_id):
                 return JsonResponse({'error': 'Permission denied'}, status=403)
-            
+
             # Get user's tags
             user_tags = UserTag.objects.filter(user=user).select_related('tag')
             tags = [{'id': ut.tag.id, 'name': ut.tag.name} for ut in user_tags]
-            
+
             return JsonResponse({
                 'success': True,
                 'user_id': user_id,
@@ -458,28 +458,28 @@ class Inboxcontroller:
     def get_user_custom_fields(request):
         """Get all custom field values for a specific user"""
         user_id = request.GET.get('user_id')
-        
+
         if not user_id:
             return JsonResponse({'error': 'Missing user_id'}, status=400)
-        
+
         from ..models import CustomFieldValue, Admin, Organization
         from newapp.custom_field_processor import format_custom_fields_for_inbox
-        
+
         try:
             # Get user and verify ownership
             user = User.objects.filter(id=user_id).first()
             if not user:
                 return JsonResponse({'error': 'User not found'}, status=404)
-            
+
             org_id = request.session.get('organization_id')
             admin_id = request.session.get('admin_id')
-            
+
             # Security check
             if org_id and user.organization_id != org_id:
                 return JsonResponse({'error': 'Permission denied'}, status=403)
             if admin_id and str(user.admin_id_id) != str(admin_id):
                 return JsonResponse({'error': 'Permission denied'}, status=403)
-            
+
             # Get admin/org objects for the processor
             admin = None
             org = None
@@ -487,10 +487,10 @@ class Inboxcontroller:
                 org = Organization.objects.filter(id=org_id).first()
             if admin_id:
                 admin = Admin.objects.filter(id=admin_id).first()
-            
+
             # Get custom field values formatted for inbox
             fields = format_custom_fields_for_inbox(user, admin, org)
-            
+
             return JsonResponse({
                 'success': True,
                 'user_id': user_id,
@@ -507,7 +507,7 @@ class Inboxcontroller:
         """Update a custom field value for a user"""
         if request.method != 'POST':
             return JsonResponse({'error': 'POST required'}, status=405)
-        
+
         import json
         try:
             data = json.loads(request.body)
@@ -516,23 +516,23 @@ class Inboxcontroller:
             field_value = data.get('value')
         except:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        
+
         if not user_id or not field_name:
             return JsonResponse({'error': 'Missing user_id or field_name'}, status=400)
-        
+
         from ..models import CustomField, CustomFieldValue
-        
+
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
-        
+
         if not org_id and not admin_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         # Get user and verify ownership
         user = User.objects.filter(id=user_id).first()
         if not user:
             return JsonResponse({'error': 'User not found'}, status=404)
-        
+
         # Security check
         if org_id and user.organization_id != org_id:
             return JsonResponse({'error': 'Permission denied'}, status=403)
@@ -540,7 +540,7 @@ class Inboxcontroller:
             return JsonResponse({'error': 'Permission denied'}, status=403)
 
         field_key = field_name.strip().lower()
-            
+
         # Handle standard fields
         if field_key in ['phone_no', 'name']:
             setattr(user, field_key, field_value)
@@ -621,7 +621,7 @@ class Inboxcontroller:
                     'value': cf_value.value or ''
                 }
             })
-        
+
         # Find the custom field
         custom_field = None
         if org_id:
@@ -636,10 +636,10 @@ class Inboxcontroller:
                 name=field_name,
                 is_active=True
             ).first()
-        
+
         if not custom_field:
             return JsonResponse({'error': f"Custom field '{field_name}' not found"}, status=404)
-        
+
         # Update or create the field value
         try:
             field_value_obj, created = CustomFieldValue.objects.update_or_create(
@@ -650,7 +650,7 @@ class Inboxcontroller:
                     'updated_at': timezone.now()
                 }
             )
-            
+
             # Trigger pipeline automations on field change
             try:
                 from newapp.controllers.pipeline import run_pipeline_automations
@@ -660,7 +660,7 @@ class Inboxcontroller:
                 )
             except Exception:
                 pass  # Don't break custom field flow
-            
+
             action = "Created" if created else "Updated"
             return JsonResponse({
                 'success': True,
@@ -682,7 +682,7 @@ class Inboxcontroller:
         """Delete a custom field value for a user"""
         if request.method != 'POST':
             return JsonResponse({'error': 'POST required'}, status=405)
-        
+
         import json
         try:
             data = json.loads(request.body)
@@ -690,23 +690,23 @@ class Inboxcontroller:
             field_name = data.get('field_name')
         except:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        
+
         if not user_id or not field_name:
             return JsonResponse({'error': 'Missing user_id or field_name'}, status=400)
-        
+
         from ..models import CustomField, CustomFieldValue
-        
+
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
-        
+
         if not org_id and not admin_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         # Get user and verify ownership
         user = User.objects.filter(id=user_id).first()
         if not user:
             return JsonResponse({'error': 'User not found'}, status=404)
-        
+
         # Security check
         if org_id and user.organization_id != org_id:
             return JsonResponse({'error': 'Permission denied'}, status=403)
@@ -714,7 +714,7 @@ class Inboxcontroller:
             return JsonResponse({'error': 'Permission denied'}, status=403)
 
         field_key = field_name.strip().lower()
-            
+
         # Handle standard fields
         if field_key in ['phone_no', 'name']:
             setattr(user, field_key, '')
@@ -748,7 +748,7 @@ class Inboxcontroller:
                 'success': True,
                 'message': 'Cleared email'
             })
-        
+
         # Find the custom field
         custom_field = None
         if org_id:
@@ -763,17 +763,17 @@ class Inboxcontroller:
                 name=field_name,
                 is_active=True
             ).first()
-        
+
         if not custom_field:
             return JsonResponse({'error': f"Custom field '{field_name}' not found"}, status=404)
-        
+
         # Delete the field value
         try:
             deleted, _ = CustomFieldValue.objects.filter(
                 custom_field=custom_field,
                 user=user
             ).delete()
-            
+
             if deleted:
                 return JsonResponse({
                     'success': True,
@@ -960,3 +960,68 @@ class Inboxcontroller:
             ])
 
         return response
+
+    @staticmethod
+    @csrf_exempt
+    def get_user_pipelines(request):
+        user_id = request.GET.get('user_id')
+        if not user_id:
+            return JsonResponse({'error': 'Missing user_id'}, status=400)
+
+        from ..models import Opportunity
+        try:
+            opportunities = Opportunity.objects.filter(user_id=user_id).select_related('pipeline', 'stage')
+            data = []
+            for opp in opportunities:
+                data.append({
+                    'id': opp.id,
+                    'title': opp.title,
+                    'pipeline_name': opp.pipeline.name,
+                    'stage_name': opp.stage.name,
+                    'value': str(opp.opportunity_value),
+                    'created_at': opp.created_at.isoformat()
+                })
+
+            return JsonResponse({'success': True, 'pipelines': data})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    @staticmethod
+    @csrf_exempt
+    def get_user_media(request):
+        user_id = request.GET.get('user_id')
+        if not user_id:
+            return JsonResponse({'error': 'Missing user_id'}, status=400)
+
+        try:
+            from ..models import Message
+            from django.db.models import Q
+            media_msgs = Message.objects.filter(
+                Q(user_id=user_id) & (
+                    Q(messages__icontains='[Image:') |
+                    Q(messages__icontains='[Document:') |
+                    Q(messages__icontains='[Video:') |
+                    Q(messages__icontains='[Audio:')
+                )
+            ).order_by('-created_at')
+
+            import re
+            data = []
+            for m in media_msgs:
+                match = re.search(r'\[(.*?)\]', m.messages or '')
+                if match:
+                    content = match.group(1)
+                    parts = content.split(':', 1)
+                    if len(parts) == 2:
+                        media_type, url = parts[0].strip(), parts[1].strip()
+                        data.append({
+                            'id': m.id,
+                            'type': media_type,
+                            'url': url,
+                            'created_at': m.created_at.isoformat(),
+                            'who': m.who
+                        })
+
+            return JsonResponse({'success': True, 'media': data})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)

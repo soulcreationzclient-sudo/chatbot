@@ -34,33 +34,47 @@ class Settingcontroller :
         return render(request,'set/dashboard.html')
     def channels_view(request):
         whatsapp_connected = None
+        ig_connected = False
+        fb_connected = False
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         if org_id:
             # Organization-based auth
             from ..models import Organization
             org = Organization.objects.filter(id=org_id).first()
             if org and org.whatsapp_token and org.whatsapp_phone_id:
                 whatsapp_connected = True
+            if org and getattr(org, 'instagram_token', '') and getattr(org, 'instagram_page_id', ''):
+                ig_connected = True
+            if org and getattr(org, 'facebook_token', '') and getattr(org, 'facebook_page_id', ''):
+                fb_connected = True
         elif admin_id:
             # Legacy admin-based auth
             admin = Admin.objects.filter(id=admin_id).only('whatsapp_phone_id', 'whatsapp_token').first()
             if admin and admin.whatsapp_token and admin.whatsapp_phone_id:
                 whatsapp_connected = True
-        
-        return render(request, 'set/channels.html', {'whatsapp_connected': whatsapp_connected})
-    
+
+        # Build base URL for webhook display
+        base_url = request.build_absolute_uri('/').rstrip('/')
+
+        return render(request, 'set/channels.html', {
+            'whatsapp_connected': whatsapp_connected,
+            'ig_connected': ig_connected,
+            'fb_connected': fb_connected,
+            'base_url': base_url,
+        })
+
     def integration(request):
         pinecone_connected = None
         chatgpt_connected = False
         calendly_connected = False
-        admin = None 
+        admin = None
         chatgpt_mode = "N/A"
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         if org_id:
             # New Organization Logic
             from ..models import Organization
@@ -70,20 +84,20 @@ class Settingcontroller :
                 if org.openai_api_key: chatgpt_connected = True
                 if org.calendly_token: calendly_connected = True
                 chatgpt_mode = org.chatgpt_mode
-                
+
         elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
-            
+
             if admin:
                 pinecone_token = admin.pinecone_token
                 if pinecone_token != '':
                     pinecone_connected = True
-                
+
                 openai_key = admin.openai_api_key
                 if openai_key and openai_key != '':
                     chatgpt_connected = True
                 chatgpt_mode = admin.chatgpt_mode
-                
+
                 # Check Calendly connection
                 if admin.calendly_token and admin.calendly_token.strip():
                     calendly_connected = True
@@ -97,14 +111,14 @@ class Settingcontroller :
             'chatgpt_mode': chatgpt_mode,
             'current_gpt_model': getattr(org, 'gpt_model', 'gpt-4o-mini') if org_id and org else 'gpt-4o-mini',
         })
-    
+
     def external_apis(request):
         from ..models import ExternalAPI, CustomField, Organization
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         apis = []
         custom_fields = []
-        
+
         if org_id:
             # Organization user - filter by organization
             apis = ExternalAPI.objects.filter(organization_id=org_id)
@@ -114,22 +128,22 @@ class Settingcontroller :
             if admin:
                 apis = ExternalAPI.objects.filter(admin=admin)
                 custom_fields = CustomField.objects.filter(admin=admin).order_by('name')
-        
+
         return render(request, 'set/external_apis.html', {
             'apis': apis,
             'custom_fields': custom_fields,
         })
-    
+
     @staticmethod
     def external_api_detail(request, api_id):
         from django.http import JsonResponse
         from ..models import ExternalAPI
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         admin = None
         org = None
-        
+
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
         elif org_id:
@@ -137,10 +151,10 @@ class Settingcontroller :
             org = Organization.objects.filter(id=org_id).first()
             if org and org.whatsapp_phone_id:
                 admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
-        
+
         if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         if org:
             api = ExternalAPI.objects.filter(id=api_id, organization_id=org_id).first()
         elif admin:
@@ -149,7 +163,7 @@ class Settingcontroller :
             api = None
         if not api:
             return JsonResponse({'error': 'API not found'}, status=404)
-        
+
         return JsonResponse({
             'id': api.id,
             'name': api.name,
@@ -161,7 +175,7 @@ class Settingcontroller :
             'payload': api.payload,
             'response_mapping': api.response_mapping,
         })
-    
+
     @staticmethod
     def external_api_create(request):
         # RBAC: Only users with can_manage_settings can create APIs
@@ -170,15 +184,15 @@ class Settingcontroller :
         from django.http import JsonResponse
         from ..models import ExternalAPI
         import json
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         admin = None
         org = None
-        
+
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
         elif org_id:
@@ -186,10 +200,10 @@ class Settingcontroller :
             org = Organization.objects.filter(id=org_id).first()
             if org and org.whatsapp_phone_id:
                 admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
-        
+
         if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         try:
             data = json.loads(request.body)
             api = ExternalAPI.objects.create(
@@ -207,7 +221,7 @@ class Settingcontroller :
             return JsonResponse({'success': True, 'id': api.id})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-    
+
     @staticmethod
     def external_api_update(request, api_id):
         # RBAC: Only users with can_manage_settings can update APIs
@@ -216,15 +230,15 @@ class Settingcontroller :
         from django.http import JsonResponse
         from ..models import ExternalAPI
         import json
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         admin = None
         org = None
-        
+
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
         elif org_id:
@@ -232,10 +246,10 @@ class Settingcontroller :
             org = Organization.objects.filter(id=org_id).first()
             if org and org.whatsapp_phone_id:
                 admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
-        
+
         if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         if org:
             api = ExternalAPI.objects.filter(id=api_id, organization_id=org_id).first()
         elif admin:
@@ -244,7 +258,7 @@ class Settingcontroller :
             api = None
         if not api:
             return JsonResponse({'error': 'API not found'}, status=404)
-        
+
         try:
             data = json.loads(request.body)
             api.name = data.get('name', api.name)
@@ -259,7 +273,7 @@ class Settingcontroller :
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-    
+
     @staticmethod
     def external_api_delete(request, api_id):
         # RBAC: Only users with can_manage_settings can delete APIs
@@ -267,15 +281,15 @@ class Settingcontroller :
         if denied: return denied
         from django.http import JsonResponse
         from ..models import ExternalAPI
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         admin = None
         org = None
-        
+
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
         elif org_id:
@@ -283,10 +297,10 @@ class Settingcontroller :
             org = Organization.objects.filter(id=org_id).first()
             if org and org.whatsapp_phone_id:
                 admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
-        
+
         if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         if org:
             api = ExternalAPI.objects.filter(id=api_id, organization_id=org_id).first()
         elif admin:
@@ -295,10 +309,10 @@ class Settingcontroller :
             api = None
         if not api:
             return JsonResponse({'error': 'API not found'}, status=404)
-        
+
         api.delete()
         return JsonResponse({'success': True})
-    
+
     @staticmethod
     def external_api_test(request, api_id):
         from django.http import JsonResponse
@@ -306,15 +320,15 @@ class Settingcontroller :
         import requests
         import json
         import re
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         admin = None
         org = None
-        
+
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
         elif org_id:
@@ -322,10 +336,10 @@ class Settingcontroller :
             org = Organization.objects.filter(id=org_id).first()
             if org and org.whatsapp_phone_id:
                 admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
-        
+
         if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         if org:
             api = ExternalAPI.objects.filter(id=api_id, organization_id=org_id).first()
         elif admin:
@@ -334,7 +348,7 @@ class Settingcontroller :
             api = None
         if not api:
             return JsonResponse({'error': 'API not found'}, status=404)
-        
+
         try:
             # Get test parameters from request body
             test_params = {}
@@ -343,21 +357,21 @@ class Settingcontroller :
                 test_params = body.get('test_params', {})
             except:
                 pass
-            
+
             # If no test params provided, extract {param} placeholders from URL and use sample values
             if not test_params:
                 placeholders = re.findall(r'\{(\w+)\}', api.url)
                 for p in placeholders:
                     test_params[p] = f'1'  # Default test value
-            
+
             headers = api.headers if isinstance(api.headers, dict) else {}
             payload = api.payload if isinstance(api.payload, dict) else {}
-            
+
             # Substitute {param} placeholders in URL with test values
             url = api.url
             for key, value in test_params.items():
                 url = url.replace('{' + key + '}', str(value))
-            
+
             # Also substitute in payload values
             if payload:
                 payload_str = json.dumps(payload)
@@ -365,7 +379,7 @@ class Settingcontroller :
                     payload_str = payload_str.replace('{' + key + '}', str(value))
                     payload_str = payload_str.replace('{{custom_field:' + key + ':value}}', str(value))
                 payload = json.loads(payload_str)
-            
+
             if api.method == 'GET':
                 response = requests.get(url, headers=headers, params=payload, timeout=30)
             elif api.method == 'POST':
@@ -381,12 +395,12 @@ class Settingcontroller :
                 response = requests.delete(url, headers=headers, timeout=30)
             else:
                 return JsonResponse({'error': f'Unsupported method: {api.method}'}, status=400)
-            
+
             try:
                 response_data = response.json()
             except:
                 response_data = response.text
-            
+
             return JsonResponse({
                 'success': True,
                 'status_code': response.status_code,
@@ -401,18 +415,18 @@ class Settingcontroller :
             return JsonResponse({'error': str(e)}, status=500)
 
     # ==================== IMAGE ASSETS ====================
-    
+
     @staticmethod
     def compress_uploaded_image(image_file, max_dimension=1024, quality=85):
         """
         Compress an uploaded image file before saving.
         Resizes to max_dimension and compresses to JPEG.
-        
+
         Args:
             image_file: Django UploadedFile object
             max_dimension: Maximum width/height in pixels
             quality: JPEG quality (1-100)
-            
+
         Returns:
             Compressed image file (InMemoryUploadedFile or original)
         """
@@ -421,32 +435,32 @@ class Settingcontroller :
             from io import BytesIO
             from django.core.files.uploadedfile import InMemoryUploadedFile
             import os
-            
+
             # Open image
             img = Image.open(image_file)
             original_format = img.format
-            
+
             # Convert to RGB if necessary (for PNG with transparency)
             if img.mode in ('RGBA', 'P'):
                 img = img.convert('RGB')
-            
+
             # Resize if too large
             if max(img.size) > max_dimension:
                 ratio = max_dimension / max(img.size)
                 new_size = (int(img.size[0] * ratio), int(img.size[1] * ratio))
                 img = img.resize(new_size, Image.Resampling.LANCZOS)
                 print(f"[ImageAsset] Resized from {img.size} to {new_size}")
-            
+
             # Save to buffer
             buffer = BytesIO()
             img.save(buffer, 'JPEG', quality=quality, optimize=True)
             buffer.seek(0)
-            
+
             # Get new filename with .jpg extension
             original_name = image_file.name
             base_name = os.path.splitext(original_name)[0]
             new_name = f"{base_name}.jpg"
-            
+
             # Create new InMemoryUploadedFile
             compressed_file = InMemoryUploadedFile(
                 file=buffer,
@@ -456,23 +470,23 @@ class Settingcontroller :
                 size=buffer.getbuffer().nbytes,
                 charset=None
             )
-            
+
             print(f"[ImageAsset] Compressed image: {buffer.getbuffer().nbytes / 1024:.1f}KB")
             return compressed_file
-            
+
         except ImportError:
             print("[ImageAsset] Warning: Pillow not installed. Cannot compress images.")
             return image_file
         except Exception as e:
             print(f"[ImageAsset] Error compressing image: {e}")
             return image_file
-    
+
     def image_assets(request):
         from ..models import ImageAsset, Organization
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         assets = []
-        
+
         if org_id:
             org = Organization.objects.filter(id=org_id).first()
             if org:
@@ -481,43 +495,43 @@ class Settingcontroller :
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 assets = ImageAsset.objects.filter(admin=admin).order_by('-created_at')
-        
+
         return render(request, 'set/image_assets.html', {'assets': assets})
-    
+
     @staticmethod
     @csrf_exempt
     def image_asset_create(request):
         from django.http import JsonResponse
         from ..models import ImageAsset, Organization
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         # Support both organization and admin auth
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
-        
+
         admin = None
         org = None
-        
+
         if org_id:
             org = Organization.objects.filter(id=org_id).first()
         elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
-        
+
         if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         try:
             name = request.POST.get('name', '').strip()
             description = request.POST.get('description', '').strip()
             image_file = request.FILES.get('image')
-            
+
             if not name:
                 return JsonResponse({'error': 'Name is required'}, status=400)
             if not image_file:
                 return JsonResponse({'error': 'Image file is required'}, status=400)
-            
+
             # Check for duplicate name
             if org:
                 if ImageAsset.objects.filter(organization=org, name=name).exists():
@@ -525,10 +539,10 @@ class Settingcontroller :
             elif admin:
                 if ImageAsset.objects.filter(admin=admin, name=name).exists():
                     return JsonResponse({'error': f'An image with name "{name}" already exists'}, status=400)
-            
+
             # Compress image before saving
             compressed_image = Settingcontroller.compress_uploaded_image(image_file)
-            
+
             asset = ImageAsset.objects.create(
                 admin=admin,
                 organization=org,
@@ -543,63 +557,63 @@ class Settingcontroller :
             })
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-    
+
     @staticmethod
     def image_asset_update(request, asset_id):
         from django.http import JsonResponse
         from ..models import ImageAsset, Organization
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
-        
+
         admin = None
         org = None
-        
+
         if org_id:
             org = Organization.objects.filter(id=org_id).first()
         elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
-        
+
         if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         if org:
             asset = ImageAsset.objects.filter(id=asset_id, organization=org).first()
         else:
             asset = ImageAsset.objects.filter(id=asset_id, admin=admin).first()
-            
+
         if not asset:
             return JsonResponse({'error': 'Image asset not found'}, status=404)
-        
+
         try:
             name = request.POST.get('name', '').strip()
             description = request.POST.get('description', '').strip()
             image_file = request.FILES.get('image')
-            
+
             if name and name != asset.name:
                 exists = False
                 if org:
                     exists = ImageAsset.objects.filter(organization=org, name=name).exclude(id=asset_id).exists()
                 else:
                     exists = ImageAsset.objects.filter(admin=admin, name=name).exclude(id=asset_id).exists()
-                
+
                 if exists:
                     return JsonResponse({'error': f'An image with name "{name}" already exists'}, status=400)
                 asset.name = name
-            
+
             if description is not None:
                 asset.description = description
-            
+
             if image_file:
                 if asset.image:
                     asset.image.delete(save=False)
                 # Compress image before saving
                 compressed_image = Settingcontroller.compress_uploaded_image(image_file)
                 asset.image = compressed_image
-            
+
             asset.save()
             return JsonResponse({
                 'success': True,
@@ -607,51 +621,51 @@ class Settingcontroller :
             })
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-    
+
     @staticmethod
     def image_asset_delete(request, asset_id):
         from django.http import JsonResponse
         from ..models import ImageAsset, Organization
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         org_id = request.session.get('organization_id')
         admin_id = request.session.get('admin_id')
-        
+
         admin = None
         org = None
-        
+
         if org_id:
             org = Organization.objects.filter(id=org_id).first()
         elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
-        
+
         if not admin and not org:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         try:
             if org:
                 result = ImageAsset.objects.filter(id=asset_id, organization=org).delete()
             else:
                 result = ImageAsset.objects.filter(id=asset_id, admin=admin).delete()
-            
+
             if result[0] > 0:
                 return JsonResponse({'success': True})
             else:
                 return JsonResponse({'error': 'Image asset not found'}, status=404)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-    
+
     # ===================== FOLLOW-UP SETTINGS =====================
-    
+
     @staticmethod
     def followup_settings(request):
         from ..models import FollowUpMessage, Admin, Tag, WhatsAppTemplate
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         # Get admin - either from session or via org's WhatsApp phone ID
         admin = None
         if admin_id:
@@ -661,7 +675,7 @@ class Settingcontroller :
             org = Organization.objects.filter(id=org_id).first()
             if org and org.whatsapp_phone_id:
                 admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
-            
+
         if not admin:
             # Follow-ups require an Admin record to be linked
             return render(request, 'set/followup_settings.html', {
@@ -671,9 +685,9 @@ class Settingcontroller :
                 'templates': WhatsAppTemplate.objects.none(),
                 'error_message': 'Follow-up settings require a WhatsApp connection. Please connect WhatsApp first in Settings > Channels.'
             })
-        
+
         followups = FollowUpMessage.objects.filter(admin=admin).order_by('step')
-        
+
         # Get tags for the dropdown - filter by org or admin
         if org_id:
             tags = Tag.objects.filter(organization_id=org_id)
@@ -681,7 +695,7 @@ class Settingcontroller :
             tags = Tag.objects.filter(admin_id=admin_id)
         else:
             tags = Tag.objects.none()
-        
+
         # Get approved WhatsApp templates for the template picker
         # Query by BOTH org and admin to ensure we find templates regardless of how they were synced
         from django.db.models import Q
@@ -696,26 +710,26 @@ class Settingcontroller :
             templates = WhatsAppTemplate.objects.filter(q_filter, status='APPROVED').distinct()
         else:
             templates = WhatsAppTemplate.objects.none()
-        
+
         return render(request, 'set/followup_settings.html', {
             'admin': admin,
             'followups': followups,
             'tags': tags,
             'templates': templates
         })
-    
+
     @staticmethod
     def followup_create(request):
         from django.http import JsonResponse
         from ..models import FollowUpMessage
         import json
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         # Get admin - either from session or via org's WhatsApp phone ID
         admin = None
         if admin_id:
@@ -725,23 +739,23 @@ class Settingcontroller :
             org = Organization.objects.filter(id=org_id).first()
             if org and org.whatsapp_phone_id:
                 admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
-        
+
         if not admin:
             return JsonResponse({'error': 'Follow-up settings require a WhatsApp connection. Please connect WhatsApp first.'}, status=404)
-        
+
         # Check limit (max 4)
         existing_count = FollowUpMessage.objects.filter(admin=admin).count()
         if existing_count >= 4:
             return JsonResponse({'error': 'Maximum 4 follow-ups allowed'}, status=400)
-        
+
         try:
             data = json.loads(request.body)
             next_step = existing_count + 1
-            
+
             use_template = data.get('use_template', False)
             if isinstance(use_template, str):
                 use_template = use_template.lower() in ('true', '1', 'on')
-            
+
             followup = FollowUpMessage.objects.create(
                 admin=admin,
                 step=next_step,
@@ -751,23 +765,23 @@ class Settingcontroller :
                 use_template=use_template,
                 template_id=data.get('template_id') or None
             )
-            
+
             return JsonResponse({'success': True, 'id': followup.id})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-    
+
     @staticmethod
     def followup_update(request, followup_id):
         from django.http import JsonResponse
         from ..models import FollowUpMessage
         import json
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         admin = None
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
@@ -776,14 +790,14 @@ class Settingcontroller :
             org = Organization.objects.filter(id=org_id).first()
             if org and org.whatsapp_phone_id:
                 admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
-        
+
         if not admin:
             return JsonResponse({'error': 'Admin not found'}, status=404)
-        
+
         followup = FollowUpMessage.objects.filter(id=followup_id, admin=admin).first()
         if not followup:
             return JsonResponse({'error': 'Follow-up not found'}, status=404)
-        
+
         try:
             data = json.loads(request.body)
             followup.delay_minutes = data.get('delay_minutes', followup.delay_minutes)
@@ -798,22 +812,22 @@ class Settingcontroller :
             if 'template_id' in data:
                 followup.template_id = data.get('template_id') or None
             followup.save()
-            
+
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-    
+
     @staticmethod
     def followup_delete(request, followup_id):
         from django.http import JsonResponse
         from ..models import FollowUpMessage
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         admin = None
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
@@ -822,36 +836,36 @@ class Settingcontroller :
             org = Organization.objects.filter(id=org_id).first()
             if org and org.whatsapp_phone_id:
                 admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
-        
+
         if not admin:
             return JsonResponse({'error': 'Admin not found'}, status=404)
-        
+
         followup = FollowUpMessage.objects.filter(id=followup_id, admin=admin).first()
         if not followup:
             return JsonResponse({'error': 'Follow-up not found'}, status=404)
-        
+
         deleted_step = followup.step
         followup.delete()
-        
+
         # Renumber remaining steps
         remaining = FollowUpMessage.objects.filter(admin=admin, step__gt=deleted_step).order_by('step')
         for i, f in enumerate(remaining, start=deleted_step):
             f.step = i
             f.save()
-        
+
         return JsonResponse({'success': True})
-    
+
     @staticmethod
     def followup_toggle(request):
         from django.http import JsonResponse
         import json
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         admin = None
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
@@ -860,10 +874,10 @@ class Settingcontroller :
             org = Organization.objects.filter(id=org_id).first()
             if org and org.whatsapp_phone_id:
                 admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
-        
+
         if not admin:
             return JsonResponse({'error': 'Admin not found'}, status=404)
-        
+
         try:
             data = json.loads(request.body)
             admin.followup_enabled = data.get('enabled', True)
@@ -873,18 +887,18 @@ class Settingcontroller :
             return JsonResponse({'error': str(e)}, status=400)
 
     # ===================== TAG MANAGEMENT =====================
-    
+
     @staticmethod
     def tags_view(request):
         from ..models import Tag, Organization
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         tags = []
         admin = None
         org = None
-        
+
         if org_id:
             # Organization user - filter tags by organization
             org = Organization.objects.filter(id=org_id).first()
@@ -897,12 +911,12 @@ class Settingcontroller :
                 tags = Tag.objects.filter(admin=admin).order_by('-created_at')
         else:
             return redirect('/login/')
-        
+
         return render(request, 'set/tags.html', {
             'admin': admin,
             'tags': tags
         })
-    
+
     @staticmethod
     def tag_create(request):
         # RBAC: Only users with can_manage_tags can create tags
@@ -911,34 +925,34 @@ class Settingcontroller :
         from django.http import JsonResponse
         from ..models import Tag, Organization
         import json
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         if not admin_id and not org_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         try:
             data = json.loads(request.body)
             name = data.get('name', '').strip()
             description = data.get('description', '').strip()
-            
+
             if not name:
                 return JsonResponse({'error': 'Tag name is required'}, status=400)
-            
+
             if org_id:
                 # Organization user - create tag for organization
                 org = Organization.objects.filter(id=org_id).first()
                 if not org:
                     return JsonResponse({'error': 'Organization not found'}, status=404)
-                
+
                 # Check for duplicate within organization
                 if Tag.objects.filter(organization=org, name__iexact=name).exists():
                     return JsonResponse({'error': 'Tag already exists'}, status=400)
-                
+
                 tag = Tag.objects.create(
                     organization=org,
                     name=name,
@@ -951,11 +965,11 @@ class Settingcontroller :
                 admin = Admin.objects.filter(id=admin_id).first()
                 if not admin:
                     return JsonResponse({'error': 'Admin not found'}, status=404)
-                
+
                 # Check for duplicate within admin
                 if Tag.objects.filter(admin=admin, name__iexact=name).exists():
                     return JsonResponse({'error': 'Tag already exists'}, status=400)
-                
+
                 tag = Tag.objects.create(
                     admin=admin,
                     name=name,
@@ -963,11 +977,11 @@ class Settingcontroller :
                     keyword=data.get('keyword', '').strip() or None,
                     auto_apply=data.get('auto_apply', False)
                 )
-            
+
             return JsonResponse({'success': True, 'id': tag.id, 'name': tag.name})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-    
+
     @staticmethod
     def tag_update(request, tag_id):
         # RBAC: Only users with can_manage_tags can update tags
@@ -976,16 +990,16 @@ class Settingcontroller :
         from django.http import JsonResponse
         from ..models import Tag, Organization
         import json
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         if not admin_id and not org_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         # Find tag based on user type
         tag = None
         if org_id:
@@ -996,10 +1010,10 @@ class Settingcontroller :
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 tag = Tag.objects.filter(id=tag_id, admin=admin).first()
-        
+
         if not tag:
             return JsonResponse({'error': 'Tag not found'}, status=404)
-        
+
         try:
             data = json.loads(request.body)
             tag.name = data.get('name', tag.name).strip()
@@ -1007,11 +1021,11 @@ class Settingcontroller :
             tag.keyword = data.get('keyword', tag.keyword or '').strip() or None
             tag.auto_apply = data.get('auto_apply', tag.auto_apply)
             tag.save()
-            
+
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-    
+
     @staticmethod
     def tag_delete(request, tag_id):
         # RBAC: Only users with can_manage_tags can delete tags
@@ -1019,16 +1033,16 @@ class Settingcontroller :
         if denied: return denied
         from django.http import JsonResponse
         from ..models import Tag, Organization
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         if not admin_id and not org_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         # Find tag based on user type
         tag = None
         if org_id:
@@ -1039,26 +1053,26 @@ class Settingcontroller :
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 tag = Tag.objects.filter(id=tag_id, admin=admin).first()
-        
+
         if not tag:
             return JsonResponse({'error': 'Tag not found'}, status=404)
-        
+
         tag.delete()
         return JsonResponse({'success': True})
-    
+
     # ===================== CUSTOM FIELD MANAGEMENT =====================
-    
+
     @staticmethod
     def custom_fields_view(request):
         from ..models import CustomField, Organization
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         custom_fields = []
         admin = None
         org = None
-        
+
         if org_id:
             # Organization user - filter custom fields by organization
             org = Organization.objects.filter(id=org_id).first()
@@ -1071,52 +1085,52 @@ class Settingcontroller :
                 custom_fields = CustomField.objects.filter(admin=admin).order_by('-created_at')
         else:
             return redirect('/login/')
-        
+
         return render(request, 'set/custom_fields.html', {
             'admin': admin,
             'custom_fields': custom_fields
         })
-    
+
     @staticmethod
     def custom_field_create(request):
         from django.http import JsonResponse
         from ..models import CustomField, Organization
         import json
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         if not admin_id and not org_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         try:
             data = json.loads(request.body)
             name = data.get('name', '').strip()
             field_type = data.get('field_type', 'text').strip()
             description = data.get('description', '').strip()
             is_required = data.get('is_required', False)
-            
+
             if not name:
                 return JsonResponse({'error': 'Field name is required'}, status=400)
-            
+
             # Validate field_type
             valid_types = [choice[0] for choice in CustomField.FIELD_TYPE_CHOICES]
             if field_type not in valid_types:
                 return JsonResponse({'error': f'Invalid field type. Must be one of: {", ".join(valid_types)}'}, status=400)
-            
+
             if org_id:
                 # Organization user - create custom field for organization
                 org = Organization.objects.filter(id=org_id).first()
                 if not org:
                     return JsonResponse({'error': 'Organization not found'}, status=404)
-                
+
                 # Check for duplicate within organization
                 if CustomField.objects.filter(organization=org, name__iexact=name).exists():
                     return JsonResponse({'error': 'Custom field already exists'}, status=400)
-                
+
                 custom_field = CustomField.objects.create(
                     organization=org,
                     name=name,
@@ -1129,11 +1143,11 @@ class Settingcontroller :
                 admin = Admin.objects.filter(id=admin_id).first()
                 if not admin:
                     return JsonResponse({'error': 'Admin not found'}, status=404)
-                
+
                 # Check for duplicate within admin
                 if CustomField.objects.filter(admin=admin, name__iexact=name).exists():
                     return JsonResponse({'error': 'Custom field already exists'}, status=400)
-                
+
                 custom_field = CustomField.objects.create(
                     admin=admin,
                     name=name,
@@ -1141,26 +1155,26 @@ class Settingcontroller :
                     description=description,
                     is_required=is_required
                 )
-            
+
             return JsonResponse({'success': True, 'id': custom_field.id, 'name': custom_field.name})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-    
+
     @staticmethod
     def custom_field_update(request, field_id):
         from django.http import JsonResponse
         from ..models import CustomField, Organization
         import json
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         if not admin_id and not org_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         # Find custom field based on user type
         custom_field = None
         if org_id:
@@ -1171,10 +1185,10 @@ class Settingcontroller :
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 custom_field = CustomField.objects.filter(id=field_id, admin=admin).first()
-        
+
         if not custom_field:
             return JsonResponse({'error': 'Custom field not found'}, status=404)
-        
+
         try:
             data= json.loads(request.body)
             name = data.get('name', '').strip()
@@ -1182,14 +1196,14 @@ class Settingcontroller :
             description = data.get('description', '').strip()
             is_required = data.get('is_required', custom_field.is_required)
             is_active = data.get('is_active', custom_field.is_active)
-            
+
             # Validate field_type if provided
             if field_type:
                 valid_types = [choice[0] for choice in CustomField.FIELD_TYPE_CHOICES]
                 if field_type not in valid_types:
                     return JsonResponse({'error': f'Invalid field type. Must be one of: {", ".join(valid_types)}'}, status=400)
                 custom_field.field_type = field_type
-            
+
             if name:
                 # Check for duplicate name if changing
                 if name.lower() != custom_field.name.lower():
@@ -1202,30 +1216,30 @@ class Settingcontroller :
                         if admin and CustomField.objects.filter(admin=admin, name__iexact=name).exclude(id=field_id).exists():
                             return JsonResponse({'error': 'Custom field with this name already exists'}, status=400)
                 custom_field.name = name
-            
+
             custom_field.description = description
             custom_field.is_required = is_required
             custom_field.is_active = is_active
             custom_field.save()
-            
+
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-    
+
     @staticmethod
     def custom_field_delete(request, field_id):
         from django.http import JsonResponse
         from ..models import CustomField, Organization
-        
+
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         if not admin_id and not org_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         # Find custom field based on user type
         custom_field = None
         if org_id:
@@ -1236,24 +1250,24 @@ class Settingcontroller :
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 custom_field = CustomField.objects.filter(id=field_id, admin=admin).first()
-        
+
         if not custom_field:
             return JsonResponse({'error': 'Custom field not found'}, status=404)
-        
+
         custom_field.delete()
         return JsonResponse({'success': True})
-    
+
     @staticmethod
     def custom_field_list(request):
         from django.http import JsonResponse
         from ..models import CustomField, Organization
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         if not admin_id and not org_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         try:
             custom_fields = []
             if org_id:
@@ -1264,7 +1278,7 @@ class Settingcontroller :
                 admin = Admin.objects.filter(id=admin_id).first()
                 if admin:
                     custom_fields = CustomField.objects.filter(admin=admin, is_active=True)
-            
+
             fields_data = [{
                 'id': cf.id,
                 'name': cf.name,
@@ -1272,7 +1286,7 @@ class Settingcontroller :
                 'description': cf.description,
                 'is_required': cf.is_required
             } for cf in custom_fields]
-            
+
             return JsonResponse({'success': True, 'custom_fields': fields_data})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
@@ -1288,7 +1302,7 @@ class Settingcontroller :
         calendly_connected = False
         calendly_url = ''
         custom_fields = []
-        
+
         if org_id:
             links = CalendlyLink.objects.filter(organization_id=org_id).order_by('-created_at')
             org = Organization.objects.filter(id=org_id).first()
@@ -1303,7 +1317,7 @@ class Settingcontroller :
                 calendly_connected = bool(getattr(admin, 'calendly_token', ''))
                 calendly_url = getattr(admin, 'calendly_scheduling_url', '') or ''
             custom_fields = CustomField.objects.filter(admin_id=admin_id, is_active=True).order_by('name')
-        
+
         return render(request, 'set/calendly_links.html', {
             'links': links,
             'calendly_connected': calendly_connected,
@@ -1317,21 +1331,21 @@ class Settingcontroller :
         from ..models import CalendlyLink, Organization
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         admin = None
-        
+
         if admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
         elif org_id:
             org = Organization.objects.filter(id=org_id).first()
             if org and org.whatsapp_phone_id:
                 admin = Admin.objects.filter(whatsapp_phone_id=org.whatsapp_phone_id).first()
-        
+
         if not admin and not org_id:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
-        
+
         try:
             data = json.loads(request.body)
             name = data.get('name', '').strip()
@@ -1339,10 +1353,10 @@ class Settingcontroller :
             url = data.get('url', '').strip()
             custom_field_name = data.get('custom_field_name', '').strip()
             booking_message = data.get('booking_message', '').strip()
-            
+
             if not name or not url:
                 return JsonResponse({'error': 'Name and URL are required'}, status=400)
-            
+
             link = CalendlyLink.objects.create(
                 admin=admin,
                 organization_id=org_id if org_id else None,
@@ -1352,7 +1366,7 @@ class Settingcontroller :
                 custom_field_name=custom_field_name,
                 booking_message=booking_message,
             )
-            
+
             return JsonResponse({
                 'success': True,
                 'id': link.id,
@@ -1367,10 +1381,10 @@ class Settingcontroller :
         from ..models import CalendlyLink, Organization
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         link = None
         if org_id:
             link = CalendlyLink.objects.filter(id=link_id, organization_id=org_id).first()
@@ -1378,10 +1392,10 @@ class Settingcontroller :
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 link = CalendlyLink.objects.filter(id=link_id, admin=admin).first()
-        
+
         if not link:
             return JsonResponse({'error': 'Link not found'}, status=404)
-        
+
         try:
             data = json.loads(request.body)
             link.name = data.get('name', link.name).strip()
@@ -1390,7 +1404,7 @@ class Settingcontroller :
             link.custom_field_name = data.get('custom_field_name', link.custom_field_name).strip()
             link.booking_message = data.get('booking_message', link.booking_message).strip()
             link.save()
-            
+
             return JsonResponse({'success': True, 'msg': 'Link updated!'})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
@@ -1401,10 +1415,10 @@ class Settingcontroller :
         from ..models import CalendlyLink, Organization
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         link = None
         if org_id:
             link = CalendlyLink.objects.filter(id=link_id, organization_id=org_id).first()
@@ -1412,23 +1426,23 @@ class Settingcontroller :
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 link = CalendlyLink.objects.filter(id=link_id, admin=admin).first()
-        
+
         if not link:
             return JsonResponse({'error': 'Link not found'}, status=404)
-        
+
         link.delete()
         return JsonResponse({'success': True, 'msg': 'Link deleted!'})
 
     # ==================== PROMPT MANAGEMENT (Multi-Agent) ====================
     @staticmethod
     def prompt_list(request):
-        """AI Agent page — list all prompts for prompt management."""
+        """AI Agent page â€” list all prompts for prompt management."""
         from ..models import ChatGPTPrompt, Organization, Admin
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
         if not admin_id and not org_id:
             return redirect('/login')
-        
+
         prompts = ChatGPTPrompt.objects.none()
         org = None
         admin = None
@@ -1438,7 +1452,7 @@ class Settingcontroller :
         elif admin_id:
             admin = Admin.objects.filter(id=admin_id).first()
             prompts = ChatGPTPrompt.objects.filter(admin=admin).order_by('-is_default', '-updated_at')
-        
+
         return render(request, 'set/ai_agent.html', {
             'prompts': prompts,
             'organization': org,
@@ -1454,10 +1468,10 @@ class Settingcontroller :
         from ..models import ChatGPTPrompt, Organization, Admin
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
         name = data.get('name', 'New Prompt').strip()
         prompt_text = data.get('prompt_text', '').strip()
@@ -1465,9 +1479,15 @@ class Settingcontroller :
         is_default = data.get('is_default', False)
         if isinstance(is_default, str):
             is_default = is_default.lower() in ('true', '1', 'on')
-        
+
         prompt = ChatGPTPrompt(name=name, prompt_text=prompt_text, gpt_model=gpt_model, is_default=is_default)
-        
+
+        # Channel assignment
+        channels = data.get('channels', [])
+        if isinstance(channels, list):
+            valid_channels = [c for c in channels if c in ('whatsapp', 'instagram', 'facebook', 'webchat')]
+            prompt.channels = valid_channels
+
         if org_id:
             prompt.organization_id = org_id
             if is_default:
@@ -1477,7 +1497,7 @@ class Settingcontroller :
             prompt.admin = admin
             if is_default:
                 ChatGPTPrompt.objects.filter(admin=admin, is_default=True).update(is_default=False)
-        
+
         prompt.save()
         return JsonResponse({'success': True, 'id': prompt.id, 'msg': 'Prompt created!'})
 
@@ -1490,10 +1510,10 @@ class Settingcontroller :
         from ..models import ChatGPTPrompt, Organization, Admin
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         prompt = None
         if org_id:
             prompt = ChatGPTPrompt.objects.filter(id=prompt_id, organization_id=org_id).first()
@@ -1501,12 +1521,12 @@ class Settingcontroller :
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 prompt = ChatGPTPrompt.objects.filter(id=prompt_id, admin=admin).first()
-        
+
         if not prompt:
             return JsonResponse({'error': 'Prompt not found'}, status=404)
-        
+
         data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
-        
+
         if 'name' in data:
             prompt.name = data['name'].strip()
         if 'prompt_text' in data:
@@ -1525,7 +1545,14 @@ class Settingcontroller :
                     if admin:
                         ChatGPTPrompt.objects.filter(admin=admin, is_default=True).update(is_default=False)
             prompt.is_default = is_default
-        
+
+        # Channel assignment
+        if 'channels' in data:
+            channels = data['channels']
+            if isinstance(channels, list):
+                valid_channels = [c for c in channels if c in ('whatsapp', 'instagram', 'facebook', 'webchat')]
+                prompt.channels = valid_channels
+
         prompt.save()
         return JsonResponse({'success': True, 'msg': 'Prompt updated!'})
 
@@ -1538,10 +1565,10 @@ class Settingcontroller :
         from ..models import ChatGPTPrompt, Organization, Admin
         if request.method != 'POST':
             return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
+
         admin_id = request.session.get('admin_id')
         org_id = request.session.get('organization_id')
-        
+
         prompt = None
         if org_id:
             prompt = ChatGPTPrompt.objects.filter(id=prompt_id, organization_id=org_id).first()
@@ -1549,10 +1576,10 @@ class Settingcontroller :
             admin = Admin.objects.filter(id=admin_id).first()
             if admin:
                 prompt = ChatGPTPrompt.objects.filter(id=prompt_id, admin=admin).first()
-        
+
         if not prompt:
             return JsonResponse({'error': 'Prompt not found'}, status=404)
-        
+
         prompt.delete()
         return JsonResponse({'success': True, 'msg': 'Prompt deleted!'})
 
@@ -1640,3 +1667,313 @@ class Settingcontroller :
             return JsonResponse({'error': 'Not found'}, status=404)
         link.delete()
         return JsonResponse({'success': True})
+
+    # ===================== INTERACTIVE BUTTON MANAGEMENT =====================
+
+    @staticmethod
+    def button_groups(request):
+        """List all button groups for the current org/admin."""
+        from ..models import ButtonGroup, Organization
+
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+        groups = []
+
+        if org_id:
+            org = Organization.objects.filter(id=org_id).first()
+            if org:
+                groups = ButtonGroup.objects.filter(organization=org).prefetch_related('buttons').order_by('-created_at')
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                groups = ButtonGroup.objects.filter(admin=admin).prefetch_related('buttons').order_by('-created_at')
+
+        return render(request, 'set/buttons.html', {'groups': groups})
+
+    @staticmethod
+    def button_group_create(request):
+        """Create a new button group with buttons."""
+        denied = Settingcontroller._check_permission(request, 'can_manage_settings')
+        if denied: return denied
+        from django.http import JsonResponse
+        from ..models import ButtonGroup, ButtonItem, Organization
+        import json
+
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+
+        if not admin_id and not org_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+        try:
+            data = json.loads(request.body)
+            name = data.get('name', '').strip()
+
+            if not name:
+                return JsonResponse({'error': 'Button group name is required'}, status=400)
+
+            buttons = data.get('buttons', [])
+            if not buttons:
+                return JsonResponse({'error': 'At least one button is required'}, status=400)
+            if len(buttons) > 3:
+                return JsonResponse({'error': 'Maximum 3 buttons per group (WhatsApp limit)'}, status=400)
+
+            admin = None
+            org = None
+
+            if org_id:
+                org = Organization.objects.filter(id=org_id).first()
+                if not org:
+                    return JsonResponse({'error': 'Organization not found'}, status=404)
+                if ButtonGroup.objects.filter(organization=org, name__iexact=name).exists():
+                    return JsonResponse({'error': f'Button group "{name}" already exists'}, status=400)
+            elif admin_id:
+                admin = Admin.objects.filter(id=admin_id).first()
+                if not admin:
+                    return JsonResponse({'error': 'Admin not found'}, status=404)
+                if ButtonGroup.objects.filter(admin=admin, name__iexact=name).exists():
+                    return JsonResponse({'error': f'Button group "{name}" already exists'}, status=400)
+
+            group = ButtonGroup.objects.create(
+                admin=admin,
+                organization=org,
+                name=name,
+                description=data.get('description', ''),
+                header_text=data.get('header_text', '')[:60],
+                body_text=data.get('body_text', 'Please choose an option:'),
+                footer_text=data.get('footer_text', '')[:60],
+            )
+
+            # Create button items
+            for i, btn in enumerate(buttons[:3]):
+                title = btn.get('title', '').strip()
+                if not title:
+                    continue
+                ButtonItem.objects.create(
+                    group=group,
+                    title=title[:20],
+                    button_type=btn.get('button_type', 'reply'),
+                    payload=btn.get('payload', ''),
+                    order=i,
+                )
+
+            return JsonResponse({'success': True, 'id': group.id, 'name': group.name})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    @staticmethod
+    def button_group_update(request, group_id):
+        """Update a button group and its buttons."""
+        denied = Settingcontroller._check_permission(request, 'can_manage_settings')
+        if denied: return denied
+        from django.http import JsonResponse
+        from ..models import ButtonGroup, ButtonItem, Organization
+        import json
+
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+
+        if not admin_id and not org_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+        group = None
+        if org_id:
+            group = ButtonGroup.objects.filter(id=group_id, organization_id=org_id).first()
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                group = ButtonGroup.objects.filter(id=group_id, admin=admin).first()
+
+        if not group:
+            return JsonResponse({'error': 'Button group not found'}, status=404)
+
+        try:
+            data = json.loads(request.body)
+
+            group.name = data.get('name', group.name).strip()
+            group.description = data.get('description', group.description)
+            group.header_text = data.get('header_text', group.header_text)[:60]
+            group.body_text = data.get('body_text', group.body_text)
+            group.footer_text = data.get('footer_text', group.footer_text)[:60]
+            group.is_active = data.get('is_active', group.is_active)
+            group.save()
+
+            # Replace buttons
+            buttons = data.get('buttons', None)
+            if buttons is not None:
+                if len(buttons) > 3:
+                    return JsonResponse({'error': 'Maximum 3 buttons per group'}, status=400)
+
+                group.buttons.all().delete()
+                for i, btn in enumerate(buttons[:3]):
+                    title = btn.get('title', '').strip()
+                    if not title:
+                        continue
+                    ButtonItem.objects.create(
+                        group=group,
+                        title=title[:20],
+                        button_type=btn.get('button_type', 'reply'),
+                        payload=btn.get('payload', ''),
+                        order=i,
+                    )
+
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    @staticmethod
+    def button_group_delete(request, group_id):
+        """Delete a button group and all its buttons."""
+        denied = Settingcontroller._check_permission(request, 'can_manage_settings')
+        if denied: return denied
+        from django.http import JsonResponse
+        from ..models import ButtonGroup, Organization
+
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+        admin_id = request.session.get('admin_id')
+        org_id = request.session.get('organization_id')
+
+        if not admin_id and not org_id:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+        group = None
+        if org_id:
+            group = ButtonGroup.objects.filter(id=group_id, organization_id=org_id).first()
+        elif admin_id:
+            admin = Admin.objects.filter(id=admin_id).first()
+            if admin:
+                group = ButtonGroup.objects.filter(id=group_id, admin=admin).first()
+
+        if not group:
+            return JsonResponse({'error': 'Button group not found'}, status=404)
+
+        group.delete()
+        return JsonResponse({'success': True})
+
+    # ===================== INSTAGRAM / FACEBOOK CHANNEL CONNECTION =====================
+
+    @staticmethod
+    @csrf_exempt
+    def channel_instagram_connect(request):
+        """Save Instagram DM credentials."""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+        org_id = request.session.get('organization_id')
+        if not org_id:
+            from django.contrib import messages as django_messages
+            django_messages.error(request, 'Organization-level login required for channel configuration')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        from ..models import Organization
+        org = Organization.objects.filter(id=org_id).first()
+        if not org:
+            from django.contrib import messages as django_messages
+            django_messages.error(request, 'Organization not found')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        page_id = (request.POST.get('instagram_page_id') or '').strip()
+        token = (request.POST.get('instagram_token') or '').strip()
+        account_id = (request.POST.get('instagram_account_id') or '').strip()
+
+        if not page_id or not token:
+            from django.contrib import messages as django_messages
+            django_messages.error(request, 'Page ID and Access Token are required')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        org.instagram_page_id = page_id
+        org.instagram_token = token
+        org.instagram_account_id = account_id
+        org.save(update_fields=['instagram_page_id', 'instagram_token', 'instagram_account_id'])
+
+        from django.contrib import messages as django_messages
+        django_messages.success(request, 'Instagram DM connected successfully!')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    @staticmethod
+    @csrf_exempt
+    def channel_instagram_disconnect(request):
+        """Remove Instagram DM credentials."""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+        org_id = request.session.get('organization_id')
+        if not org_id:
+            from django.contrib import messages as django_messages
+            django_messages.error(request, 'Not authenticated')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        from ..models import Organization
+        Organization.objects.filter(id=org_id).update(
+            instagram_page_id='', instagram_token='', instagram_account_id=''
+        )
+
+        from django.contrib import messages as django_messages
+        django_messages.success(request, 'Instagram DM disconnected')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    @staticmethod
+    @csrf_exempt
+    def channel_facebook_connect(request):
+        """Save Facebook Messenger credentials."""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+        org_id = request.session.get('organization_id')
+        if not org_id:
+            from django.contrib import messages as django_messages
+            django_messages.error(request, 'Organization-level login required for channel configuration')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        from ..models import Organization
+        org = Organization.objects.filter(id=org_id).first()
+        if not org:
+            from django.contrib import messages as django_messages
+            django_messages.error(request, 'Organization not found')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        page_id = (request.POST.get('facebook_page_id') or '').strip()
+        token = (request.POST.get('facebook_token') or '').strip()
+
+        if not page_id or not token:
+            from django.contrib import messages as django_messages
+            django_messages.error(request, 'Page ID and Access Token are required')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        org.facebook_page_id = page_id
+        org.facebook_token = token
+        org.save(update_fields=['facebook_page_id', 'facebook_token'])
+
+        from django.contrib import messages as django_messages
+        django_messages.success(request, 'Facebook Messenger connected successfully!')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    @staticmethod
+    @csrf_exempt
+    def channel_facebook_disconnect(request):
+        """Remove Facebook Messenger credentials."""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+        org_id = request.session.get('organization_id')
+        if not org_id:
+            from django.contrib import messages as django_messages
+            django_messages.error(request, 'Not authenticated')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        from ..models import Organization
+        Organization.objects.filter(id=org_id).update(
+            facebook_page_id='', facebook_token=''
+        )
+
+        from django.contrib import messages as django_messages
+        django_messages.success(request, 'Facebook Messenger disconnected')
+        return redirect(request.META.get('HTTP_REFERER', '/'))

@@ -3,7 +3,7 @@
 Action Tag Processor for WhatsApp Messages
 
 
-This module handles the processing of action tags in AI responses, 
+This module handles the processing of action tags in AI responses,
 allowing the chatbot to perform backend actions triggered by the prompt.
 
 Supported Tags:
@@ -18,7 +18,7 @@ Usage in AI prompts:
     "Checking your invoice status... {{api:fetch_invoice}}"
     "Sending you a follow-up... {{template:booking_confirmation}}"
     "Creating your order... {{api:create_customer}} {{api:create_invoice}}"  # Chained
-    
+
 The processor will:
 1. Parse the tags from the response
 2. Execute the corresponding actions (using logic.py)
@@ -32,12 +32,12 @@ from . import logic
 def parse_action_tags(text):
     """
     Extract all action tags from text.
-    
+
     Returns:
         List of dicts: [{'type': 'tag_add', 'name': 'vip', 'full_tag': '{{tag:add:vip}}'}, ...]
     """
     actions = []
-    
+
     # 1. Tag Add: {{tag:add:name}}
     tag_add_matches = re.finditer(r'\{\{tag:add:([a-zA-Z0-9_\-\s]+)\}\}', text)
     for match in tag_add_matches:
@@ -46,7 +46,7 @@ def parse_action_tags(text):
             'name': match.group(1).strip(),
             'full_tag': match.group(0)
         })
-        
+
     # 2. Tag Remove: {{tag:remove:name}}
     tag_remove_matches = re.finditer(r'\{\{tag:remove:([a-zA-Z0-9_\-\s]+)\}\}', text)
     for match in tag_remove_matches:
@@ -55,7 +55,7 @@ def parse_action_tags(text):
             'name': match.group(1).strip(),
             'full_tag': match.group(0)
         })
-        
+
     # 3. API Call: {{api:name}} or {{api:name:key=val,key2=val2}}
     api_matches = re.finditer(r'\{\{api:([a-zA-Z0-9_]+)(?::([^}]+))?\}\}', text)
     for match in api_matches:
@@ -73,7 +73,7 @@ def parse_action_tags(text):
             'full_tag': match.group(0),
             'params': params
         })
-    
+
     # 4. Template Send: {{template:name}} or {{template:name:1=John,2=Order123}}
     template_matches = re.finditer(r'\{\{template:([a-zA-Z0-9_\-]+)(?::([^}]+))?\}\}', text)
     for match in template_matches:
@@ -90,7 +90,7 @@ def parse_action_tags(text):
             'full_tag': match.group(0),
             'params': params
         })
-    
+
     # 5. Calendly Link: {{calendly:name}}
     calendly_matches = re.finditer(r'\{\{calendly:([a-zA-Z0-9_\-\s]+)\}\}', text)
     for match in calendly_matches:
@@ -99,7 +99,7 @@ def parse_action_tags(text):
             'name': match.group(1).strip(),
             'full_tag': match.group(0)
         })
-    
+
     # 6. Google Calendar Booking: {{gcalendar:name}}
     gcal_matches = re.finditer(r'\{\{gcalendar:([a-zA-Z0-9_\-\s]+)\}\}', text)
     for match in gcal_matches:
@@ -108,7 +108,16 @@ def parse_action_tags(text):
             'name': match.group(1).strip(),
             'full_tag': match.group(0)
         })
-        
+
+    # 7. Interactive Buttons: {{button:group_name}}
+    button_matches = re.finditer(r'\{\{button:([a-zA-Z0-9_\-\s]+)\}\}', text)
+    for match in button_matches:
+        actions.append({
+            'type': 'button_send',
+            'name': match.group(1).strip(),
+            'full_tag': match.group(0)
+        })
+
     return actions
 
 
@@ -123,7 +132,7 @@ def _replace_raw_calendly_urls(text, phone, admin, organization):
     matches = calendly_pattern.findall(text)
     if not matches:
         return text
-    
+
     for raw_url in matches:
         try:
             from .models import CalendlyLink, CalendlyBookingTracker, User as UserModel
@@ -133,12 +142,12 @@ def _replace_raw_calendly_urls(text, phone, admin, organization):
                 link = CalendlyLink.objects.filter(organization=organization).first()
             if not link and admin:
                 link = CalendlyLink.objects.filter(admin=admin).first()
-            
+
             if link:
                 booking_token = uuid.uuid4().hex[:16]
                 redirect_url = f"https://chatbotad.io/book/{booking_token}/"
                 text = text.replace(raw_url, redirect_url)
-                
+
                 # Track the booking
                 user_obj = UserModel.objects.filter(phone_no=phone).first()
                 if user_obj:
@@ -155,19 +164,19 @@ def _replace_raw_calendly_urls(text, phone, admin, organization):
                 print(f"[ActionTag] SAFETY: Removed raw Calendly URL (no link configured)")
         except Exception as e:
             print(f"[ActionTag] SAFETY: Error replacing raw URL: {e}")
-    
+
     return text
 
 
 def process_response_actions(text, admin, phone, organization=None):
     """
     Process an AI response, extracting and executing action tags.
-    
+
     Args:
         text (str): The full AI response text
         admin (Admin): The Admin model instance
         phone (str): User's phone number
-        
+
     Returns:
         dict with:
             - 'original_text': str
@@ -181,30 +190,30 @@ def process_response_actions(text, admin, phone, organization=None):
         'actions_executed': [],
         'api_responses': []
     }
-    
+
     # Set context for logic functions
     logic.set_current_context(phone, admin, organization)
-    
+
     actions = parse_action_tags(text)
-    
+
     if not actions:
         # Even without tags, check for raw Calendly URLs the AI might have generated
         result['final_text'] = _replace_raw_calendly_urls(text, phone, admin, organization)
         return result
-        
+
     print(f"[ActionTag] Found {len(actions)} action(s) in response")
-    
-    # Sort actions by their position in text to process in order? 
+
+    # Sort actions by their position in text to process in order?
     # Actually regex finditer yields in order.
-    
+
     replacement_text = text
-    
+
     for action in actions:
         tag = action['full_tag']
         action_type = action['type']
         name = action['name']
         outcome = ""
-        
+
         # For calendly links, replace tag with redirect URL (token-based)
         # For other tags, remove the tag from text
         if action_type == 'calendly_link':
@@ -215,7 +224,7 @@ def process_response_actions(text, admin, phone, organization=None):
                 link = CalendlyLink.objects.filter(organization=organization, name__iexact=name).first()
             if not link and admin:
                 link = CalendlyLink.objects.filter(admin=admin, name__iexact=name).first()
-            
+
             if link:
                 # Generate booking token and create redirect URL
                 import uuid
@@ -223,7 +232,7 @@ def process_response_actions(text, admin, phone, organization=None):
                 redirect_url = f"https://chatbotad.io/book/{booking_token}/"
                 replacement_text = replacement_text.replace(tag, redirect_url)
                 outcome = f"Calendly link '{name}' inserted as redirect: {redirect_url}"
-                
+
                 # Track this Calendly link send with booking token
                 try:
                     from .models import CalendlyBookingTracker
@@ -239,7 +248,7 @@ def process_response_actions(text, admin, phone, organization=None):
                         print(f"[ActionTag] Tracked Calendly link send: {phone} -> {link.name} (token: {booking_token})")
                 except Exception as track_err:
                     print(f"[ActionTag] Tracking error (non-fatal): {track_err}")
-                
+
                 # Cancel any pending follow-ups for this user since link was served
                 try:
                     from .models import ScheduledFollowUp, User as UserModel
@@ -259,23 +268,23 @@ def process_response_actions(text, admin, phone, organization=None):
         else:
             # Remove tag from text
             replacement_text = replacement_text.replace(tag, "").strip()
-        
+
         try:
             if action_type == 'tag_add':
                 outcome = logic.apply_user_tag(name, admin, phone)
-                
+
             elif action_type == 'tag_remove':
                 outcome = logic.remove_user_tag(name, admin, phone)
-                
+
             elif action_type == 'api_call':
-                # Feature 5: Check for API chaining — execute dependent APIs first
+                # Feature 5: Check for API chaining â€” execute dependent APIs first
                 from .models import ExternalAPI
                 api_config = None
                 if organization:
                     api_config = ExternalAPI.objects.filter(organization=organization, name=name).first()
                 if not api_config and admin:
                     api_config = ExternalAPI.objects.filter(admin=admin, name=name).first()
-                
+
                 # Execute any prerequisite APIs first (chaining)
                 if api_config and api_config.depends_on:
                     dep = api_config.depends_on
@@ -285,13 +294,13 @@ def process_response_actions(text, admin, phone, organization=None):
                     # Save prerequisite response fields to custom fields via response_mapping
                     # (already handled inside execute_tool -> _process_response_mapping)
                     print(f"[ActionTag] Prerequisite '{dep.name}' result: {dep_response[:200] if dep_response else 'empty'}")
-                
-                # Build context args — include custom fields so chained values are available
+
+                # Build context args â€” include custom fields so chained values are available
                 context_args = {
                     "phone": phone,
                     "phone_no": phone
                 }
-                
+
                 # Inject user's custom field values so {{cf:field_name}} and {{custom_field:name:value}} work
                 try:
                     from .models import CustomFieldValue, User as UserModel
@@ -302,16 +311,16 @@ def process_response_actions(text, admin, phone, organization=None):
                             context_args[cfv.custom_field.name] = cfv.value
                 except Exception:
                     pass
-                
+
                 # Merge inline params from {{api:name:key=val}} format
                 inline_params = action.get('params', {})
                 if inline_params:
                     context_args.update(inline_params)
-                
+
                 api_response = logic.execute_tool(name, context_args, admin)
-                
+
                 outcome = f"API '{name}' executed."
-                
+
                 # Check if response looks like JSON or plain text
                 try:
                     json_res = json.loads(api_response)
@@ -326,20 +335,20 @@ def process_response_actions(text, admin, phone, organization=None):
                         result['api_responses'].append(api_response)
                     else:
                         result['api_responses'].append("Sorry, no data found for that request.")
-            
+
             elif action_type == 'template_send':
                 # Feature 2: Send a WhatsApp template message mid-conversation
                 try:
                     from .models import WhatsAppTemplate, Organization as OrgModel
                     from .template_message_sender import send_template_message
-                    
+
                     # Look up the template
                     tmpl = None
                     if organization:
                         tmpl = WhatsAppTemplate.objects.filter(organization=organization, name__iexact=name).first()
                     if not tmpl and admin:
                         tmpl = WhatsAppTemplate.objects.filter(admin=admin, name__iexact=name).first()
-                    
+
                     if tmpl:
                         # Get WhatsApp credentials
                         org = None
@@ -347,14 +356,14 @@ def process_response_actions(text, admin, phone, organization=None):
                             org = organization if hasattr(organization, 'whatsappid') else OrgModel.objects.filter(id=organization.id).first()
                         elif admin:
                             org = OrgModel.objects.filter(whatsapp_phone_id=admin.whatsapp_phone_id).first()
-                        
+
                         tmpl_vars = action.get('params', {})
                         # Auto-populate user name as param 1 if not set
                         from .models import User as UserModel
                         user_obj = UserModel.objects.filter(phone_no__endswith=phone[-10:]).first() if phone else None
                         if user_obj and user_obj.name and '1' not in tmpl_vars:
                             tmpl_vars['1'] = user_obj.name
-                        
+
                         tmpl_result = send_template_message(
                             phone_number=phone,
                             template=tmpl,
@@ -367,10 +376,10 @@ def process_response_actions(text, admin, phone, organization=None):
                 except Exception as tmpl_err:
                     outcome = f"Error sending template '{name}': {str(tmpl_err)}"
                     print(f"[ActionTag] {outcome}")
-            
+
             elif action_type == 'calendly_link':
                 pass  # Already handled above
-            
+
             elif action_type == 'gcalendar_link':
                 # Feature 6: Generate a Google Calendar booking link
                 import uuid
@@ -385,12 +394,12 @@ def process_response_actions(text, admin, phone, organization=None):
                         gcal_link = GoogleCalendarLink.objects.filter(
                             admin=admin, name__iexact=name, is_active=True
                         ).first()
-                    
+
                     if gcal_link:
                         user_obj = UserModel.objects.filter(
                             phone_no__endswith=phone[-10:]
                         ).first() if phone else None
-                        
+
                         booking_token = uuid.uuid4().hex[:16]
                         if user_obj:
                             GoogleCalendarBooking.objects.create(
@@ -401,7 +410,7 @@ def process_response_actions(text, admin, phone, organization=None):
                             )
                         else:
                             print(f"[ActionTag] Warning: No user found for phone {phone}. Booking link may 404.")
-                        
+
                         # Replace tag with booking page URL (absolute, for WhatsApp)
                         try:
                             from django.conf import settings
@@ -423,20 +432,63 @@ def process_response_actions(text, admin, phone, organization=None):
                     outcome = f"Error generating GCal link: {str(gcal_err)}"
                     print(f"[ActionTag] {outcome}")
 
-                    
+            elif action_type == 'button_send':
+                # Feature: Send interactive buttons via WhatsApp
+                try:
+                    from .models import ButtonGroup, ButtonItem
+                    btn_group = None
+                    if organization:
+                        btn_group = ButtonGroup.objects.filter(
+                            organization=organization, name__iexact=name, is_active=True
+                        ).prefetch_related('buttons').first()
+                    if not btn_group and admin:
+                        btn_group = ButtonGroup.objects.filter(
+                            admin=admin, name__iexact=name, is_active=True
+                        ).prefetch_related('buttons').first()
+
+                    if btn_group:
+                        buttons_data = list(btn_group.buttons.all().order_by('order')[:3])
+                        if buttons_data:
+                            # Store button data in result for the message sender to construct
+                            # the interactive payload instead of a plain text message
+                            result['button_group'] = {
+                                'name': btn_group.name,
+                                'header_text': btn_group.header_text or '',
+                                'body_text': btn_group.body_text or 'Please choose an option:',
+                                'footer_text': btn_group.footer_text or '',
+                                'buttons': [
+                                    {
+                                        'id': f'btn_{btn.id}',
+                                        'title': btn.title[:20],  # WhatsApp 20 char limit
+                                        'type': btn.button_type,
+                                        'payload': btn.payload,
+                                    }
+                                    for btn in buttons_data
+                                ]
+                            }
+                            outcome = f"Button group '{name}' loaded ({len(buttons_data)} buttons)"
+                        else:
+                            outcome = f"Warning: Button group '{name}' has no buttons"
+                    else:
+                        outcome = f"Warning: Button group '{name}' not found"
+                except Exception as btn_err:
+                    outcome = f"Error loading button group '{name}': {str(btn_err)}"
+                    print(f"[ActionTag] {outcome}")
+
+
         except Exception as e:
             outcome = f"Error processing {tag}: {str(e)}"
             print(f"[ActionTag] {outcome}")
-            
+
         result['actions_executed'].append({
             'tag': tag,
             'result': outcome
         })
-        
+
     # Clean up whitespace
     replacement_text = re.sub(r'\n\s*\n', '\n\n', replacement_text).strip()
     # Safety filter: catch any remaining raw calendly.com URLs
     replacement_text = _replace_raw_calendly_urls(replacement_text, phone, admin, organization)
     result['final_text'] = replacement_text
-    
+
     return result

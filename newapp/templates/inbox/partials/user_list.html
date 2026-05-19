@@ -1,6 +1,25 @@
 {% for u in users %}
 <a class="item {% if selected_user and selected_user.id == u.id %}active{% endif %}" href="{% url 'inbox_dashboard' %}?user_id={{ u.id }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.tag_id %}&tag_id={{ request.GET.tag_id }}{% endif %}">
-  <div class="avatar">{{ u.name|default:u.phone_no|slice:":2"|upper }}</div>
+  <div class="avatar" style="position:relative;">
+    {{ u.name|default:u.phone_no|slice:":2"|upper }}
+    {% if u.source == 'Instagram' %}
+    <span class="channel-badge" style="position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;border-radius:50%;background:#e4405f;display:flex;align-items:center;justify-content:center;border:2px solid #fff;" title="Instagram">
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="white" stroke-width="2.5"/><circle cx="12" cy="12" r="5" fill="none" stroke="white" stroke-width="2.5"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg>
+    </span>
+    {% elif u.source == 'Facebook' %}
+    <span class="channel-badge" style="position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;border-radius:50%;background:#0084ff;display:flex;align-items:center;justify-content:center;border:2px solid #fff;" title="Facebook Messenger">
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.145 2 11.243c0 2.906 1.453 5.497 3.727 7.192V22l3.4-1.867A11.45 11.45 0 0 0 12 20.486c5.523 0 10-4.145 10-9.243S17.523 2 12 2z"/></svg>
+    </span>
+    {% elif u.source == 'Webchat' %}
+    <span class="channel-badge" style="position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#60a5fa);display:flex;align-items:center;justify-content:center;border:2px solid #fff;" title="Webchat">
+      <svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </span>
+    {% else %}
+    <span class="channel-badge" style="position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;border:2px solid #fff;" title="WhatsApp">
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+    </span>
+    {% endif %}
+  </div>
   <div>
     <div class="name">{{ u.name|default:"User" }}</div>
     <div class="preview">{{ u.phone_no }}</div>

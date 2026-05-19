@@ -1,6 +1,6 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
 {% load static %}
-{% block title %}AI Agent — Prompt Management{% endblock %}
+{% block title %}AI Agent â€” Prompt Management{% endblock %}
 
 {% block head_css %}
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -74,7 +74,7 @@
   .btn-cancel { background: #e5e7eb; color: #111827; padding: 10px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; }
 </style>
 <style>
-  /* ── SpeedBots Rose Theme Patch ── */
+  /* â”€â”€ SpeedBots Rose Theme Patch â”€â”€ */
   :root {
     --accent: #2563eb !important;
     --accent-soft: #eff6ff !important;
@@ -114,7 +114,7 @@
   }
 </style>
 <style>
-/* ── Rose Theme Polish ── */
+/* â”€â”€ Rose Theme Polish â”€â”€ */
 :root {
   --accent: #2563eb;
   --accent-soft: #eff6ff;
@@ -229,7 +229,7 @@ table tr:last-child td { border-bottom: none !important; }
 {% block content %}
 <div class="settings-wrap">
   <div class="breadcrumb-nav">
-    <a href="{% url 'settings' %}">Settings</a> › <a href="{% url 'integration_view' %}">Integration</a> › AI Agent
+    <a href="{% url 'settings' %}">Settings</a> â€º <a href="{% url 'integration_view' %}">Integration</a> â€º AI Agent
   </div>
 
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
@@ -246,17 +246,29 @@ table tr:last-child td { border-bottom: none !important; }
       <div class="prompt-header">
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="prompt-name">{{ p.name }}</span>
-          {% if p.is_default %}<span class="prompt-default-badge">⭐ DEFAULT</span>{% endif %}
+          {% if p.is_default %}<span class="prompt-default-badge">â­ DEFAULT</span>{% endif %}
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           {% if p.gpt_model %}<span class="prompt-model">{{ p.gpt_model }}</span>{% else %}<span class="prompt-model">Org Default</span>{% endif %}
+          {% if p.channels %}
+            {% for ch in p.channels %}
+              <span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;
+                {% if ch == 'whatsapp' %}background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;
+                {% elif ch == 'instagram' %}background:#fce7f3;color:#be185d;border:1px solid #fbcfe8;
+                {% elif ch == 'facebook' %}background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;
+                {% elif ch == 'webchat' %}background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;
+                {% endif %}">{{ ch|title }}</span>
+            {% endfor %}
+          {% else %}
+            <span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;background:#f8fafc;color:#64748b;border:1px solid #e5e7eb;">All Channels</span>
+          {% endif %}
         </div>
       </div>
       <div class="prompt-text-preview">{{ p.prompt_text }}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <span style="font-size:12px;color:var(--text-muted);">Updated: {{ p.updated_at|date:"M d, Y H:i" }}</span>
         <div class="prompt-actions">
-          <button class="btn-sm-custom btn-edit" onclick="editPrompt({{ p.id }}, '{{ p.name|escapejs }}', `{{ p.prompt_text|escapejs }}`, '{{ p.gpt_model|escapejs }}', {{ p.is_default|yesno:'true,false' }})">Edit</button>
+          <button class="btn-sm-custom btn-edit" onclick="editPrompt({{ p.id }}, '{{ p.name|escapejs }}', `{{ p.prompt_text|escapejs }}`, '{{ p.gpt_model|escapejs }}', {{ p.is_default|yesno:'true,false' }}, {{ p.channels|default:'[]' }})">Edit</button>
           {% if not p.is_default %}<button class="btn-sm-custom btn-default" onclick="setDefault({{ p.id }})">Set Default</button>{% endif %}
           <button class="btn-sm-custom btn-del" onclick="deletePrompt({{ p.id }}, '{{ p.name|escapejs }}')">Delete</button>
         </div>
@@ -286,21 +298,30 @@ table tr:last-child td { border-bottom: none !important; }
       <label class="form-label">GPT Model <span style="font-weight:400;color:var(--text-muted);">(leave empty to use org default)</span></label>
       <select class="form-input" id="promptModel">
         <option value="">Use Organization Default</option>
-        <optgroup label="Latest Models">
-          <option value="gpt-4.1">gpt-4.1 (Best quality)</option>
-          <option value="gpt-4.1-mini">gpt-4.1-mini (Fast & smart)</option>
-          <option value="gpt-4.1-nano">gpt-4.1-nano (Ultra fast)</option>
-          <option value="o4-mini">o4-mini (Reasoning)</option>
+        <optgroup label="GPT-5 Series">
+          <option value="gpt-5.2">GPT-5.2 (Most Powerful)</option>
+          <option value="gpt-5">GPT-5 (Advanced)</option>
+          <option value="gpt-5-mini">GPT-5 Mini (Fast & Smart)</option>
+          <option value="gpt-5-nano">GPT-5 Nano (Fastest & Cheapest)</option>
+        </optgroup>
+        <optgroup label="Reasoning Models">
+          <option value="o4-mini">o4-mini (Latest Reasoning)</option>
+          <option value="o3">o3 (Advanced Reasoning)</option>
           <option value="o3-mini">o3-mini (Reasoning)</option>
         </optgroup>
-        <optgroup label="GPT-4o Series">
-          <option value="gpt-4o">gpt-4o</option>
-          <option value="gpt-4o-mini">gpt-4o-mini</option>
+        <optgroup label="GPT-4.1 Series">
+          <option value="gpt-4.1">GPT-4.1 (Reliable)</option>
+          <option value="gpt-4.1-mini">GPT-4.1 Mini (Affordable)</option>
+          <option value="gpt-4.1-nano">GPT-4.1 Nano (Ultra Fast)</option>
         </optgroup>
-        <optgroup label="Older Models">
-          <option value="gpt-4-turbo">gpt-4-turbo</option>
-          <option value="gpt-4">gpt-4</option>
-          <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+        <optgroup label="GPT-4o Series">
+          <option value="gpt-4o">GPT-4o (Multimodal)</option>
+          <option value="gpt-4o-mini">GPT-4o Mini</option>
+        </optgroup>
+        <optgroup label="Legacy">
+          <option value="gpt-4-turbo">GPT-4 Turbo</option>
+          <option value="gpt-4">GPT-4</option>
+          <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
         </optgroup>
       </select>
     </div>
@@ -316,6 +337,29 @@ table tr:last-child td { border-bottom: none !important; }
       </label>
     </div>
 
+    <div class="form-group">
+      <label class="form-label">Active Channels <span style="font-weight:400;color:var(--text-muted);">(leave all unchecked = active on all channels)</span></label>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border-radius:10px;border:1px solid #e5e7eb;background:#f8fafc;">
+          <input type="checkbox" class="channel-check" value="whatsapp">
+          <span style="color:#25d366;font-size:16px;">ðŸ“±</span> WhatsApp
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border-radius:10px;border:1px solid #e5e7eb;background:#f8fafc;">
+          <input type="checkbox" class="channel-check" value="instagram">
+          <span style="color:#e4405f;font-size:16px;">ðŸ“·</span> Instagram
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border-radius:10px;border:1px solid #e5e7eb;background:#f8fafc;">
+          <input type="checkbox" class="channel-check" value="facebook">
+          <span style="color:#0084ff;font-size:16px;">ðŸ’¬</span> Facebook
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border-radius:10px;border:1px solid #e5e7eb;background:#f8fafc;">
+          <input type="checkbox" class="channel-check" value="webchat">
+          <span style="color:#2563eb;font-size:16px;">ðŸŒ</span> Webchat
+        </label>
+      </div>
+      <div id="channelWarning" style="display:none;margin-top:8px;font-size:12px;color:#d97706;background:#fffbeb;padding:8px 12px;border-radius:8px;border:1px solid #fde68a;"></div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn-save" onclick="savePrompt()">Save</button>
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
@@ -324,6 +368,17 @@ table tr:last-child td { border-bottom: none !important; }
 </div>
 
 <script>
+// Channels already taken by other prompts (for warning)
+const takenChannels = {};
+{% for p in prompts %}
+  {% if p.channels %}
+    {% for ch in p.channels %}
+      takenChannels['{{ ch }}'] = takenChannels['{{ ch }}'] || [];
+      takenChannels['{{ ch }}'].push({id: {{ p.id }}, name: '{{ p.name|escapejs }}'});
+    {% endfor %}
+  {% endif %}
+{% endfor %}
+
 function getCookie(name) {
   let v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
   return v ? v.pop() : '';
@@ -336,6 +391,8 @@ function openModal() {
   document.getElementById('promptModel').value = '';
   document.getElementById('promptText').value = '';
   document.getElementById('promptDefault').checked = false;
+  document.querySelectorAll('.channel-check').forEach(c => c.checked = false);
+  document.getElementById('channelWarning').style.display = 'none';
   document.getElementById('promptModal').classList.add('active');
 }
 
@@ -343,23 +400,62 @@ function closeModal() {
   document.getElementById('promptModal').classList.remove('active');
 }
 
-function editPrompt(id, name, text, model, isDefault) {
+function editPrompt(id, name, text, model, isDefault, channels) {
   document.getElementById('modalTitle').textContent = 'Edit Prompt';
   document.getElementById('editId').value = id;
   document.getElementById('promptName').value = name;
   document.getElementById('promptModel').value = model;
   document.getElementById('promptText').value = text;
   document.getElementById('promptDefault').checked = isDefault;
+
+  // Set channel checkboxes
+  const channelList = channels || [];
+  document.querySelectorAll('.channel-check').forEach(c => {
+    c.checked = channelList.includes(c.value);
+  });
+  updateChannelWarnings(id);
   document.getElementById('promptModal').classList.add('active');
 }
 
+function updateChannelWarnings(editingId) {
+  const warningEl = document.getElementById('channelWarning');
+  const warnings = [];
+  document.querySelectorAll('.channel-check:checked').forEach(c => {
+    const ch = c.value;
+    if (takenChannels[ch]) {
+      const others = takenChannels[ch].filter(p => p.id != editingId);
+      if (others.length > 0) {
+        warnings.push(`âš ï¸ ${ch} is already assigned to: ${others.map(p => p.name).join(', ')}`);
+      }
+    }
+  });
+  if (warnings.length > 0) {
+    warningEl.innerHTML = warnings.join('<br>');
+    warningEl.style.display = 'block';
+  } else {
+    warningEl.style.display = 'none';
+  }
+}
+
+// Attach warning update on checkbox change
+document.querySelectorAll('.channel-check').forEach(c => {
+  c.addEventListener('change', () => {
+    const editingId = document.getElementById('editId').value;
+    updateChannelWarnings(editingId);
+  });
+});
+
 async function savePrompt() {
   const id = document.getElementById('editId').value;
+  const channels = [];
+  document.querySelectorAll('.channel-check:checked').forEach(c => channels.push(c.value));
+
   const data = {
     name: document.getElementById('promptName').value,
     prompt_text: document.getElementById('promptText').value,
     gpt_model: document.getElementById('promptModel').value,
-    is_default: document.getElementById('promptDefault').checked
+    is_default: document.getElementById('promptDefault').checked,
+    channels: channels
   };
 
   const url = id ? `/api/prompt/${id}/update/` : '/api/prompt/create/';
